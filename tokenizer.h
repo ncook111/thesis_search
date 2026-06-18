@@ -27,17 +27,25 @@ class Tokenizer {
     public:
         Tokenizer(const std::string &file_path);
         void close();
-        std::vector<uint8_t*> alpha_tokens;
-        std::vector<uint32_t> num_tokens;
-        std::vector<float> float_tokens;
-        std::vector<time_t> d_tokens;
-        std::vector<time_t> t_tokens;
-        std::vector<uint32_t> ipv4_tokens;
-        std::vector<uint64_t> ipv6_tokens;
+        std::unordered_map<std::string, std::vector<uint64_t>> alpha_tokens;
+        std::unordered_map<uint64_t, std::vector<uint64_t>> num_tokens;
+        std::unordered_map<float, std::vector<uint64_t>> float_tokens;
+        std::unordered_map<time_t, std::vector<uint64_t>> d_tokens;
+        std::unordered_map<time_t, std::vector<uint64_t>> t_tokens;
+        std::unordered_map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
+        std::unordered_map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
+        std::vector<uint64_t> offsets;
+
+        void printAlphaTokens();
+        void printNumTokens();
+        void printFloatTokens();
+        void printDateTokens();
+        void printTimeTokens();
+        void printIPTokens();
 
     private:
         void tokenize();
-        void processToken(std::string &curr_token);
+        void processToken(std::string &curr_token, uint64_t &offset);
         const long get_file_size(const std::string &filename);
         const uint8_t numeric_type(const std::string& s);
         const bool is_ipv6(const std::string& s);
@@ -48,6 +56,6 @@ class Tokenizer {
         const bool is_int(const std::string& s);
 
         FILE *input_file;
-        uint8_t type;
+        const size_t BUFFER_SIZE = 16384;
 };
 #endif
