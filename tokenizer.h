@@ -30,6 +30,7 @@ class Tokenizer {
         static Tokenizer from_file(const std::string &file_path); // Takes in path to file in which to tokenize
         static Tokenizer from_string(const std::string &input); // Takes in string in which to tokenize
         void close();
+
         std::map<std::string, std::vector<uint64_t>> alpha_tokens;
         std::map<int64_t, std::vector<uint64_t>> num_tokens;
         std::map<float, std::vector<uint64_t>> float_tokens;
@@ -37,6 +38,7 @@ class Tokenizer {
         std::map<time_t, std::vector<uint64_t>> t_tokens;
         std::map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
         std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
+        std::vector<std::pair<uint64_t, uint64_t>> entry_offsets; // Denotes the start and end points of all entries within the file (newline for csv and logfmt, {} for json)
 
         void printAlphaTokens();
         void printNumTokens();
@@ -69,6 +71,7 @@ class Tokenizer {
 
         FILE *input_file;
         const size_t BUFFER_SIZE = 655360;
+        uint8_t type;
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <filesystem>
+#include <algorithm>
 #include <iostream>
 #include "coder.h"
 #include "index.h"
@@ -210,7 +211,7 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
             offset = header.time_offsets_header;
             break;
         case TokenType::IPV4:
-            tok_offsets_length = file_size - header.ipv4_id_map_header; 
+            tok_offsets_length = header.entry_offsets_header - header.ipv4_id_map_header; 
             if (tok_offsets_length == 0) throw std::invalid_argument("No ipv4 offsets present in file");
             offset = header.ipv4_offsets_header;
             break;
@@ -241,6 +242,43 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
     }
 
     return offsets;
+}
+
+// Output converts offsets values from file from 1 indexing back to 0 indexing
+const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name) {
+    std::ifstream file;
+    file.open(file_name, std::ios::binary | std::ios::ate);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + file_name);
+    }
+
+    std::streamsize file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // Read in header
+    Offsets_header header = {};
+    file.read(reinterpret_cast<char*>(&header), sizeof(header));
+
+    uint64_t size_to_read = file_size - header.entry_offsets_header;
+
+    if (size_to_read == 0) throw std::invalid_argument("No entry offsets present in file");
+    file.seekg(header.entry_offsets_header);
+
+    std::vector<uint8_t> enc_entry_offsets_vec(size_to_read);
+    file.read(reinterpret_cast<char*>(enc_entry_offsets_vec.data()), sizeof(uint8_t) * size_to_read);
+
+    file.close(); 
+    std::vector<uint64_t> entry_offsets_vec = gvb_decode_uint64_t(enc_entry_offsets_vec);
+
+    assert(entry_offsets_vec.size() % 2 == 0);
+
+    // Convert to 0 indexing
+    for (auto &cur : entry_offsets_vec) {
+        --cur;
+    }
+
+    return entry_offsets_vec;
 }
 
 const std::unordered_map<size_t, std::vector<uint64_t>> search_index(const std::string &query) {
@@ -343,7 +381,7 @@ const std::string token_type_to_str(const uint8_t &type) {
     ip4v_id_to_offsets
 */ 
 void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {
-    Offsets_header header = {0,0,0,0,0,0,0,0,0,0,0,0};
+    Offsets_header header = {};
     std::ofstream file;
     file.open(file_name + ".off", std::ios::binary);
 
@@ -353,12 +391,15 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.write(reinterpret_cast<const char*>(&header), sizeof(header)); // Reserve for later use
     
-    Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file);
-    Write_pos num_pos = write_offsets_to_file(tokenizer.num_tokens, file);
-    Write_pos float_pos = write_offsets_to_file(tokenizer.float_tokens, file);
-    Write_pos date_pos = write_offsets_to_file(tokenizer.d_tokens, file);
-    Write_pos time_pos = write_offsets_to_file(tokenizer.t_tokens, file);
-    Write_pos ipv4_pos = write_offsets_to_file(tokenizer.ipv4_tokens, file);
+    const Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file);
+    const Write_pos num_pos = write_offsets_to_file(tokenizer.num_tokens, file);
+    const Write_pos float_pos = write_offsets_to_file(tokenizer.float_tokens, file);
+    const Write_pos date_pos = write_offsets_to_file(tokenizer.d_tokens, file);
+    const Write_pos time_pos = write_offsets_to_file(tokenizer.t_tokens, file);
+    const Write_pos ipv4_pos = write_offsets_to_file(tokenizer.ipv4_tokens, file);
+    const uint64_t entry_offsets_pos = write_entry_offsets_to_file(tokenizer.entry_offsets, file); // Handled differently to above
+
+
 
     // Populate header with offset values then write to file   
     header = {
@@ -367,42 +408,132 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
         float_pos.id_map_pos, float_pos.offsets_pos,
         date_pos.id_map_pos, date_pos.offsets_pos,
         time_pos.id_map_pos, time_pos.offsets_pos,
-        ipv4_pos.id_map_pos, ipv4_pos.offsets_pos
+        ipv4_pos.id_map_pos, ipv4_pos.offsets_pos,
+        entry_offsets_pos
     };
 
     file.seekp(0); 
     file.write(reinterpret_cast<const char*>(&header), sizeof(header)); // Write header data
 
     file.close();
+
+    check_offsets_file(tokenizer, file_name + ".off");
+}
+
+const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t, uint64_t>> &entry_offsets, std::ofstream &file) {
+    if (entry_offsets.size() == 0) { 
+        return static_cast<uint64_t>(file.tellp());
+    }
+
+    // Convert into a standard vector
+    std::vector<uint64_t> entry_offsets_vec;
+    for (auto &cur : entry_offsets) {
+        entry_offsets_vec.push_back(cur.first);
+        entry_offsets_vec.push_back(cur.second);
+    }
+    
+
+    // for (auto &cur : entry_offsets_vec) {
+    //     std::cout << "Offset: " << cur << std::endl;
+    // }
+    
+    std::vector<uint8_t> all_enc_entry_offsets = gvb_encode_uint64_t(entry_offsets_vec);
+
+    // Write to file
+    const uint64_t entry_offsets_size = all_enc_entry_offsets.size();
+
+    const uint64_t write_pos = file.tellp();
+    file.write(reinterpret_cast<const char*>(all_enc_entry_offsets.data()), sizeof(uint8_t) * entry_offsets_size);
+
+    return write_pos;
 }
 
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {
-    check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA);
-    check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT);
-    check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
-    check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
-    check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
-    check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
+    bool check = true;
+    check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA);
+    check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT);
+    check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
+    check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
+    check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
+    check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
+    check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
+
+    if (check) {
+        std::cout << file_name << ": Offsets file correct" << std::endl;
+    } else {
+        std::cout << file_name << ": Offsets file incorrect" << std::endl;
+    }
 }
 
-const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path) {
+bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offsets, const std::string &file_name) {
+    // Convert into a standard vector and into 0 indexing
+    std::vector<uint64_t> entry_offsets_vec;
+    for (auto &cur : entry_offsets) {
+        entry_offsets_vec.push_back(cur.first - 1);
+        entry_offsets_vec.push_back(cur.second - 1);
+    }
+
+    std::vector<uint64_t> input = get_entry_offsets_from_file(file_name);
+
+    if (input == entry_offsets_vec) {
+        //std::cout << "Entry offsets correct: " << std::endl;
+        return true;
+    } else {
+       std::cout << "Entry offsets incorrect: " << std::endl;
+       std::cout << "From file:" << std::endl;
+       for (auto i : input) {
+        std::cout << i << std::endl;
+       }
+
+       std::cout << "Orig:" << std::endl;
+       for (auto i : entry_offsets_vec) {
+        std::cout << i << std::endl;
+       }
+       return false;
+    }
+}
+
+const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path) {
     std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> line_offsets;
     // Offsets is a map of file_id's to offsets
     for (auto &o : offsets_map) {
         const uint64_t file_id = o.first;
-        const std::string file_path = data_path + '/' + file_names[file_id];
-        const std::vector<uint64_t> &offsets = o.second;
+        const std::string data_file_path = data_path + '/' + file_names[file_id];
+        const std::string index_file_path = index_path + "/offsets/" + std::to_string(file_id)+ ".off";
+        const std::vector<uint64_t> &token_offsets = o.second;
+
 
         std::ifstream file;
-        file.open(file_path, std::ios::binary);
+        file.open(data_file_path, std::ios::binary);
 
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file: " + file_path);
+            throw std::runtime_error("Failed to open file: " + data_file_path);
         }
-        
-        for (auto &offset : offsets) {
-            std::pair<uint64_t, uint64_t> entry_offsets = get_entry_offsets(offset, file);
-            line_offsets[file_id][entry_offsets.first] = entry_offsets.second;
+
+        // All entry offsets for current data file:
+        std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path);
+        std::sort(entry_offsets.begin(), entry_offsets.end());
+
+        // Convert into an unordered_map for lookup
+        // std::unordered_map<uint64_t, uint64_t> entry_offsets_map;
+        // for (size_t i = 0; i < entry_offsets.size(); i += 2) {
+        //     entry_offsets_map[entry_offsets[i]] = entry_offsets[i+1];
+        // }
+
+        // For each token_offset, get closest prev newline and match in file to get offset to end of line
+        for (auto &cur : token_offsets) {
+            //const uint64_t start = find_line_start(cur, file);
+            //const uint64_t end = entry_offsets_map[start];
+
+            // Binary search for start, then get the next value (always the respective end value)
+            // Faster than using unordered_map, at least for smaller datasets
+            //auto it = std::lower_bound(entry_offsets.begin(), entry_offsets.end(), start);
+            auto it_1 = std::lower_bound(entry_offsets.begin(), entry_offsets.end(), cur);
+            if (it_1 == entry_offsets.end() || *it_1 != cur) {
+                --it_1;
+            }
+
+            line_offsets[file_id][*it_1] = *(it_1+1);
         }
 
         file.close();
@@ -413,7 +544,7 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
 }
 
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets_intersection(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_1, const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_2) {
-    std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> union_offsets;
+    std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> intersection_offsets;
     // Offsets is a map of file_id's to offsets
     for (auto &o : entries_1) {
         const size_t file_id = o.first;
@@ -424,18 +555,13 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
         for (auto &entry : entry_offsets_1) {
             // Entry present in both maps
             if (entry_offsets_2.contains(entry.first)) {
-                union_offsets[file_id][entry.first] = entry.second;
+                intersection_offsets[file_id][entry.first] = entry.second;
             }
         }
 
     }
 
-    return union_offsets;
-}
-
-// Currently just gets line, will need to get entry dependent on file type in future
-const std::pair<uint64_t, uint64_t> get_entry_offsets(const uint64_t offset, std::ifstream &file) {
-    return std::make_pair(backward_entry_offset(offset, file), forward_entry_offset(offset, file));
+    return intersection_offsets;
 }
 
 const std::string get_entry_str(std::pair<uint64_t, uint64_t> line_offsets, std::ifstream &file) {
@@ -449,8 +575,32 @@ const std::string get_entry_str(std::pair<uint64_t, uint64_t> line_offsets, std:
     return entry;
 }
 
-// Not performant
-const uint64_t backward_entry_offset(const uint64_t &offset, std::ifstream &file) {
+const uint64_t find_line_start(const uint64_t &offset, std::ifstream &file) {
+    const uint64_t BUF_SIZE = 100;
+    std::vector<uint8_t> buf(BUF_SIZE);
+
+    uint64_t chunk_size, start; // Prevent repeated initialisation in the loop
+    uint64_t end = offset;
+    while (end > 0) {
+        chunk_size = std::min<uint64_t>(BUF_SIZE, end);
+        start = end - chunk_size;
+
+        file.seekg(start);
+        file.read(reinterpret_cast<char*>(buf.data()), chunk_size);
+
+        for (uint64_t j = chunk_size; j-- > 0; ) {
+            if (buf[j] == '\n') {
+                return start + j + 1; // Move forward past newline
+            }
+        }
+
+        end = start;
+    }
+
+    return 0; // Start of file
+}
+
+const uint64_t find_line_start_1(const uint64_t &offset, std::ifstream &file) {
     uint64_t cur_offset = offset;
 
     char c;
@@ -467,7 +617,7 @@ const uint64_t backward_entry_offset(const uint64_t &offset, std::ifstream &file
         --cur_offset;
     }
 
-    return cur_offset;
+    return cur_offset; // Start of file
 }
 
 const uint64_t forward_entry_offset(const uint64_t &offset, std::ifstream &file) {

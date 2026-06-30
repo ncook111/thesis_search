@@ -147,7 +147,14 @@ void Tokenizer::tokenize_file() {
     long file_size = ftell(input_file);
     fseek(input_file, 0, SEEK_SET);
 
+    // Set up entry_offsets, initial pair of (1,0) where second value is dummy
+    // First is offset to start of line
+    // Second is offset to end of line
+    // Offsets required to start from 1
+    entry_offsets.push_back(std::make_pair(1,0));
+
     size_t i = 0;
+    uint64_t offset = 0;
     while (size_t bytes_read = fread(buffer, 1, BUFFER_SIZE, input_file)) {
         for (i = 0; i < bytes_read; ++i) {  
             if (isalnum(buffer[i])
@@ -156,19 +163,37 @@ void Tokenizer::tokenize_file() {
                 || buffer[i] == '.'
                 || buffer[i] == ':') {
                 curr_token.push_back(buffer[i]);
-            } else if (curr_token.size()) {
-                processToken(curr_token, total_bytes_read + i - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+            } else {
+                if (buffer[i] == '\n') {
+                        // Enter end offset for last entry_offset
+                        entry_offsets.back().second = total_bytes_read + i + 1; // End of line offset inclusive of newline
+
+                        // Push new entry with dummy second value
+                        entry_offsets.push_back(std::make_pair(total_bytes_read + i + 2, 0)); // Start offset 1 after newline, dummy second value
+                }
+
+                if (curr_token.size()) {
+                    processToken(curr_token, total_bytes_read + i - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+                }
             }
         }
 
         total_bytes_read += bytes_read;
+
+        if (bytes_read != BUFFER_SIZE) { // EOF, may be leftover token
+            if (curr_token.size()) {
+                processToken(curr_token, total_bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+            }
+
+            // Complete final entry with offset to end of file
+            entry_offsets.back().second = total_bytes_read + 1;
+        }
+
+        
         std::cout << "Processed: " << (float)(total_bytes_read/(float)file_size) * 100 << "%" << std::endl;
     }
 
-    // Process leftover token if required
-    if (curr_token.size()) {
-        processToken(curr_token, total_bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-    }
+    std::cout << "Lines: " << entry_offsets.size();
 
     free(buffer);
     std::cout << "Total bytes read: " << total_bytes_read << std::endl;

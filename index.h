@@ -19,13 +19,14 @@ const std::unordered_map<size_t, std::vector<uint64_t>> search_index(const std::
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name);
 const uint8_t str_to_token_type(const std::string &type_str);
 const std::string token_type_to_str(const uint8_t &type);
-const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path);
-const std::pair<uint64_t, uint64_t> get_entry_offsets(const uint64_t offset, std::ifstream &file);
 const std::string get_entry_str(std::pair<uint64_t, uint64_t> line_offsets, std::ifstream &file);
-const uint64_t backward_entry_offset(const uint64_t &offset, std::ifstream &file);
-const uint64_t forward_entry_offset(const uint64_t &offset, std::ifstream &file);
+const uint64_t find_line_start(const uint64_t &offset, std::ifstream &file);
+const uint64_t find_line_start_1(const uint64_t &offset, std::ifstream &file);
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets_intersection(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_1, const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_2);
-
+const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t, uint64_t>> &entry_offsets, std::ofstream &file);
+const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name);
+bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offsets, const std::string &file_name);
+const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path);
 
 // Saved to the front of the file
 struct Offsets_header {
@@ -41,6 +42,7 @@ struct Offsets_header {
     uint64_t time_offsets_header;
     uint64_t ipv4_id_map_header;
     uint64_t ipv4_offsets_header;
+    uint64_t entry_offsets_header;
 };
 
 struct Write_pos {
@@ -112,7 +114,7 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 }
 
 template <MapType M>
-void check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, uint8_t type) {
+bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, uint8_t type) {
     std::vector<uint64_t> id_to_offset;
     uint64_t offset = 1;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
@@ -135,10 +137,13 @@ void check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
 
     std::string type_string = token_type_to_str(type);
 
+    bool ret;
     if (input == id_to_offset || (empty && except)) {
-        std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
+        ret = true;
+        // std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
     } else {
-        std::cout << type_string << " ID offsets incorrect: " << file_name << std::endl;
+        ret = false;
+        // std::cout << type_string << " ID offsets incorrect: " << file_name << std::endl;
     }
 
     offset = 1;
@@ -147,7 +152,13 @@ void check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
     except = false;
     bool correct = true;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
-        const std::vector<uint64_t> &offsets = it->second;
+        std::vector<uint64_t> offsets;
+
+        // Convert offsets to 0 indexing
+        for (auto &i : it->second) {
+            offsets.push_back(i - 1);
+        }
+
         std::vector<uint64_t> from_file;
         try {
              from_file = get_tok_offsets_from_file(id, id_to_offset, file_name, type);
@@ -155,14 +166,16 @@ void check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
             except = true;
         }
          
-        correct = from_file == it->second;
+        correct = from_file == offsets;
         ++id;
     }
 
     if (correct || (empty && except)) {
-        std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
+        //std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
+        return ret && true;
     } else {
-        std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
+       //std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
+       return false;
     }
 }
 
