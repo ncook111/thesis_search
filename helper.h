@@ -1,0 +1,41 @@
+#ifndef HELPER_H
+#define HELPER_H
+
+#include <vector>
+#include <map>
+#include "custom_types.h"
+
+template <class F>
+const std::vector<uint8_t> to_bytes(const F &input) {
+    std::vector<uint8_t> bytes(sizeof(input));
+    std::memcpy(bytes.data(), &input, sizeof(input));
+
+    return bytes;
+} 
+
+template <class F>
+F from_bytes(const std::vector<uint8_t> &bytes) {
+    F val;
+    std::memcpy(&val, bytes.data(), sizeof(F));
+    return val;
+}
+
+template <FstQueryType Q, MapType M, class T> 
+std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
+    std::vector<Q> tokens;
+
+    // Handle strings differently to all other M types
+    if constexpr (std::is_same_v<M, std::string>) {
+        for (auto &tok : tokens_map) {
+            tokens.push_back(tok.first);
+        }
+    } else {
+        for (auto &tok : tokens_map) {
+            tokens.push_back(to_bytes(tok.first));
+        }
+    }
+
+    return tokens;
+}
+
+#endif

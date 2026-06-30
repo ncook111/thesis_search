@@ -1,49 +1,56 @@
+#include <cstdio>
+#include <iostream>
+#include "tokenizer.h"
 #include "ingest.h"
 #include "coder.h"
-#include <cstdio>
-#include <sys/stat.h>
-#include <time.h>
-#include "fast_float/fast_float.h"
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include "date/date.h"
-#include <chrono>
-#include "tokenizer.h"
+#include "index.h"
+
 
 int main(int argc, char *argv[]) {
-    const std::string file_path = argv[1];
+    const std::string index_path = argv[1];
+    const std::string data_path = argv[2];
+    const std::string query_1 = argv[3];
+    const std::string query_2 = argv[4];
+    const std::string query_3 = argv[5];
 
-    Tokenizer tokenizer(file_path);
+    //create_index(index_path, data_path);
+    const std::unordered_map<size_t, std::vector<uint64_t>> offsets_1 = search_index(query_1);
+    const std::unordered_map<size_t, std::vector<uint64_t>> offsets_2 = search_index(query_2);
+    const std::unordered_map<size_t, std::vector<uint64_t>> offsets_3 = search_index(query_3);
 
-    // std::vector<uint8_t> encoded = gvb_encode_uint32_t(tokenizer.num_tokens);
-    // std::vector<uint32_t> decoded = gvb_decode_uint32_t(encoded);
+    fst::StdConstFst *fst = nullptr;
+    read_from_disk(fst, "index/file_mappings.fst");
+    std::set<std::string> names = get_strings_from_fst<std::string>(*fst);
 
-    // std::cout << "Size compressed: " << encoded.size() << " bytes" << std::endl;
-    // std::cout << "Size uncompressed: " << tokenizer.num_tokens.size() * 4 << " bytes" << std::endl;
-    // std::cout << "Compression Ratio: " << (float)encoded.size() / (float)(tokenizer.num_tokens.size() * 4) * 100 << "%" << std::endl;
+    std::vector<std::string> names_vec;
 
-    // if (tokenizer.num_tokens != decoded) {
-    //     std::cout << "Incorrect" << std::endl;
-    // } else {
-    //     std::cout << "Correct" << std::endl;
-    // }
+    for (auto &i : names) {
+        names_vec.push_back(i);
+    }
 
-    tokenizer.close();
+    std::cout << std::endl << "-----OUTPUT-----" << std::endl << std::endl;
 
-    std::cout << "Memory Usage: " << getMemoryUsage() << std::endl;
-    std::cout << "Total Alpha Tokens: " << tokenizer.alpha_tokens.size() << std::endl;
-    std::cout << "Total Integer Tokens: " << tokenizer.num_tokens.size() << std::endl;
-    std::cout << "Total Float Tokens: " << tokenizer.float_tokens.size() << std::endl;
-    std::cout << "Total Date Tokens: " << tokenizer.d_tokens.size() << std::endl;
-    std::cout << "Total Time Tokens: " << tokenizer.t_tokens.size() << std::endl;
-    std::cout << "Total Ipv4 Tokens: " << tokenizer.ipv4_tokens.size() << std::endl;
-    std::cout << "Total Ipv6 Tokens: " << tokenizer.ipv6_tokens.size() << std::endl;
-    std::cout << "Total offsets: " << tokenizer.offsets.size() << std::endl;
+    const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> lines_1 = get_entries_offsets(offsets_1, names_vec, data_path);
+    const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> lines_2 = get_entries_offsets(offsets_2, names_vec, data_path);
+    const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> lines_3 = get_entries_offsets(offsets_2, names_vec, data_path);
 
-    std::vector<uint64_t> nums = tokenizer.alpha_tokens["female"];
-    std::cout << "Size: " << nums.size() << std::endl;
-    // for (const auto& num : nums) {
-    //     std::cout << num << std::endl;
-    // }
+    const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> tmp = get_entries_offsets_intersection(lines_1, lines_2);
+    const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> intersection_lines = get_entries_offsets_intersection(tmp, lines_3);
+
+    for (auto &i : intersection_lines) {
+        std::cout << "File: " << names_vec[i.first] << std::endl;
+        const uint64_t file_id = i.first;
+        const std::string file_path = data_path + '/' + names_vec[file_id];
+
+        std::ifstream file;
+        file.open(file_path, std::ios::binary);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open file: " + file_path);
+        }
+        for (auto &line : i.second) {
+            std::cout << "Line: " << get_entry_str(std::make_pair(line.first, line.second), file) << std::endl;
+        }
+    }
 }
+

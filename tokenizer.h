@@ -1,3 +1,6 @@
+#ifndef TOKENIZER_H
+#define TOKENIZER_H
+
 #include <cstdio>
 #include <sys/stat.h>
 #include <time.h>
@@ -7,34 +10,33 @@
 #include <sstream>
 #include "date/date.h"
 #include <chrono>
+#include <map>
 
-#ifndef INDEX_H
-#define INDEX_H
-
-namespace NumericType {
+namespace TokenType {
     enum Value : uint8_t {
-        NONE = 0,
+        ALPHA = 0,
         INT = 1,
         FLOAT = 2,
         DATE = 3,
         TIME = 4,
         IPV4 = 5,
         IPV6 = 6,
+        INVALID = 7,
     };
 }
 
 class Tokenizer {
     public:
-        Tokenizer(const std::string &file_path);
+        static Tokenizer from_file(const std::string &file_path); // Takes in path to file in which to tokenize
+        static Tokenizer from_string(const std::string &input); // Takes in string in which to tokenize
         void close();
-        std::unordered_map<std::string, std::vector<uint64_t>> alpha_tokens;
-        std::unordered_map<uint64_t, std::vector<uint64_t>> num_tokens;
-        std::unordered_map<float, std::vector<uint64_t>> float_tokens;
-        std::unordered_map<time_t, std::vector<uint64_t>> d_tokens;
-        std::unordered_map<time_t, std::vector<uint64_t>> t_tokens;
-        std::unordered_map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
-        std::unordered_map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
-        std::vector<uint64_t> offsets;
+        std::map<std::string, std::vector<uint64_t>> alpha_tokens;
+        std::map<int64_t, std::vector<uint64_t>> num_tokens;
+        std::map<float, std::vector<uint64_t>> float_tokens;
+        std::map<time_t, std::vector<uint64_t>> d_tokens;
+        std::map<time_t, std::vector<uint64_t>> t_tokens;
+        std::map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
 
         void printAlphaTokens();
         void printNumTokens();
@@ -42,12 +44,22 @@ class Tokenizer {
         void printDateTokens();
         void printTimeTokens();
         void printIPTokens();
+        void printStatistics();
+
+        std::vector<std::string> getAlphaTokens();
+        std::vector<int64_t> getNumTokens();
+        std::vector<float> getFloatTokens();
+        std::vector<time_t> getDateTokens();
+        std::vector<time_t> getTimeTokens();
+        std::vector<uint32_t> getIPTokens();
 
     private:
-        void tokenize();
-        void processToken(std::string &curr_token, uint64_t &offset);
+        Tokenizer() = default;
+        void tokenize_file();
+        void tokenize_string(const std::string &input);
+        void processToken(std::string &curr_token, const uint64_t offset);
         const long get_file_size(const std::string &filename);
-        const uint8_t numeric_type(const std::string& s);
+        inline const uint8_t numeric_type(const std::string& s);
         const bool is_ipv6(const std::string& s);
         const bool is_ipv4(const std::string& s);
         const bool is_time(const std::string& s);
@@ -56,6 +68,7 @@ class Tokenizer {
         const bool is_int(const std::string& s);
 
         FILE *input_file;
-        const size_t BUFFER_SIZE = 16384;
+        const size_t BUFFER_SIZE = 655360;
 };
+
 #endif
