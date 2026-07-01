@@ -203,7 +203,7 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
             offset = header.time_offsets_header;
             break;
         case TokenType::IPV4:
-            tok_offsets_length = header.entry_offsets_header - header.ipv4_id_map_header; 
+            tok_offsets_length = header.entry_offsets_header - header.ipv4_offsets_header; 
             if (tok_offsets_length == 0) throw std::invalid_argument("No ipv4 offsets present in file");
             offset = header.ipv4_offsets_header;
             break;
@@ -409,11 +409,6 @@ const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t,
         entry_offsets_vec.push_back(cur.second);
     }
     
-
-    // for (auto &cur : entry_offsets_vec) {
-    //     std::cout << "Offset: " << cur << std::endl;
-    // }
-    
     std::vector<uint8_t> all_enc_entry_offsets = gvb_encode_uint64_t(entry_offsets_vec);
 
     // Write to file
@@ -432,7 +427,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
     check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
     check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
-    // check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
+    check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
     check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
 
     if (check) {
@@ -457,15 +452,6 @@ bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offset
         return true;
     } else {
        std::cout << "Entry offsets incorrect: " << std::endl;
-       std::cout << "From file:" << std::endl;
-       for (auto i : input) {
-        std::cout << i << std::endl;
-       }
-
-       std::cout << "Orig:" << std::endl;
-       for (auto i : entry_offsets_vec) {
-        std::cout << i << std::endl;
-       }
        return false;
     }
 }

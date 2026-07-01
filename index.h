@@ -89,8 +89,10 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 
     uint64_t offset = 1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
                          // A value of 0 is used as terminator when decoding
+    uint64_t count = 0;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
         const std::vector<uint64_t> &offsets = it->second;
+        count += offsets.size();
         std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets));
         std::move(enc_tok_offsets.begin(), enc_tok_offsets.end(), back_inserter(all_enc_tok_offsets));
         id_to_offset.push_back(offset);
@@ -168,16 +170,6 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
          
         correct = from_file == offsets;
 
-        // if (from_file != offsets) {
-        //     std::cout << "og size: " << offsets.size() << std::endl;
-        //     for (auto &i : offsets) {
-        //         std::cout << i << std::endl;
-        //     }
-        //     std::cout << "file size: " << from_file.size() << std::endl;
-        //     for (auto &i : from_file) {
-        //         std::cout << i << std::endl;
-        //     }
-        // }
         ++id;
     }
 
