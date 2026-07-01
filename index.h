@@ -19,7 +19,7 @@ const std::unordered_map<size_t, std::vector<uint64_t>> search_index(const std::
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name);
 const uint8_t str_to_token_type(const std::string &type_str);
 const std::string token_type_to_str(const uint8_t &type);
-const std::string get_entry_str(std::pair<uint64_t, uint64_t> line_offsets, std::ifstream &file);
+char* get_entry_str(const uint64_t &line_start, const uint64_t &line_end, const char *file);
 const uint64_t find_line_start(const uint64_t &offset, std::ifstream &file);
 const uint64_t find_line_start_1(const uint64_t &offset, std::ifstream &file);
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets_intersection(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_1, const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_2);
@@ -27,6 +27,7 @@ const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t,
 const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name);
 bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offsets, const std::string &file_name);
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path);
+void print_entries(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &map, const std::vector<std::string> &names_vec, std::string data_path);
 
 // Saved to the front of the file
 struct Offsets_header {

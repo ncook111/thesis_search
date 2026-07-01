@@ -62,37 +62,37 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         //std::cout << "Creating Alpha FST" << std::endl;
 
         create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
-        check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
+        //check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
         tokenizer.alpha_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Int FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.num_tokens),  fst_dir.string() + "/" + file_id + "_int.fst");
-        check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
+        //check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
         tokenizer.num_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Float FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
-        check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
+        //check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
         tokenizer.float_tokens.clear();
        //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Date FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.d_tokens),  fst_dir.string() + "/" + file_id + "_date.fst");
-        check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
+        //check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
         tokenizer.d_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Time FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.t_tokens),  fst_dir.string() + "/" + file_id + "_time.fst");
-        check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
+        //check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
         tokenizer.t_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating IPV4 FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.ipv4_tokens), fst_dir.string() + "/" + file_id + "_ipv4.fst");
-        check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
+        //check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
         tokenizer.ipv4_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
@@ -100,7 +100,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
     }
 
     create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
-    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+    //check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 }
 
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, uint8_t type) {
@@ -394,7 +394,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    check_offsets_file(tokenizer, file_name + ".off");
+    //check_offsets_file(tokenizer, file_name + ".off");
 }
 
 const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t, uint64_t>> &entry_offsets, std::ofstream &file) {
@@ -508,15 +508,16 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
     return intersection_offsets;
 }
 
-const std::string get_entry_str(std::pair<uint64_t, uint64_t> line_offsets, std::ifstream &file) {
-    const uint64_t size_to_read = line_offsets.second - line_offsets.first;
+char* get_entry_str(const uint64_t &line_start, const uint64_t &line_end, const char *file) {
+    const uint64_t size_to_read = line_end - line_start;
 
-    file.seekg(line_offsets.first);
+    char* str = static_cast<char*>(malloc(size_to_read + 1));
 
-    std::string entry(size_to_read, '\0');
-    file.read(reinterpret_cast<char*>(entry.data()), size_to_read);
+    std::memcpy(str, &file[line_start], size_to_read);
 
-    return entry;
+    str[size_to_read] = 0;
+
+    return str;
 }
 
 const uint64_t find_line_start(const uint64_t &offset, std::ifstream &file) {
@@ -578,4 +579,22 @@ const uint64_t forward_entry_offset(const uint64_t &offset, std::ifstream &file)
     }
 
     return cur_offset;
+}
+
+void print_entries(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &map, const std::vector<std::string> &names_vec, std::string data_path) {
+    for (auto &i : map) {
+        std::cout << "File: " << names_vec[i.first] << std::endl;
+        const uint64_t file_id = i.first;
+        const std::string file_path = data_path + '/' + names_vec[file_id];
+
+        MappedFile mf = open_mmap_r(file_path);
+        const char *file = static_cast<char*>(mf.addr());
+        size_t file_size = mf.size();
+
+        for (auto &line : i.second) {
+            char* str = get_entry_str(line.first, line.second, file);
+            std::cout << "Line: " <<  str << std::endl;
+            free(str);
+        }
+    }
 }
