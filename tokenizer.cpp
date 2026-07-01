@@ -142,6 +142,7 @@ const long Tokenizer::get_file_size(const std::string &filename) {
 
 void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
     const char *file = static_cast<char*>(file_addr);
+
     std::string curr_token;
 
 
@@ -172,6 +173,9 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
                 processToken(curr_token, bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
             }
         }
+
+        if (bytes_read % 1000000 == 0)
+            std::cout << "Processed: " << (float)(bytes_read/(float)file_size) * 100 << "%" << std::endl;
     }
     // Process leftover token if present
     if (curr_token.size()) {
@@ -182,7 +186,7 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
     entry_offsets.back().second = file_size + 1;
 
         
-    //std::cout << "Processed: " << (float)(total_bytes_read/(float)file_size) * 100 << "%" << std::endl;
+
 
     std::cout << "Lines: " << entry_offsets.size();
 
