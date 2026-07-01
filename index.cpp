@@ -358,7 +358,6 @@ const std::string token_type_to_str(const uint8_t &type) {
     ip4v_id_to_offsets
 */ 
 void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {
-    Offsets_header header = {};
     std::ofstream file;
     file.open(file_name + ".off", std::ios::binary);
 
@@ -366,6 +365,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
         throw std::runtime_error("Failed to open file: " + file_name);
     }
 
+    Offsets_header header = {};
     file.write(reinterpret_cast<const char*>(&header), sizeof(header)); // Reserve for later use
     
     const Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file);
