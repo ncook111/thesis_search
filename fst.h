@@ -189,9 +189,6 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
             std::cout << "incorrect" << std::endl;
         }
 
-        std::cout << out.size() << std::endl;
-        std::cout << tokens.size() << std::endl;
-
         return out == tokens;
 }
 

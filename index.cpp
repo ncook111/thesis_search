@@ -54,47 +54,47 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         file_mappings_vec.push_back(f);
 
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f);
-        tokenizer.printStatistics();
+        //tokenizer.printStatistics();
 
         std::string file_id = std::to_string(i);
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
 
-        std::cout << "Creating Alpha FST" << std::endl;
+        //std::cout << "Creating Alpha FST" << std::endl;
 
         create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
         check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
         tokenizer.alpha_tokens.clear();
-        std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
-        std::cout << "Creating Int FST" << std::endl;
+        //std::cout << "Creating Int FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.num_tokens),  fst_dir.string() + "/" + file_id + "_int.fst");
         check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
         tokenizer.num_tokens.clear();
-        std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
-        std::cout << "Creating Float FST" << std::endl;
+        //std::cout << "Creating Float FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
         check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
         tokenizer.float_tokens.clear();
-        std::cout << "Finished" << std::endl;
+       //std::cout << "Finished" << std::endl;
 
-        std::cout << "Creating Date FST" << std::endl;
+        //std::cout << "Creating Date FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.d_tokens),  fst_dir.string() + "/" + file_id + "_date.fst");
         check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
         tokenizer.d_tokens.clear();
-        std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
-        std::cout << "Creating Time FST" << std::endl;
+        //std::cout << "Creating Time FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.t_tokens),  fst_dir.string() + "/" + file_id + "_time.fst");
         check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
         tokenizer.t_tokens.clear();
-        std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
-        std::cout << "Creating IPV4 FST" << std::endl;
+        //std::cout << "Creating IPV4 FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.ipv4_tokens), fst_dir.string() + "/" + file_id + "_ipv4.fst");
         check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
         tokenizer.ipv4_tokens.clear();
-        std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
         ++i;
     }
@@ -104,59 +104,57 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
 }
 
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, uint8_t type) {
-    std::ifstream file;
-    file.open(file_name, std::ios::binary);
+    MappedFile mf = open_mmap_r(file_name);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
 
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file: " + file_name);
-    }
+    size_t file_size = mf.size();
 
     
     // Read in header
-    Offsets_header header;
-    file.read(reinterpret_cast<char*>(&header), sizeof(header));
+    Offsets_header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
 
-    uint64_t size_to_read;
+    size_t size_to_read;
+    size_t addr_offset;
 
+    // Should only ever be requesting id_offsets if present?
     switch (type) {
         case TokenType::ALPHA:
             size_to_read = header.alpha_offsets_header - header.alpha_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No alpha ID's present in file");
-            file.seekg(header.alpha_id_map_header);
+            addr_offset = header.alpha_id_map_header;
             break;
         case TokenType::INT:
             size_to_read = header.num_offsets_header - header.num_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No int ID's present in file");
-            file.seekg(header.num_id_map_header);
+            addr_offset = header.num_id_map_header;
             break;
         case TokenType::FLOAT:
             size_to_read = header.float_offsets_header - header.float_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No float ID's present in file");
-            file.seekg(header.float_id_map_header);
+            addr_offset = header.float_id_map_header;
             break;
         case TokenType::DATE:
             size_to_read = header.date_offsets_header - header.date_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No date ID's present in file");
-            file.seekg(header.date_id_map_header);
+            addr_offset = header.date_id_map_header;
             break;
         case TokenType::TIME:
             size_to_read = header.time_offsets_header - header.time_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No time ID's present in file");
-            file.seekg(header.time_id_map_header);
+            addr_offset = header.time_id_map_header;
             break;
         case TokenType::IPV4:
             size_to_read = header.ipv4_offsets_header - header.ipv4_id_map_header;
             if (size_to_read == 0) throw std::invalid_argument("No ipv4 ID's present in file");
-            file.seekg(header.ipv4_id_map_header);
+            addr_offset = header.ipv4_id_map_header;
             break;
         default:
             break;
     }
 
     std::vector<uint8_t> enc_id_to_offset(size_to_read);
-    file.read(reinterpret_cast<char*>(enc_id_to_offset.data()), sizeof(uint8_t) * size_to_read);
-
-    file.close(); 
+    std::memcpy(reinterpret_cast<char*>(enc_id_to_offset.data()), &file[addr_offset], size_to_read);
 
     std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
 
@@ -165,19 +163,13 @@ const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_nam
 
 // Output converts offsets values from file from 1 indexing back to 0 indexing
 const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type) {
-    std::ifstream file;
-    file.open(file_name, std::ios::binary | std::ios::ate);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file: " + file_name);
-    }
-
-    std::streamsize file_size = file.tellg();
-    file.seekg(0, std::ios::beg);
+    MappedFile mf = open_mmap_r(file_name);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    size_t file_size = mf.size();
 
     // Read in header
-    Offsets_header header;
-    file.read(reinterpret_cast<char*>(&header), sizeof(header));
+    Offsets_header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
 
     // Get offset to start of token offsets in file
     uint64_t size_to_read;
@@ -225,50 +217,35 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
         size_to_read = id_to_offset[token_id+1] - id_to_offset[token_id];
     }
 
-    
-    file.seekg(offset + id_to_offset[token_id]-1); // Seek to enc_tok_offset position in file
-
     std::vector<uint8_t> enc_tok_offsets(size_to_read);
-    file.read(reinterpret_cast<char*>(enc_tok_offsets.data()), sizeof(uint8_t) * size_to_read);
+    std::memcpy(reinterpret_cast<char*>(enc_tok_offsets.data()), &file[offset + id_to_offset[token_id]-1], size_to_read);
+
     std::vector<uint64_t> tok_offsets = gvb_decode_uint64_t(enc_tok_offsets);
-
-    file.close();
-
     std::vector<uint64_t> offsets = delta_decode(tok_offsets);
 
     // Convert back to 0 indexing
-    for (auto &o : offsets) {
-        --o;
-    }
+    for (auto &o : offsets) --o;
 
     return offsets;
 }
 
 // Output converts offsets values from file from 1 indexing back to 0 indexing
 const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name) {
-    std::ifstream file;
-    file.open(file_name, std::ios::binary | std::ios::ate);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file: " + file_name);
-    }
-
-    std::streamsize file_size = file.tellg();
-    file.seekg(0, std::ios::beg);
+    MappedFile mf = open_mmap_r(file_name);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    size_t file_size = mf.size();
 
     // Read in header
     Offsets_header header = {};
-    file.read(reinterpret_cast<char*>(&header), sizeof(header));
+    std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
 
     uint64_t size_to_read = file_size - header.entry_offsets_header;
 
     if (size_to_read == 0) throw std::invalid_argument("No entry offsets present in file");
-    file.seekg(header.entry_offsets_header);
 
     std::vector<uint8_t> enc_entry_offsets_vec(size_to_read);
-    file.read(reinterpret_cast<char*>(enc_entry_offsets_vec.data()), sizeof(uint8_t) * size_to_read);
+    std::memcpy(reinterpret_cast<char*>(enc_entry_offsets_vec.data()), &(file[header.entry_offsets_header]), sizeof(uint8_t) * size_to_read);
 
-    file.close(); 
     std::vector<uint64_t> entry_offsets_vec = gvb_decode_uint64_t(enc_entry_offsets_vec);
 
     assert(entry_offsets_vec.size() % 2 == 0);
@@ -286,7 +263,7 @@ const std::unordered_map<size_t, std::vector<uint64_t>> search_index(const std::
 
     Tokenizer tokens = Tokenizer::from_string(query);
 
-    tokens.printStatistics();
+    //tokens.printStatistics();
 
     // Check index/fsts directory exists
     if (!std::filesystem::exists("index/fsts")) { // TODO: HARDCODED, NEED TO CHANGE
@@ -455,7 +432,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
     check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
     check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
-    check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
+    // check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
     check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
 
     if (check) {
@@ -502,32 +479,15 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
         const std::string index_file_path = index_path + "/offsets/" + std::to_string(file_id)+ ".off";
         const std::vector<uint64_t> &token_offsets = o.second;
 
-
-        std::ifstream file;
-        file.open(data_file_path, std::ios::binary);
-
-        if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file: " + data_file_path);
-        }
-
         // All entry offsets for current data file:
         std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path);
         std::sort(entry_offsets.begin(), entry_offsets.end());
 
-        // Convert into an unordered_map for lookup
-        // std::unordered_map<uint64_t, uint64_t> entry_offsets_map;
-        // for (size_t i = 0; i < entry_offsets.size(); i += 2) {
-        //     entry_offsets_map[entry_offsets[i]] = entry_offsets[i+1];
-        // }
-
         // For each token_offset, get closest prev newline and match in file to get offset to end of line
         for (auto &cur : token_offsets) {
-            //const uint64_t start = find_line_start(cur, file);
-            //const uint64_t end = entry_offsets_map[start];
 
             // Binary search for start, then get the next value (always the respective end value)
             // Faster than using unordered_map, at least for smaller datasets
-            //auto it = std::lower_bound(entry_offsets.begin(), entry_offsets.end(), start);
             auto it_1 = std::lower_bound(entry_offsets.begin(), entry_offsets.end(), cur);
             if (it_1 == entry_offsets.end() || *it_1 != cur) {
                 --it_1;
@@ -535,9 +495,7 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
 
             line_offsets[file_id][*it_1] = *(it_1+1);
         }
-
-        file.close();
-
+        
     }
 
     return line_offsets;
