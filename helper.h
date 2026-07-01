@@ -3,7 +3,23 @@
 
 #include <vector>
 #include <map>
+#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 #include "custom_types.h"
+
+using namespace boost::interprocess;
+
+struct MappedFile {
+    file_mapping mapping;
+    mapped_region region;
+
+    void* addr() const { return region.get_address(); }
+    std::size_t size() const { return region.get_size(); }
+};
+
+MappedFile open_mmap_r(std::string file_path);
+MappedFile open_mmap_rw(std::string file_path);
+
 
 template <class F>
 const std::vector<uint8_t> to_bytes(const F &input) {

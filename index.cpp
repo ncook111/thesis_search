@@ -57,50 +57,50 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         tokenizer.printStatistics();
 
         std::string file_id = std::to_string(i);
-        // generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
+        generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
 
-        // std::cout << "Creating Alpha FST" << std::endl;
+        std::cout << "Creating Alpha FST" << std::endl;
 
-        // create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
-        // check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
-        // tokenizer.alpha_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
+        check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
+        tokenizer.alpha_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // std::cout << "Creating Int FST" << std::endl;
-        // create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.num_tokens),  fst_dir.string() + "/" + file_id + "_int.fst");
-        // check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
-        // tokenizer.num_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        std::cout << "Creating Int FST" << std::endl;
+        create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.num_tokens),  fst_dir.string() + "/" + file_id + "_int.fst");
+        check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
+        tokenizer.num_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // std::cout << "Creating Float FST" << std::endl;
-        // create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
-        // check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
-        // tokenizer.float_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        std::cout << "Creating Float FST" << std::endl;
+        create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
+        check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
+        tokenizer.float_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // std::cout << "Creating Date FST" << std::endl;
-        // create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.d_tokens),  fst_dir.string() + "/" + file_id + "_date.fst");
-        // check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
-        // tokenizer.d_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        std::cout << "Creating Date FST" << std::endl;
+        create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.d_tokens),  fst_dir.string() + "/" + file_id + "_date.fst");
+        check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
+        tokenizer.d_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // std::cout << "Creating Time FST" << std::endl;
-        // create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.t_tokens),  fst_dir.string() + "/" + file_id + "_time.fst");
-        // check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
-        // tokenizer.t_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        std::cout << "Creating Time FST" << std::endl;
+        create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.t_tokens),  fst_dir.string() + "/" + file_id + "_time.fst");
+        check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
+        tokenizer.t_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // std::cout << "Creating IPV4 FST" << std::endl;
-        // create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.ipv4_tokens), fst_dir.string() + "/" + file_id + "_ipv4.fst");
-        // check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
-        // tokenizer.ipv4_tokens.clear();
-        // std::cout << "Finished" << std::endl;
+        std::cout << "Creating IPV4 FST" << std::endl;
+        create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.ipv4_tokens), fst_dir.string() + "/" + file_id + "_ipv4.fst");
+        check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
+        tokenizer.ipv4_tokens.clear();
+        std::cout << "Finished" << std::endl;
 
-        // ++i;
+        ++i;
     }
 
-    // create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
-    // check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+    create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 }
 
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, uint8_t type) {

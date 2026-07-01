@@ -140,10 +140,10 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
     bool ret;
     if (input == id_to_offset || (empty && except)) {
         ret = true;
-        // std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
+        //std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
     } else {
         ret = false;
-        // std::cout << type_string << " ID offsets incorrect: " << file_name << std::endl;
+        std::cout << type_string << " ID offsets incorrect: " << file_name << std::endl;
     }
 
     offset = 1;
@@ -167,6 +167,11 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
         }
          
         correct = from_file == offsets;
+
+        if (from_file != offsets) {
+            std::cout << "og size: " << offsets.size() << std::endl;
+            std::cout << "file size: " << from_file.size() << std::endl;
+        }
         ++id;
     }
 
@@ -174,7 +179,8 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
         //std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
         return ret && true;
     } else {
-       //std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
+        std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
+        
        return false;
     }
 }

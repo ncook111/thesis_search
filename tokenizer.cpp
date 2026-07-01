@@ -10,6 +10,7 @@
 #include "tokenizer.h"
 #include "ingest.h"
 #include "coder.h"
+#include "helper.h"
 #include <fstream>
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -145,14 +146,12 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
 
     std::string curr_token;
 
-
     // Set up entry_offsets, initial pair of (1,0) where second value is dummy
     // First is offset to start of line
     // Second is offset to end of line
     // Offsets required to start from 1
     entry_offsets.push_back(std::make_pair(1,0));
 
-    uint64_t offset = 0;
     for (size_t bytes_read = 0; bytes_read < file_size; ++bytes_read) {
         if (isalnum(file[bytes_read])
             || file[bytes_read] == '+'
@@ -177,6 +176,7 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
         if (bytes_read % 1000000 == 0)
             std::cout << "Processed: " << (float)(bytes_read/(float)file_size) * 100 << "%" << std::endl;
     }
+
     // Process leftover token if present
     if (curr_token.size()) {
         processToken(curr_token, file_size - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
@@ -185,11 +185,7 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
     // Complete final entry with offset to end of file
     entry_offsets.back().second = file_size + 1;
 
-        
-
-
     std::cout << "Lines: " << entry_offsets.size();
-
     std::cout << "Total bytes read: " << file_size << std::endl;
 }
 
@@ -337,16 +333,10 @@ void Tokenizer::printIPTokens() {
 }
 
 Tokenizer Tokenizer::from_file(const std::string &file_path) {
-    using namespace boost::interprocess;
-    
-    file_mapping file_mapping(file_path.data(), read_only);
-    mapped_region file_region(file_mapping, read_only);
-
-    void * file_addr = file_region.get_address();
-    std::size_t size = file_region.get_size();
+    MappedFile mf = open_mmap_r(file_path);
 
     Tokenizer t;
-    t.tokenize_file(file_addr, size);
+    t.tokenize_file(mf.addr(), mf.size());
 
     return t;
 }
