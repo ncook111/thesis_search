@@ -57,7 +57,7 @@ class Tokenizer {
 
     private:
         Tokenizer() = default;
-        void tokenize_file();
+        void tokenize_file(void *file_addr, const size_t &file_size);
         void tokenize_string(const std::string &input);
         void processToken(std::string &curr_token, const uint64_t offset);
         const long get_file_size(const std::string &filename);
@@ -69,8 +69,6 @@ class Tokenizer {
         const bool is_float(const std::string& s);
         const bool is_int(const std::string& s);
 
-        FILE *input_file;
-        const size_t BUFFER_SIZE = 655360;
         uint8_t type;
 };
 

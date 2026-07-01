@@ -1,21 +1,3 @@
-Total Alpha Tokens: 0
-Total Integer Tokens: 0
-Total Float Tokens: 0
-Total Date Tokens: 1
-Total Time Tokens: 0
-Total Ipv4 Tokens: 0
-Total Ipv6 Tokens: 0
-Total Alpha Tokens: 0
-Total Integer Tokens: 0
-Total Float Tokens: 0
-Total Date Tokens: 0
-Total Time Tokens: 1
-Total Ipv4 Tokens: 0
-Total Ipv6 Tokens: 0
-
------OUTPUT-----
-
-File: 2010-Oct_small.csv
 Line: 2019-10-01 17:29:00 UTC,view,15100337,2053013557024391671,,,257.15,512653812,c57e4ca4-bf9e-4e31-82c9-6ee6669294ae
 Line: 2019-10-01 17:29:00 UTC,view,21400813,2053013561579406073,electronics.clocks,casio,155.22,513536112,2194b7fb-4903-47b1-ad5a-b67f40b92a3b
 Line: 2019-10-01 17:29:00 UTC,view,1003285,2053013555631882655,electronics.smartphone,samsung,525.08,543952718,6c5bcb68-cde2-4a25-bb94-2f986e003506

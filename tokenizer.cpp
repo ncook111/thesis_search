@@ -11,6 +11,8 @@
 #include "ingest.h"
 #include "coder.h"
 #include <fstream>
+#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 
 const bool Tokenizer::is_int(const std::string &s) {
     size_t i = s.front() == '+' || s.front() == '-' ? 1 : 0;
@@ -138,14 +140,10 @@ const long Tokenizer::get_file_size(const std::string &filename) {
     return rc == 0 ? stat_buf.st_size : -1;
 }
 
-void Tokenizer::tokenize_file() {
-    uint8_t *buffer = (uint8_t*)malloc(BUFFER_SIZE);
+void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
+    const char *file = static_cast<char*>(file_addr);
     std::string curr_token;
-    uint64_t total_bytes_read = 0;
-    
-    fseek(input_file, 0, SEEK_END);
-    long file_size = ftell(input_file);
-    fseek(input_file, 0, SEEK_SET);
+
 
     // Set up entry_offsets, initial pair of (1,0) where second value is dummy
     // First is offset to start of line
@@ -153,50 +151,42 @@ void Tokenizer::tokenize_file() {
     // Offsets required to start from 1
     entry_offsets.push_back(std::make_pair(1,0));
 
-    size_t i = 0;
     uint64_t offset = 0;
-    while (size_t bytes_read = fread(buffer, 1, BUFFER_SIZE, input_file)) {
-        for (i = 0; i < bytes_read; ++i) {  
-            if (isalnum(buffer[i])
-                || buffer[i] == '+'
-                || buffer[i] == '-'
-                || buffer[i] == '.'
-                || buffer[i] == ':') {
-                curr_token.push_back(buffer[i]);
-            } else {
-                if (buffer[i] == '\n') {
-                        // Enter end offset for last entry_offset
-                        entry_offsets.back().second = total_bytes_read + i + 1; // End of line offset inclusive of newline
+    for (size_t bytes_read = 0; bytes_read < file_size; ++bytes_read) {
+        if (isalnum(file[bytes_read])
+            || file[bytes_read] == '+'
+            || file[bytes_read] == '-'
+            || file[bytes_read] == '.'
+            || file[bytes_read] == ':') {
+            curr_token.push_back(file[bytes_read]);
+        } else {
+            if (file[bytes_read] == '\n') {
+                    // Enter end offset for last entry_offset
+                    entry_offsets.back().second = bytes_read + 1; // End of line offset inclusive of newline
 
-                        // Push new entry with dummy second value
-                        entry_offsets.push_back(std::make_pair(total_bytes_read + i + 2, 0)); // Start offset 1 after newline, dummy second value
-                }
-
-                if (curr_token.size()) {
-                    processToken(curr_token, total_bytes_read + i - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-                }
+                    // Push new entry with dummy second value
+                    entry_offsets.push_back(std::make_pair(bytes_read + 2, 0)); // Start offset 1 after newline, dummy second value
             }
-        }
 
-        total_bytes_read += bytes_read;
-
-        if (bytes_read != BUFFER_SIZE) { // EOF, may be leftover token
             if (curr_token.size()) {
-                processToken(curr_token, total_bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+                processToken(curr_token, bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
             }
-
-            // Complete final entry with offset to end of file
-            entry_offsets.back().second = total_bytes_read + 1;
         }
+    }
+    // Process leftover token if present
+    if (curr_token.size()) {
+        processToken(curr_token, file_size - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+    }
+
+    // Complete final entry with offset to end of file
+    entry_offsets.back().second = file_size + 1;
 
         
-        std::cout << "Processed: " << (float)(total_bytes_read/(float)file_size) * 100 << "%" << std::endl;
-    }
+    //std::cout << "Processed: " << (float)(total_bytes_read/(float)file_size) * 100 << "%" << std::endl;
 
     std::cout << "Lines: " << entry_offsets.size();
 
-    free(buffer);
-    std::cout << "Total bytes read: " << total_bytes_read << std::endl;
+    std::cout << "Total bytes read: " << file_size << std::endl;
 }
 
 void Tokenizer::tokenize_string(const std::string &input) {
@@ -343,17 +333,16 @@ void Tokenizer::printIPTokens() {
 }
 
 Tokenizer Tokenizer::from_file(const std::string &file_path) {
+    using namespace boost::interprocess;
+    
+    file_mapping file_mapping(file_path.data(), read_only);
+    mapped_region file_region(file_mapping, read_only);
+
+    void * file_addr = file_region.get_address();
+    std::size_t size = file_region.get_size();
+
     Tokenizer t;
-    t.input_file = fopen(file_path.c_str(), "r");
-
-    if (!t.input_file) {
-        std::cerr << "Input file opening failed\n";
-        exit(EXIT_FAILURE);
-    }
-
-    t.tokenize_file();
-
-    fclose(t.input_file);
+    t.tokenize_file(file_addr, size);
 
     return t;
 }
