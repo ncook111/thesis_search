@@ -28,6 +28,7 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
 bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offsets, const std::string &file_name);
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path);
 void print_entries(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &map, const std::vector<std::string> &names_vec, std::string data_path);
+void process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path);
 
 // Saved to the front of the file
 struct Offsets_header {

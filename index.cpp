@@ -62,37 +62,37 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         //std::cout << "Creating Alpha FST" << std::endl;
 
         create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
-        //check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
+        check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
         tokenizer.alpha_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Int FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.num_tokens),  fst_dir.string() + "/" + file_id + "_int.fst");
-        //check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
+        check_fst(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.fst");
         tokenizer.num_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Float FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
-        //check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
+        check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
         tokenizer.float_tokens.clear();
-       //std::cout << "Finished" << std::endl;
+        //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Date FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.d_tokens),  fst_dir.string() + "/" + file_id + "_date.fst");
-        //check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
+        check_fst(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.fst");
         tokenizer.d_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating Time FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.t_tokens),  fst_dir.string() + "/" + file_id + "_time.fst");
-        //check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
+        check_fst(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.fst");
         tokenizer.t_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
         //std::cout << "Creating IPV4 FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.ipv4_tokens), fst_dir.string() + "/" + file_id + "_ipv4.fst");
-        //check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
+        check_fst(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.fst");
         tokenizer.ipv4_tokens.clear();
         //std::cout << "Finished" << std::endl;
 
@@ -457,19 +457,19 @@ bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offset
 }
 
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets(const std::unordered_map<size_t, std::vector<uint64_t>> &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path) {
-    std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> line_offsets;
+    std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> all_line_offsets;
     // Offsets is a map of file_id's to offsets
     for (auto &o : offsets_map) {
         const uint64_t file_id = o.first;
-        const std::string data_file_path = data_path + '/' + file_names[file_id];
         const std::string index_file_path = index_path + "/offsets/" + std::to_string(file_id)+ ".off";
         const std::vector<uint64_t> &token_offsets = o.second;
 
         // All entry offsets for current data file:
         std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path);
-        std::sort(entry_offsets.begin(), entry_offsets.end());
+        //std::sort(entry_offsets.begin(), entry_offsets.end());
 
         // For each token_offset, get closest prev newline and match in file to get offset to end of line
+        std::unordered_map<uint64_t, uint64_t> &line_offsets = all_line_offsets[file_id];
         for (auto &cur : token_offsets) {
 
             // Binary search for start, then get the next value (always the respective end value)
@@ -479,12 +479,11 @@ const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_ent
                 --it_1;
             }
 
-            line_offsets[file_id][*it_1] = *(it_1+1);
+            line_offsets[*it_1] = *(it_1+1);
         }
-        
     }
 
-    return line_offsets;
+    return all_line_offsets;
 }
 
 const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> get_entries_offsets_intersection(const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_1, const std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> &entries_2) {
@@ -592,9 +591,31 @@ void print_entries(const std::unordered_map<size_t, std::unordered_map<uint64_t,
         size_t file_size = mf.size();
 
         for (auto &line : i.second) {
-            char* str = get_entry_str(line.first, line.second, file);
-            std::cout << "Line: " <<  str << std::endl;
-            free(str);
+            std::cout << "Line: ";
+            std::cout.write(&file[line.first], line.second-line.first);
+            std::cout << "\n";
         }
     }
+}
+
+void process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path) {
+    assert(queries.size() != 0);
+
+    fst::StdConstFst *fst = nullptr;
+    read_from_disk(fst, "index/file_mappings.fst");
+    std::set<std::string> names = get_strings_from_fst<std::string>(*fst);
+
+    std::vector<std::string> names_vec;
+
+    for (auto &i : names) {
+        names_vec.push_back(i);
+    }
+
+    std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> result_entries = get_entries_offsets(search_index(queries.front()), names_vec, data_path, index_path);
+    
+    for (auto it = queries.begin() + 1; it != queries.end(); ++it) {
+        result_entries = get_entries_offsets_intersection(result_entries, get_entries_offsets(search_index(*it), names_vec, data_path, index_path));
+    }
+
+    print_entries(result_entries, names_vec, data_path);
 }
