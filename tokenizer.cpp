@@ -125,13 +125,17 @@ const bool Tokenizer::is_ipv6(const std::string &s) {
     return false;
 }
 
+const bool Tokenizer::is_bool(const std::string& s) {
+    return (s == "true" || s == "false");
+}
+
 inline const uint8_t Tokenizer::numeric_type(const std::string &s) {
     if (is_int(s)) { return TokenType::INT; }
     if (is_float(s)) { return TokenType::FLOAT; }
     if (is_date(s)) { return TokenType::DATE; }
     if (is_time(s)) { return TokenType::TIME; }
     if (is_ipv4(s)) { return TokenType::IPV4; }
-
+    if (is_bool(s)) { return TokenType::BOOLEAN; }
     return TokenType::ALPHA;
 }
 
@@ -221,6 +225,8 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
         date::sys_time<std::chrono::seconds> dateTimePoint;
         std::chrono::seconds timeTimePoint;
 
+        std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(),[](unsigned char c){ return std::tolower(c); });
+
         // Deal with an alphabetical string and numeric string differently
         switch (numeric_type(curr_token)) {
             case TokenType::INT:
@@ -278,13 +284,17 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
                 ipv6_tokens[1].push_back(offset);
                 break;
 
+            case TokenType::BOOLEAN:
+                if (curr_token == "true") boolean_tokens.push_back(true);
+                if (curr_token == "false") boolean_tokens.push_back(false);
+                break;
+
             default: 
                 unprocessed = true;
                 break;
         }
 
         if (unprocessed) {
-            std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(),[](unsigned char c){ return std::tolower(c); });
             alpha_tokens[std::move(curr_token)].push_back(offset);
         }
 
@@ -356,6 +366,7 @@ void Tokenizer::printStatistics() {
     std::cout << "Total Time Tokens: " << t_tokens.size() << std::endl;
     std::cout << "Total Ipv4 Tokens: " << ipv4_tokens.size() << std::endl;
     std::cout << "Total Ipv6 Tokens: " << ipv6_tokens.size() << std::endl;
+    std::cout << "Total Boolean Tokens: " << boolean_tokens.size() << std::endl;
 }
 
 std::vector<std::string> Tokenizer::getAlphaTokens() {

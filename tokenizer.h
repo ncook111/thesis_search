@@ -21,7 +21,8 @@ namespace TokenType {
         TIME = 4,
         IPV4 = 5,
         IPV6 = 6,
-        INVALID = 7,
+        BOOLEAN = 7,
+        INVALID = 8,
     };
 }
 
@@ -38,6 +39,7 @@ class Tokenizer {
         std::map<time_t, std::vector<uint64_t>> t_tokens;
         std::map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
         std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
+        std::vector<bool> boolean_tokens;
         std::vector<std::pair<uint64_t, uint64_t>> entry_offsets; // Denotes the start and end points of all entries within the file (newline for csv and logfmt, {} for json)
 
         void printAlphaTokens();
@@ -68,6 +70,7 @@ class Tokenizer {
         const bool is_date(const std::string& s);
         const bool is_float(const std::string& s);
         const bool is_int(const std::string& s);
+        const bool is_bool(const std::string& s);
 
         uint8_t type;
 };

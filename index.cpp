@@ -57,7 +57,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         file_mappings_vec.push_back(f);
 
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f);
-        //tokenizer.printStatistics();
+        tokenizer.printStatistics();
 
         std::string file_id = std::to_string(i);
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
