@@ -29,6 +29,12 @@ int main(int argc, char *argv[]) {
         create_index(index_path, data_path);
     // Recreate index mode
     } else if (mode == "-r") {
+        if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
+            std::cout << "Not a valid existing index folder" << std::endl;
+            return 0;
+        }
+        
+        std::filesystem::remove_all(index_path);
         create_index(index_path, data_path);
     // Index search mode
     } else if (mode == "-s") {
@@ -44,7 +50,8 @@ int main(int argc, char *argv[]) {
             std::cout << argv[i];
         }
 
-        process_queries(queries, data_path, index_path);
+        const EntryMap results = process_queries(queries, data_path, index_path);
+        //print_entries(results, index_path, data_path);
     }
 
     return 0;

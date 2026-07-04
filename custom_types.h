@@ -16,6 +16,4 @@ template <typename L>
 template <typename D>
     concept FstQueryType = std::same_as<D, std::string> ||
     std::same_as<D, std::vector<uint8_t>>;
-
-
 #endif
