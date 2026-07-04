@@ -148,7 +148,7 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
     // First is offset to start of line
     // Second is offset to end of line
     // Offsets required to start from 1
-    entry_offsets.push_back(std::make_pair(1,0));
+    entry_offsets.push_back(0);
 
     for (size_t bytes_read = 0; bytes_read < file_size; ++bytes_read) {
         if (isalnum(file[bytes_read])
@@ -159,11 +159,8 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
             curr_token.push_back(file[bytes_read]);
         } else {
             if (file[bytes_read] == '\n') {
-                    // Enter end offset for last entry_offset
-                    entry_offsets.back().second = bytes_read + 1; // End of line offset inclusive of newline
-
                     // Push new entry with dummy second value
-                    entry_offsets.push_back(std::make_pair(bytes_read + 2, 0)); // Start offset 1 after newline, dummy second value
+                    entry_offsets.push_back(bytes_read + 2); // Start offset 1 after newline, dummy second value
             }
 
             if (curr_token.size()) {
@@ -179,9 +176,6 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
     if (curr_token.size()) {
         processToken(curr_token, file_size - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
-
-    // Complete final entry with offset to end of file
-    entry_offsets.back().second = file_size + 1;
 
     std::cout << "Lines: " << entry_offsets.size();
     std::cout << "Total bytes read: " << file_size << std::endl;

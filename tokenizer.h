@@ -40,7 +40,7 @@ class Tokenizer {
         std::map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
         std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
         std::vector<bool> boolean_tokens;
-        std::vector<std::pair<uint64_t, uint64_t>> entry_offsets; // Denotes the start and end points of all entries within the file (newline for csv and logfmt, {} for json)
+        std::vector<uint64_t> entry_offsets; // Denotes the start point for all entries in the file (newline for csv and logfmt, {} for json)
 
         void printAlphaTokens();
         void printNumTokens();

@@ -393,19 +393,12 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
     //check_offsets_file(tokenizer, file_name + ".off");
 }
 
-const uint64_t write_entry_offsets_to_file(const std::vector<std::pair<uint64_t, uint64_t>> &entry_offsets, std::ofstream &file) {
+const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     if (entry_offsets.size() == 0) { 
         return static_cast<uint64_t>(file.tellp());
     }
-
-    // Convert into a standard vector
-    std::vector<uint64_t> entry_offsets_vec;
-    for (auto &cur : entry_offsets) {
-        entry_offsets_vec.push_back(cur.first);
-        entry_offsets_vec.push_back(cur.second);
-    }
     
-    std::vector<uint8_t> all_enc_entry_offsets = gvb_encode_uint64_t(entry_offsets_vec);
+    std::vector<uint8_t> all_enc_entry_offsets = gvb_encode_uint64_t(entry_offsets);
 
     // Write to file
     const uint64_t entry_offsets_size = all_enc_entry_offsets.size();
@@ -433,17 +426,16 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     }
 }
 
-bool check_entry_offsets(std::vector<std::pair<uint64_t, uint64_t>> entry_offsets, const std::string &file_name) {
+bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name) {
     // Convert into a standard vector and into 0 indexing
-    std::vector<uint64_t> entry_offsets_vec;
+    std::vector<uint64_t> entry_offsets_0;
     for (auto &cur : entry_offsets) {
-        entry_offsets_vec.push_back(cur.first - 1);
-        entry_offsets_vec.push_back(cur.second - 1);
+        entry_offsets_0.push_back(cur - 1);
     }
 
     std::vector<uint64_t> input = get_entry_offsets_from_file(file_name);
 
-    if (input == entry_offsets_vec) {
+    if (input == entry_offsets_0) {
         //std::cout << "Entry offsets correct: " << std::endl;
         return true;
     } else {
@@ -462,7 +454,6 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
 
         // All entry offsets for current data file:
         std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path);
-        //std::sort(entry_offsets.begin(), entry_offsets.end());
 
         // For each token_offset, get closest prev newline and match in file to get offset to end of line
         std::unordered_map<uint64_t, uint64_t> &line_offsets = all_line_offsets[file_id];
@@ -475,7 +466,7 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
                 --it_1;
             }
 
-            line_offsets[*it_1] = *(it_1+1);
+            line_offsets[*it_1] = *(it_1+1) - 1;
         }
     }
 
