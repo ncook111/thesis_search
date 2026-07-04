@@ -28,7 +28,7 @@ namespace TokenType {
 
 class Tokenizer {
     public:
-        static Tokenizer from_file(const std::string &file_path); // Takes in path to file in which to tokenize
+        static Tokenizer from_file(const std::string &file_path, const uint8_t type); // Takes in path to file in which to tokenize
         static Tokenizer from_string(const std::string &input); // Takes in string in which to tokenize
         void close();
 
@@ -59,10 +59,9 @@ class Tokenizer {
 
     private:
         Tokenizer() = default;
-        void tokenize_file(void *file_addr, const size_t &file_size);
+        void tokenize_file(void *file_addr, const size_t &file_size, const uint8_t type);
         void tokenize_string(const std::string &input);
         void processToken(std::string &curr_token, const uint64_t offset);
-        const long get_file_size(const std::string &filename);
         inline const uint8_t numeric_type(const std::string& s);
         const bool is_ipv6(const std::string& s);
         const bool is_ipv4(const std::string& s);

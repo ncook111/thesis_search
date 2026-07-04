@@ -17,9 +17,18 @@ struct MappedFile {
     std::size_t size() const { return region.get_size(); }
 };
 
+namespace FileType {
+    enum Value : uint8_t {
+        CSV = 0,
+        JSON = 1,
+        LOGFMT = 2,
+        INVALID = 3
+    };
+}
+
+uint8_t get_file_type(const std::string &type);
 MappedFile open_mmap_r(std::string file_path);
 MappedFile open_mmap_rw(std::string file_path);
-
 
 template <class F>
 const std::vector<uint8_t> to_bytes(const F &input) {

@@ -139,13 +139,7 @@ inline const uint8_t Tokenizer::numeric_type(const std::string &s) {
     return TokenType::ALPHA;
 }
 
-const long Tokenizer::get_file_size(const std::string &filename) {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
-}
-
-void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size) {
+void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const uint8_t type) {
     const char *file = static_cast<char*>(file_addr);
 
     std::string curr_token;
@@ -342,11 +336,11 @@ void Tokenizer::printIPTokens() {
 
 }
 
-Tokenizer Tokenizer::from_file(const std::string &file_path) {
+Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type) {
     MappedFile mf = open_mmap_r(file_path);
 
     Tokenizer t;
-    t.tokenize_file(mf.addr(), mf.size());
+    t.tokenize_file(mf.addr(), mf.size(), type);
 
     return t;
 }

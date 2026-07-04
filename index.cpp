@@ -45,25 +45,20 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         }
     }
 
-    std::set<std::string> file_mappings;
     std::vector<std::string> file_mappings_vec;
     // Tokenize, generate offsets and fst's for all supported files
-    for (auto &f : files) {
-        file_mappings.insert(f.filename().string());
-    }
-
     size_t i = 0;
-    for (auto &f : file_mappings) {
-        file_mappings_vec.push_back(f);
+    for (auto &f : files) {
+        file_mappings_vec.push_back(f.filename().string());
 
-        Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f);
+        uint8_t type = get_file_type(f.extension());
+        Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
         tokenizer.printStatistics();
 
         std::string file_id = std::to_string(i);
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
 
         //std::cout << "Creating Alpha FST" << std::endl;
-
         create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
         check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
         tokenizer.alpha_tokens.clear();

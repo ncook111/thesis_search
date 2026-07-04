@@ -7,6 +7,14 @@ using namespace boost::interprocess;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> EntryMap;
 
+uint8_t get_file_type(const std::string &type) {
+    if (type == ".csv") return 0;
+    if (type == ".json") return 0;
+    if (type == ".logfmt") return 0;
+
+    throw std::invalid_argument("File type not supported");
+}
+
 MappedFile open_mmap_r(std::string file_path) {
     file_mapping file_mapping(file_path.data(), read_only);
     mapped_region file_region(file_mapping, read_only);
