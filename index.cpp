@@ -244,8 +244,6 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
 
     std::vector<uint64_t> entry_offsets_vec = gvb_decode_uint64_t(enc_entry_offsets_vec);
 
-    assert(entry_offsets_vec.size() % 2 == 0);
-
     // Convert to 0 indexing
     for (auto &cur : entry_offsets_vec) {
         --cur;

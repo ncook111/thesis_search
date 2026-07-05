@@ -2,3 +2,5 @@ data/
 big_data/
 index/
 *.o
+third_party/
+build/
