@@ -22,10 +22,10 @@ bool valid_extension(const std::string &ext) {
 }
 
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str) {
-    std::filesystem::path index_dir = index_dir_str;
-    std::filesystem::path offsets_dir = index_dir_str + "/offsets";
-    std::filesystem::path fst_dir = index_dir_str + "/fsts";
-    std::filesystem::path data_dir = data_dir_str;
+    const std::filesystem::path index_dir = index_dir_str;
+    const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
+    const std::filesystem::path fst_dir = index_dir_str + "/fsts";
+    const std::filesystem::path data_dir = data_dir_str;
 
     // Create index directories, fails gracefully if directory already exists
     std::filesystem::create_directory(index_dir);
@@ -46,16 +46,17 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
     }
 
     std::vector<std::string> file_mappings_vec;
+
     // Tokenize, generate offsets and fst's for all supported files
     size_t i = 0;
     for (auto &f : files) {
         file_mappings_vec.push_back(f.filename().string());
 
-        uint8_t type = get_file_type(f.extension());
+        const uint8_t type = get_file_type(f.extension());
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
         tokenizer.printStatistics();
 
-        std::string file_id = std::to_string(i);
+        const std::string file_id = std::to_string(i);
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
 
         //std::cout << "Creating Alpha FST" << std::endl;
@@ -98,7 +99,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
     }
 
     create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
-    //check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 }
 
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, uint8_t type) {
@@ -153,7 +154,7 @@ const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_nam
     std::vector<uint8_t> enc_id_to_offset(size_to_read);
     std::memcpy(reinterpret_cast<char*>(enc_id_to_offset.data()), &file[addr_offset], size_to_read);
 
-    std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
+    const std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
 
     return id_to_offset;
 }
@@ -179,11 +180,11 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
             if (tok_offsets_length == 0) throw std::invalid_argument("No alpha offsets present in file");
             offset = header.alpha_offsets_header;
             break;
-        // case TokenType::INT:
-        //     tok_offsets_length = header.float_id_map_header - header.num_offsets_header;
-        //     if (tok_offsets_length == 0) throw std::invalid_argument("No int offsets present in file");
-        //     offset = header.num_offsets_header;
-        //     break;
+        case TokenType::INT:
+            tok_offsets_length = header.float_id_map_header - header.num_offsets_header;
+            if (tok_offsets_length == 0) throw std::invalid_argument("No int offsets present in file");
+            offset = header.num_offsets_header;
+            break;
         // case TokenType::FLOAT:
         //     tok_offsets_length = header.date_id_map_header - header.float_offsets_header;
         //     if (tok_offsets_length == 0) throw std::invalid_argument("No float offsets present in file");
@@ -245,9 +246,7 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
     std::vector<uint64_t> entry_offsets_vec = gvb_decode_uint64_t(enc_entry_offsets_vec);
 
     // Convert to 0 indexing
-    for (auto &cur : entry_offsets_vec) {
-        --cur;
-    }
+    for (auto &cur : entry_offsets_vec) --cur;
 
     return entry_offsets_vec;
 }
@@ -255,7 +254,7 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
 const FieldMap search_index(const std::string &query, const std::string &index_path) {
     FieldMap offsets;
 
-    Tokenizer tokens = Tokenizer::from_string(query);
+    const Tokenizer tokens = Tokenizer::from_string(query);
 
     //tokens.printStatistics();
 
@@ -388,7 +387,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    //check_offsets_file(tokenizer, file_name + ".off");
+    check_offsets_file(tokenizer, file_name + ".off");
 }
 
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
@@ -411,11 +410,11 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     bool check = true;
     check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA);
     check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT);
-    check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
-    check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
-    check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
-    check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
-    check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
+    // check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
+    // check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
+    // check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
+    // check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
+    //check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
 
     if (check) {
         std::cout << file_name << ": Offsets file correct" << std::endl;

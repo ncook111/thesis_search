@@ -20,8 +20,8 @@ void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv_f, const std::vector<uint64_t> &nums);
 const std::vector<std::pair<uint64_t, uint64_t>> partitioned_ef_encode_multi(succinct::bit_vector &bv_f, std::vector<std::vector<uint64_t>> &vecs);
-const std::vector<uint64_t> partitioned_ef_decode(succinct::bit_vector const &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats_vec);
-const std::vector<uint64_t> partitioned_ef_decode_multi(succinct::bit_vector const &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats);
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats_vec);
+const std::vector<uint64_t> partitioned_ef_decode_multi(const succinct::bit_vector &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats);
 
 template <class F>
 std::vector<F> delta_encode(const std::vector<F> &nums) {

@@ -331,8 +331,8 @@ const std::vector<uint64_t> gvb_decode_uint64_t(const std::vector<uint8_t> &byte
 // Encoding a single vector with ef
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv_f, const std::vector<uint64_t> &nums) {
     succinct::bit_vector_builder bv;
-    uint64_t universe = nums.back() + 1;
-    uint64_t n = nums.size();
+    const uint64_t universe = nums.back() + 1;
+    const uint64_t n = nums.size();
     const ds2i::global_parameters params;
 
     ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, params); 
@@ -349,9 +349,9 @@ const std::vector<std::pair<uint64_t, uint64_t>> partitioned_ef_encode_multi(suc
 
     std::vector<std::pair<uint64_t, uint64_t>> encoded_stats_vec;
 
-    for (auto &nums : vecs) {
-        uint64_t universe = nums.back() + 1;
-        uint64_t n = nums.size();
+    for (const auto &nums : vecs) {
+        const uint64_t universe = nums.back() + 1;
+        const uint64_t n = nums.size();
         const ds2i::global_parameters params;
 
         ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, params); 
@@ -365,12 +365,13 @@ const std::vector<std::pair<uint64_t, uint64_t>> partitioned_ef_encode_multi(suc
     return encoded_stats_vec;
 }
 
-const std::vector<uint64_t> partitioned_ef_decode(succinct::bit_vector const &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats) {
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats) {
     std::vector<uint64_t> decoded;
     
     const uint64_t universe = encoded_stats.first;
     const uint64_t n = encoded_stats.second;
     const ds2i::global_parameters params;
+
     ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n, params);
 
     decoded.reserve(n);
@@ -381,10 +382,10 @@ const std::vector<uint64_t> partitioned_ef_decode(succinct::bit_vector const &bv
     return decoded;
 }
 
-const std::vector<std::vector<uint64_t>> partitioned_ef_decode_multi(succinct::bit_vector const &bv_f, const std::vector<std::pair<uint64_t, uint64_t>> &encoded_stats_vec) {
+const std::vector<std::vector<uint64_t>> partitioned_ef_decode_multi(const succinct::bit_vector &bv_f, const std::vector<std::pair<uint64_t, uint64_t>> &encoded_stats_vec) {
     std::vector<std::vector<uint64_t>> all_decoded;
     
-    for (auto &encoded_stats : encoded_stats_vec) {
+    for (const auto &encoded_stats : encoded_stats_vec) {
         const uint64_t universe = encoded_stats.first;
         const uint64_t n = encoded_stats.second;
         const ds2i::global_parameters params;

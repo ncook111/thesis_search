@@ -120,6 +120,7 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 
 template <MapType M>
 bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, uint8_t type) {
+    std::cout << "here1" << std::endl;
     std::vector<uint64_t> id_to_offset;
     uint64_t offset = 1;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
@@ -140,7 +141,7 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
         except = true;
     }
 
-    std::string type_string = token_type_to_str(type);
+    const std::string type_string = token_type_to_str(type);
 
     bool ret;
     if (input == id_to_offset || (empty && except)) {
@@ -176,12 +177,13 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
         ++id;
     }
 
+    std::cout << "here2" << std::endl;
+
     if (correct || (empty && except)) {
         //std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
         return ret && true;
     } else {
         std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
-        
        return false;
     }
 }

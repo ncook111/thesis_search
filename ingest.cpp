@@ -57,40 +57,5 @@ int main(int argc, char *argv[]) {
         print_entries(results, index_path, data_path);
     }
 
-    // std::vector<uint64_t> in;
-
-    // for (int i = 0; i < 100000000; i+=4) {
-    //     in.push_back(i);
-    // }
-
-    // uint64_t universe = in.back() + 1;
-    // uint64_t n = in.size();
-    // ds2i::global_parameters params;
-    // succinct::bit_vector_builder bvb;
-
-    // ds2i::partitioned_sequence<>::write(bvb, in.begin(), universe, n, params); 
-
-    // succinct::bit_vector bv(&bvb);
-
-    // std::cout << "Input Size: " << in.size() * 8 << std::endl;
-    // std::cout << "Output Size: " << bv.data().size() * sizeof(uint64_t) << std::endl;
-
-    // ds2i::partitioned_sequence<>::enumerator e(bv, 0, universe, n, params);
-
-    // std::vector<uint64_t> decoded;
-    // decoded.reserve(n);
-    // for (uint64_t i = 0; i < n; ++i) {
-    //     decoded.push_back(e.move(i).second);
-    // }
-
-    // std::cout << "Correct: " << (decoded == in) << std::endl;
-
-    // std::vector<uint8_t> gvb_encoded = gvb_encode_uint64_t(in);
-    // std::vector<uint64_t> gvb_decoded = gvb_decode_uint64_t(gvb_encoded);
-
-    // std::cout << "Input Size: " << in.size() * 8 << std::endl;
-    // std::cout << "Output Size: " << (float)(gvb_encoded.size()) / (in.size() * 8) << std::endl;
-
-
     return 0;
 }
