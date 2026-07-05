@@ -5,7 +5,7 @@
 #include "coder.h"
 #include "index.h"
 
-constexpr uint8_t ARG_MIN = 4; // Minimum arguments required for normal operation
+constexpr uint8_t ARG_MIN = 5; // Minimum arguments required for normal operation
 
 int main(int argc, char *argv[]) {
     if (argc == 2 && std::string(argv[1]) == "help") {
@@ -18,29 +18,30 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    const std::string mode = argv[1];
-    const std::string data_path = argv[2];
-    const std::string index_path = argv[3];
-
-
+    const std::string act_mode = argv[1];
+    const uint8_t enc_type = get_enc_type(argv[2]);
+    const std::string data_path = argv[3];
+    const std::string index_path = argv[4];
+    
     // Create index mode
-    if (mode == "-c") {
+    if (act_mode == "-c") {
         if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
             std::cout << "Index already exists" << std::endl;
             return 0;
         }
-        create_index(index_path, data_path);
+
+        create_index(index_path, data_path, enc_type);
     // Recreate index mode
-    } else if (mode == "-r") {
+    } else if (act_mode == "-r") {
         if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
             std::cout << "Not a valid existing index folder" << std::endl;
             return 0;
         }
         
         std::filesystem::remove_all(index_path);
-        create_index(index_path, data_path);
+        create_index(index_path, data_path, enc_type);
     // Index search mode
-    } else if (mode == "-s") {
+    } else if (act_mode == "-s") {
         if (argc == ARG_MIN) {
             std::cout << "Help: ingest help" << std::endl;
             return 0;

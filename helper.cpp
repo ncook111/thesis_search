@@ -4,12 +4,19 @@
 
 using namespace boost::interprocess;
 
-uint8_t get_file_type(const std::string &type) {
+const uint8_t get_file_type(const std::string &type) {
     if (type == ".csv") return 0;
     if (type == ".json") return 0;
     if (type == ".logfmt") return 0;
 
     throw std::invalid_argument("File type not supported");
+}
+
+const uint8_t get_enc_type(const std::string &type) {
+    if (type == "-gvb") return EncType::GVB;
+    if (type == "-pef") return EncType::PEF;
+
+    throw std::invalid_argument("Encoding type not supported");
 }
 
 MappedFile open_mmap_r(std::string file_path) {

@@ -21,7 +21,7 @@ bool valid_extension(const std::string &ext) {
     );
 }
 
-void create_index(const std::string &index_dir_str, const std::string &data_dir_str) {
+void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type) {
     const std::filesystem::path index_dir = index_dir_str;
     const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
     const std::filesystem::path fst_dir = index_dir_str + "/fsts";
@@ -61,7 +61,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         tokenizer.printStatistics();
 
         const std::string file_id = std::to_string(i);
-        generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id);
+        generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
 
         //std::cout << "Creating Alpha FST" << std::endl;
         create_fst<std::string>(tokens_from_map<std::string>(tokenizer.alpha_tokens), fst_dir.string() + "/" + file_id + "_alpha.fst");
@@ -354,7 +354,7 @@ const std::string token_type_to_str(const uint8_t &type) {
     ipv4_offsets
     ip4v_id_to_offsets
 */ 
-void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {
+void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type) {
     std::ofstream file;
     file.open(file_name + ".off", std::ios::binary);
 
@@ -365,13 +365,13 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
     Offsets_header header = {};
     file.write(reinterpret_cast<const char*>(&header), sizeof(header)); // Reserve for later use
     
-    const Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file);
-    const Write_pos num_pos = write_offsets_to_file(tokenizer.num_tokens, file);
-    const Write_pos float_pos = write_offsets_to_file(tokenizer.float_tokens, file);
-    const Write_pos date_pos = write_offsets_to_file(tokenizer.d_tokens, file);
-    const Write_pos time_pos = write_offsets_to_file(tokenizer.t_tokens, file);
-    const Write_pos ipv4_pos = write_offsets_to_file(tokenizer.ipv4_tokens, file);
-    const uint64_t entry_offsets_pos = write_entry_offsets_to_file(tokenizer.entry_offsets, file); // Handled differently to above
+    const Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file, enc_type);
+    const Write_pos num_pos = write_offsets_to_file(tokenizer.num_tokens, file, enc_type);
+    const Write_pos float_pos = write_offsets_to_file(tokenizer.float_tokens, file, enc_type);
+    const Write_pos date_pos = write_offsets_to_file(tokenizer.d_tokens, file, enc_type);
+    const Write_pos time_pos = write_offsets_to_file(tokenizer.t_tokens, file, enc_type);
+    const Write_pos ipv4_pos = write_offsets_to_file(tokenizer.ipv4_tokens, file, enc_type);
+    const uint64_t entry_offsets_pos = write_entry_offsets_to_file(tokenizer.entry_offsets, file, enc_type); // Handled differently to above
 
 
 
@@ -394,11 +394,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
     //check_offsets_file(tokenizer, file_name + ".off");
 }
 
-const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
-    if (entry_offsets.size() == 0) { 
-        return static_cast<uint64_t>(file.tellp());
-    }
-    
+const uint64_t write_entry_gvb(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     std::vector<uint8_t> all_enc_entry_offsets = gvb_encode_uint64_t(entry_offsets);
 
     // Write to file
@@ -408,6 +404,44 @@ const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_of
     file.write(reinterpret_cast<const char*>(all_enc_entry_offsets.data()), sizeof(uint8_t) * entry_offsets_size);
 
     return write_pos;
+}
+
+const uint64_t write_entry_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
+    succinct::bit_vector_builder enc_tok_offsets;
+    const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
+    succinct::bit_vector enc_tok_offsets_final(&enc_tok_offsets);
+
+    // Write to file
+    const uint64_t entry_offsets_size = enc_tok_offsets_final.data().size() * sizeof(uint64_t);
+
+    const uint64_t write_pos = file.tellp();
+
+    // Write universe and n
+    file.write(reinterpret_cast<const char*>(&res.first), sizeof(uint64_t));
+    file.write(reinterpret_cast<const char*>(&res.second), sizeof(uint64_t));
+
+    // Write enc_tok_offsets
+    file.write(reinterpret_cast<const char*>(enc_tok_offsets_final.data().data()), entry_offsets_size);
+
+    return write_pos;
+}
+
+const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file, const uint8_t enc_type) {
+    if (entry_offsets.size() == 0) { 
+        return static_cast<uint64_t>(file.tellp());
+    }
+    
+    switch (enc_type) {
+        case EncType::GVB:
+            return write_entry_gvb(entry_offsets, file);
+            break;
+        case EncType::PEF:
+            return write_entry_pef(entry_offsets, file);
+            break;
+        default:
+            throw std::invalid_argument("Not a valid encoding type");
+    }
+
 }
 
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {

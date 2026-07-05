@@ -33,7 +33,8 @@ namespace EncType {
     };
 }
 
-uint8_t get_file_type(const std::string &type);
+const uint8_t get_file_type(const std::string &type);
+const uint8_t get_enc_type(const std::string &type);
 MappedFile open_mmap_r(std::string file_path);
 MappedFile open_mmap_rw(std::string file_path);
 
