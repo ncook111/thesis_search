@@ -309,17 +309,21 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
          
         correct = correct && (from_file == offsets);
 
-        // if (from_file != offsets) {
-        //     std::cout << "Offsets OG:" << std::endl;
-        //     for (auto i : offsets) {
-        //         std::cout << i << std::endl;
-        //     }
+        if (from_file != offsets) {
+            std::cout << "Offsets OG Size:" << offsets.size() << std::endl;
+            std::cout << "from file Size:" << from_file.size() << std::endl;
+            std::cout << "Offsets OG:" << std::endl;
+            for (auto i : offsets) {
+                std::cout << i << std::endl;
+            }
 
-        //     std::cout << "from file:" << std::endl;
-        //     for (auto i : from_file) {
-        //         std::cout << i << std::endl;
-        //     }
-        // }
+            std::cout << "from file:" << std::endl;
+            for (auto i : from_file) {
+                std::cout << i << std::endl;
+            }
+
+            return false;
+        }
 
         ++id;
     }
