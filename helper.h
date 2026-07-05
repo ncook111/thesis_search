@@ -26,6 +26,13 @@ namespace FileType {
     };
 }
 
+namespace EncType {
+    enum Value : uint8_t {
+        GVB = 0,
+        PEF = 1,
+    };
+}
+
 uint8_t get_file_type(const std::string &type);
 MappedFile open_mmap_r(std::string file_path);
 MappedFile open_mmap_rw(std::string file_path);

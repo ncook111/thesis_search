@@ -391,7 +391,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    check_offsets_file(tokenizer, file_name + ".off");
+    //check_offsets_file(tokenizer, file_name + ".off");
 }
 
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {

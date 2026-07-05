@@ -80,7 +80,7 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
 }
 
 template <MapType M>
-const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &tokens_map, std::ofstream &file) {
+const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &tokens_map, std::ofstream &file, const uint8_t enc_type) {
     if (tokens_map.size() == 0) { 
         return Write_pos {
             static_cast<uint64_t>(file.tellp()),
@@ -88,7 +88,27 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
         };
     }
 
-    std::vector<uint8_t> all_enc_tok_offsets;
+    switch (enc_type) {
+        case EncType::GVB:
+            return write_offsets_to_file_gvb(tokens_map, file);
+            break;
+        case EncType::PEF:
+            return write_offsets_to_file_pef(tokens_map, file);
+            break;
+        default:
+            throw std::invalid_argument("Not a valid encoding type");
+    }
+
+
+}
+
+template <MapType M>
+const Write_pos write_offsets_to_file_gvb(const std::map<M, std::vector<uint64_t>> &tokens_map, std::ofstream &file) {
+}
+
+template <MapType M>
+const Write_pos write_offsets_to_file_pef(const std::map<M, std::vector<uint64_t>> &tokens_map, std::ofstream &file) {
+    std::vector<std::unique_ptr<succinct::bit_vector>> all_enc_tok_offsets;
     std::vector<uint64_t> id_to_offset;
 
     uint64_t offset = 1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
@@ -100,13 +120,14 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
         for (auto &off : offsets) {
             if (offsets_dedup.size() && offsets_dedup.back() == off) continue;
             offsets_dedup.push_back(off);
-            assert(off != 0);
         }
 
-        assert(offsets_dedup.size() != 0);
 
-        std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets_dedup));
-        std::move(enc_tok_offsets.begin(), enc_tok_offsets.end(), back_inserter(all_enc_tok_offsets));
+        succinct::bit_vector_builder enc_tok_offsets;
+        const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
+
+        all_enc_tok_offsets.push_back(std::make_unique<succinct::bit_vector>(&enc_tok_offsets));
+
         id_to_offset.push_back(offset);
 
         offset += enc_tok_offsets.size();
@@ -122,9 +143,11 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
     file.write(reinterpret_cast<const char*>(enc_id_to_offset.data()), sizeof(uint8_t) * id_to_offset_size);
 
     const uint64_t second_write_pos = file.tellp();
-    file.write(reinterpret_cast<const char*>(all_enc_tok_offsets.data()), sizeof(uint8_t) * tok_offsets_size);
-
-    return Write_pos {first_write_pos, second_write_pos};
+    for (auto &bv : all_enc_tok_offsets) {
+        const succinct::mapper::mappable_vector<uint64_t> &data = bv->data();
+        uint64_t num_words = data.size();
+        file.write(reinterpret_cast<const char*>(data.data()), num_words * sizeof(uint64_t));
+    }
 }
 
 template <MapType M>

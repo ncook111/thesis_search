@@ -329,16 +329,12 @@ const std::vector<uint64_t> gvb_decode_uint64_t(const std::vector<uint8_t> &byte
 }
 
 // Encoding a single vector with ef
-const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv_f, const std::vector<uint64_t> &nums) {
-    succinct::bit_vector_builder bv;
+const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums) {
     const uint64_t universe = nums.back() + 1;
     const uint64_t n = nums.size();
     const ds2i::global_parameters params;
 
     ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, params); 
-
-    succinct::bit_vector finalised(&bv);
-    bv_f.swap(finalised);
 
     return std::make_pair(universe, n);
 }
