@@ -11,7 +11,7 @@
 #include "helper.h"
 
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
-typedef std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> EntryMap;
+typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 bool valid_extension(const std::string &ext) {
     return (
@@ -45,12 +45,16 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         }
     }
 
+    // Must be sorted for later fst creation
+    std::sort(files.begin(), files.end());
+
     std::vector<std::string> file_mappings_vec;
 
     // Tokenize, generate offsets and fst's for all supported files
     size_t i = 0;
     for (auto &f : files) {
         file_mappings_vec.push_back(f.filename().string());
+        std::cout << f.filename().string() << std::endl;
 
         const uint8_t type = get_file_type(f.extension());
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
@@ -280,26 +284,26 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
     const size_t names_size = names.size();
 
     for (auto &t : tokens.alpha_tokens) {
-        search_index_by_type(offsets, t.first, TokenType::ALPHA, names_size);
+        search_index_by_type(offsets, t.first, TokenType::ALPHA, names_size, index_path);
     }
 
     for (auto &t : tokens.num_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::INT, names_size);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::INT, names_size, index_path);
     }
 
     for (auto &t : tokens.float_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::FLOAT, names_size);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::FLOAT, names_size, index_path);
     }
 
     for (auto &t : tokens.d_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::DATE, names_size);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::DATE, names_size, index_path);
     }
 
     for (auto &t : tokens.t_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::TIME, names_size);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::TIME, names_size, index_path);
     }
     for (auto &t : tokens.ipv4_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::IPV4, names_size);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::IPV4, names_size, index_path);
     }
 
     return offsets;
@@ -453,36 +457,31 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
         std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path);
 
         // For each token_offset, get closest prev newline and match in file to get offset to end of line
-        std::unordered_map<uint64_t, uint64_t> &line_offsets = all_line_offsets[file_id];
-        for (auto &cur : token_offsets) {
-
-            // Binary search for start, then get the next value (always the respective end value)
-            // Faster than using unordered_map, at least for smaller datasets
-            auto it_1 = std::lower_bound(entry_offsets.begin(), entry_offsets.end(), cur);
-            if (it_1 == entry_offsets.end() || *it_1 != cur) {
-                --it_1;
-            }
-
-            line_offsets[*it_1] = *(it_1+1) - 1;
+        std::vector<uint64_t> &line_offsets = all_line_offsets[file_id];
+        for (auto it = token_offsets.begin(); it != token_offsets.end(); ++it) {
+            line_offsets.push_back(entry_offsets[*it]);
+            line_offsets.push_back(entry_offsets[*(it) + 1] - 1);
         }
     }
 
     return all_line_offsets;
 }
 
-const EntryMap get_entries_offsets_intersection(const EntryMap &entries_1, const EntryMap &entries_2) {
-    EntryMap intersection_offsets;
+const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2) {
+    FieldMap intersection_offsets;
     // Offsets is a map of file_id's to offsets
     for (auto &o : entries_1) {
         const size_t file_id = o.first;
         if (!entries_2.contains(file_id)) continue;
 
-        const std::unordered_map<uint64_t, uint64_t> &entry_offsets_1 = o.second;
-        const std::unordered_map<uint64_t, uint64_t> &entry_offsets_2 = entries_2.at(file_id);
-        for (auto &entry : entry_offsets_1) {
-            // Entry present in both maps
-            if (entry_offsets_2.contains(entry.first)) {
-                intersection_offsets[file_id][entry.first] = entry.second;
+        const std::vector<uint64_t> &docids_1 = o.second;
+        const std::vector<uint64_t> &docids_2 = entries_2.at(file_id);
+        std::vector<uint64_t> &intersect_docids = intersection_offsets[file_id];
+        for (auto &docid : docids_1) {
+            // Check DocId present in both maps using binary search
+            auto it = std::lower_bound(docids_2.begin(), docids_2.end(), docid);
+            if (it != docids_2.end() && *it == docid) {
+                intersect_docids.push_back(docid);
             }
         }
 
@@ -522,9 +521,10 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
         const char *file = static_cast<char*>(mf.addr());
         const size_t file_size = mf.size();
 
-        for (auto &line : i.second) {
+        for (auto it = (i.second).begin(); it < (i.second).end() - 1; it += 2) {
+            uint64_t size = *(it + 1) - *it;
             std::cout << "Line: ";
-            std::cout.write(&file[line.first], line.second-line.first);
+            std::cout.write(&file[*it], size);
             std::cout << "\n";
         }
     }
@@ -542,12 +542,13 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
     for (auto &i : names) {
         names_vec.push_back(i);
     }
-
-    EntryMap result_entries = get_entries_offsets(search_index(queries.front(), index_path), names_vec, data_path, index_path);
     
+    FieldMap intersected_queries = search_index(queries.front(), index_path);
     for (auto it = queries.begin() + 1; it != queries.end(); ++it) {
-        result_entries = get_entries_offsets_intersection(result_entries, get_entries_offsets(search_index(*it, index_path), names_vec, data_path, index_path));
+        intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(*it, index_path));
     }
+
+    EntryMap result_entries = get_entries_offsets(intersected_queries, names_vec, data_path, index_path);
 
     return result_entries;
 }

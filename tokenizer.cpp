@@ -144,11 +144,9 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
 
     std::string curr_token;
 
-    // Set up entry_offsets, initial pair of (1,0) where second value is dummy
-    // First is offset to start of line
-    // Second is offset to end of line
-    // Offsets required to start from 1
-    entry_offsets.push_back(0);
+    // Set up entry_offsets with inital value of 1
+    // Offsets required to start at 1
+    entry_offsets.push_back(1);
 
     for (size_t bytes_read = 0; bytes_read < file_size; ++bytes_read) {
         if (isalnum(file[bytes_read])
@@ -158,13 +156,13 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
             || file[bytes_read] == ':') {
             curr_token.push_back(file[bytes_read]);
         } else {
-            if (file[bytes_read] == '\n') {
-                    // Push new entry with dummy second value
-                    entry_offsets.push_back(bytes_read + 2); // Start offset 1 after newline, dummy second value
+            if (curr_token.size()) {
+                processToken(curr_token, entry_offsets.size()); // Current DocId is size of entry_offsets vec
             }
 
-            if (curr_token.size()) {
-                processToken(curr_token, bytes_read - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+            if (file[bytes_read] == '\n') {
+                // Push new entry
+                entry_offsets.push_back(bytes_read + 2); // Start offset 1 after newline
             }
         }
 
@@ -174,8 +172,11 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
 
     // Process leftover token if present
     if (curr_token.size()) {
-        processToken(curr_token, file_size - curr_token.size() + 1); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+        processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
+
+    // Final dummy docId representing eof
+    entry_offsets.push_back(file_size + 2);
 
     std::cout << "Lines: " << entry_offsets.size();
     std::cout << "Total bytes read: " << file_size << std::endl;

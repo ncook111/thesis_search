@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
         create_index(index_path, data_path);
     // Index search mode
     } else if (mode == "-s") {
-
         if (argc == ARG_MIN) {
             std::cout << "Help: ingest help" << std::endl;
             return 0;
@@ -50,7 +49,7 @@ int main(int argc, char *argv[]) {
         std::vector<std::string> queries;
         for (size_t i = ARG_MIN; i < argc; i++) {
             queries.push_back(argv[i]);
-            std::cout << argv[i];
+            std::cout << argv[i] << std::endl;
         }
 
         const EntryMap results = process_queries(queries, data_path, index_path);

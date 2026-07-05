@@ -11,7 +11,7 @@
 #include "custom_types.h"
 
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
-typedef std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> EntryMap;
+typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 bool valid_extension(const std::string &ext);
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str);
@@ -23,7 +23,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
 const uint8_t str_to_token_type(const std::string &type_str);
 const std::string token_type_to_str(const uint8_t &type);
 char* get_entry_str(const uint64_t &line_start, const uint64_t &line_end, const char *file);
-const EntryMap get_entries_offsets_intersection(const EntryMap &entries_1, const EntryMap &entries_2);
+const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file);
 const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name);
 bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name);
@@ -54,14 +54,15 @@ struct Write_pos {
 };
 
 template <QueryType Q>
-void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, size_t files_indexed) {
+void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, size_t files_indexed, const std::string &index_path) {
     std::string type_str = token_type_to_str(type);
     // Get list of all fst files filtered by type
     size_t i = 0;
     for (; i < files_indexed; ++i) {
-        std::string fst_file_name = "index/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
-        std::string offset_file_name = "index/offsets/" + std::to_string(i) + ".off";
+        std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
+        std::string offset_file_name = index_path + "/offsets/" + std::to_string(i) + ".off";
         if (!std::filesystem::exists(fst_file_name)) { 
+            std::cout << fst_file_name << std::endl;
             throw std::invalid_argument("Fst file does not exist");
         }
 
@@ -120,7 +121,6 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 
 template <MapType M>
 bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, uint8_t type) {
-    std::cout << "here1" << std::endl;
     std::vector<uint64_t> id_to_offset;
     uint64_t offset = 1;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
@@ -160,8 +160,9 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
         std::vector<uint64_t> offsets;
         
-        // Convert offsets to 0 indexing
+        // Convert offsets to 0 indexing and remove duplicates
         for (auto &i : it->second) {
+            if (offsets.size() && offsets.back() == i-1) continue;
             offsets.push_back(i - 1);
         }
 
@@ -169,15 +170,26 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
         try {
              from_file = get_tok_offsets_from_file(id, id_to_offset, file_name, type);
         } catch (const std::invalid_argument &e) {
+            std::cout << "here" << std::endl;
             except = true;
         }
          
-        correct = from_file == offsets;
+        correct = correct && (from_file == offsets);
+
+        if (from_file != offsets) {
+            std::cout << "Offsets OG:" << std::endl;
+            for (auto i : offsets) {
+                std::cout << i << std::endl;
+            }
+
+            std::cout << "from file:" << std::endl;
+            for (auto i : from_file) {
+                std::cout << i << std::endl;
+            }
+        }
 
         ++id;
     }
-
-    std::cout << "here2" << std::endl;
 
     if (correct || (empty && except)) {
         //std::cout << type_string << " Token offsets correct: " << file_name << std::endl;

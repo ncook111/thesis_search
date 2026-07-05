@@ -4,9 +4,6 @@
 
 using namespace boost::interprocess;
 
-typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
-typedef std::unordered_map<size_t, std::unordered_map<uint64_t, uint64_t>> EntryMap;
-
 uint8_t get_file_type(const std::string &type) {
     if (type == ".csv") return 0;
     if (type == ".json") return 0;
