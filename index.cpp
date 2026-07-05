@@ -288,14 +288,12 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
         size_to_read = id_to_offset[token_id+1] - id_to_offset[token_id];
     }
 
-    
-
     switch (enc_type) {
         case EncType::GVB:
-            return read_id_offsets_gvb(file, offset + id_to_offset[token_id]-1, size_to_read);
+            return read_tok_offsets_gvb(file, offset + id_to_offset[token_id]-1, size_to_read);
             break;
         case EncType::PEF:
-            return read_id_offsets_pef(file, offset + id_to_offset[token_id]-1, size_to_read);
+            return read_tok_offsets_pef(file, offset + id_to_offset[token_id]-1, size_to_read);
             break;
         default:
             throw std::invalid_argument("Not a valid encoding type");
