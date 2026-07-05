@@ -93,11 +93,19 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 
     uint64_t offset = 1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
                          // A value of 0 is used as terminator when decoding
-    uint64_t count = 0;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
+        // Duplicate docids may be present from tokenization stage, remove them
         const std::vector<uint64_t> &offsets = it->second;
-        count += offsets.size();
-        std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets));
+        std::vector<uint64_t> offsets_dedup;
+        for (auto &off : offsets) {
+            if (offsets_dedup.size() && offsets_dedup.back() == off) continue;
+            offsets_dedup.push_back(off);
+            assert(off != 0);
+        }
+
+        assert(offsets_dedup.size() != 0);
+
+        std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets_dedup));
         std::move(enc_tok_offsets.begin(), enc_tok_offsets.end(), back_inserter(all_enc_tok_offsets));
         id_to_offset.push_back(offset);
 
@@ -124,7 +132,11 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
     std::vector<uint64_t> id_to_offset;
     uint64_t offset = 1;
     for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
-        const std::vector<uint64_t> &offsets = it->second;
+        std::vector<uint64_t> offsets;
+        for (auto &i : it->second) {
+            if (offsets.size() && offsets.back() == i) continue;
+            offsets.push_back(i);
+        }
         const std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets));
         id_to_offset.push_back(offset);
         offset += enc_tok_offsets.size();
@@ -146,10 +158,19 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
     bool ret;
     if (input == id_to_offset || (empty && except)) {
         ret = true;
-        //std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
+        std::cout << type_string << " ID offsets correct: " << file_name << std::endl;
     } else {
         ret = false;
         std::cout << type_string << " ID offsets incorrect: " << file_name << std::endl;
+                std::cout << "Offsets OG:" << std::endl;
+                for (auto i : id_to_offset) {
+                    std::cout << i << std::endl;
+                }
+
+                std::cout << "from file:" << std::endl;
+                for (auto i : input) {
+                    std::cout << i << std::endl;
+                }
     }
 
     offset = 1;
@@ -176,23 +197,23 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
          
         correct = correct && (from_file == offsets);
 
-        if (from_file != offsets) {
-            std::cout << "Offsets OG:" << std::endl;
-            for (auto i : offsets) {
-                std::cout << i << std::endl;
-            }
+        // if (from_file != offsets) {
+        //     std::cout << "Offsets OG:" << std::endl;
+        //     for (auto i : offsets) {
+        //         std::cout << i << std::endl;
+        //     }
 
-            std::cout << "from file:" << std::endl;
-            for (auto i : from_file) {
-                std::cout << i << std::endl;
-            }
-        }
+        //     std::cout << "from file:" << std::endl;
+        //     for (auto i : from_file) {
+        //         std::cout << i << std::endl;
+        //     }
+        // }
 
         ++id;
     }
 
     if (correct || (empty && except)) {
-        //std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
+        std::cout << type_string << " Token offsets correct: " << file_name << std::endl;
         return ret && true;
     } else {
         std::cout << type_string << " Token offsets incorrect: " << file_name << std::endl;
