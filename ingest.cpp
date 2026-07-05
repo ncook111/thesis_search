@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     const uint8_t enc_type = get_enc_type(argv[2]);
     const std::string data_path = argv[3];
     const std::string index_path = argv[4];
-    
+
     // Create index mode
     if (act_mode == "-c") {
         if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
             std::cout << argv[i] << std::endl;
         }
 
-        const EntryMap results = process_queries(queries, data_path, index_path);
+        const EntryMap results = process_queries(queries, data_path, index_path, enc_type);
         print_entries(results, index_path, data_path);
     }
 

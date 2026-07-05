@@ -106,7 +106,35 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
     check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 }
 
-const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, uint8_t type) {
+const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
+    std::vector<uint8_t> enc_id_to_offset(size_to_read);
+    std::memcpy(reinterpret_cast<char*>(enc_id_to_offset.data()), &file[addr_offset], size_to_read);
+
+    const std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
+
+    return id_to_offset;
+}
+
+const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
+    // Read in universe and n first
+    Pef_Header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[addr_offset], sizeof(header));
+
+    std::vector<uint64_t> raw_input(size_to_read / 8);
+    std::memcpy(raw_input.data(), &file[addr_offset + sizeof(header)], size_to_read);
+
+    succinct::bit_vector_builder bvb2(header.num_bits);
+
+    succinct::bit_vector_builder::bits_type &target = bvb2.move_bits(); 
+
+    std::copy(raw_input.begin(), raw_input.end(), target.begin());
+
+    succinct::bit_vector bv(&bvb2);
+
+    return partitioned_ef_decode(bv, header.universe, header.n);
+}
+
+const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
     const MappedFile mf = open_mmap_r(file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -155,16 +183,57 @@ const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_nam
             break;
     }
 
-    std::vector<uint8_t> enc_id_to_offset(size_to_read);
-    std::memcpy(reinterpret_cast<char*>(enc_id_to_offset.data()), &file[addr_offset], size_to_read);
-
-    const std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
-
-    return id_to_offset;
+    switch (enc_type) {
+        case EncType::GVB:
+            return read_id_offsets_gvb(file, addr_offset, size_to_read);
+            break;
+        case EncType::PEF:
+            return read_id_offsets_pef(file, addr_offset, size_to_read);
+            break;
+        default:
+            throw std::invalid_argument("Not a valid encoding type");
+    }
 }
 
+const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
+    std::vector<uint8_t> enc_tok_offsets(size_to_read);
+    std::memcpy(reinterpret_cast<char*>(enc_tok_offsets.data()), &file[addr_offset], size_to_read);
+    std::vector<uint64_t> offsets = delta_decode(gvb_decode_uint64_t(enc_tok_offsets));
+    
+    // Convert back to 0 indexing
+    for (auto &o : offsets) --o;
+
+    return offsets;
+}
+
+const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
+    std::vector<uint8_t> enc_tok_offsets(size_to_read);
+
+    Pef_Header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[addr_offset], sizeof(header));
+
+    std::vector<uint64_t> raw_input(size_to_read / 8);
+    std::memcpy(raw_input.data(), &file[addr_offset + sizeof(header)], size_to_read);
+
+    succinct::bit_vector_builder bvb2(header.num_bits);
+
+    succinct::bit_vector_builder::bits_type &target = bvb2.move_bits(); 
+
+    std::copy(raw_input.begin(), raw_input.end(), target.begin());
+
+    succinct::bit_vector bv(&bvb2);
+
+    std::vector<uint64_t> offsets = partitioned_ef_decode(bv, header.universe, header.n);
+    
+    // Convert back to 0 indexing
+    for (auto &o : offsets) --o;
+
+    return offsets;
+}
+
+
 // Output converts offsets values from file from 1 indexing back to 0 indexing
-const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type) {
+const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type) {
     const MappedFile mf = open_mmap_r(file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -219,15 +288,18 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, 
         size_to_read = id_to_offset[token_id+1] - id_to_offset[token_id];
     }
 
-    std::vector<uint8_t> enc_tok_offsets(size_to_read);
-    std::memcpy(reinterpret_cast<char*>(enc_tok_offsets.data()), &file[offset + id_to_offset[token_id]-1], size_to_read);
+    
 
-    std::vector<uint64_t> offsets = delta_decode(gvb_decode_uint64_t(enc_tok_offsets));
-
-    // Convert back to 0 indexing
-    for (auto &o : offsets) --o;
-
-    return offsets;
+    switch (enc_type) {
+        case EncType::GVB:
+            return read_id_offsets_gvb(file, offset + id_to_offset[token_id]-1, size_to_read);
+            break;
+        case EncType::PEF:
+            return read_id_offsets_pef(file, offset + id_to_offset[token_id]-1, size_to_read);
+            break;
+        default:
+            throw std::invalid_argument("Not a valid encoding type");
+    }
 }
 
 // Output converts offsets values from file from 1 indexing back to 0 indexing
@@ -255,7 +327,7 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
     return entry_offsets_vec;
 }
 
-const FieldMap search_index(const std::string &query, const std::string &index_path) {
+const FieldMap search_index(const std::string &query, const std::string &index_path, const uint8_t enc_type) {
     FieldMap offsets;
 
     const Tokenizer tokens = Tokenizer::from_string(query);
@@ -284,26 +356,26 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
     const size_t names_size = names.size();
 
     for (auto &t : tokens.alpha_tokens) {
-        search_index_by_type(offsets, t.first, TokenType::ALPHA, names_size, index_path);
+        search_index_by_type(offsets, t.first, TokenType::ALPHA, names_size, index_path, enc_type);
     }
 
     for (auto &t : tokens.num_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::INT, names_size, index_path);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::INT, names_size, index_path, enc_type);
     }
 
     for (auto &t : tokens.float_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::FLOAT, names_size, index_path);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::FLOAT, names_size, index_path, enc_type);
     }
 
     for (auto &t : tokens.d_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::DATE, names_size, index_path);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::DATE, names_size, index_path, enc_type);
     }
 
     for (auto &t : tokens.t_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::TIME, names_size, index_path);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::TIME, names_size, index_path, enc_type);
     }
     for (auto &t : tokens.ipv4_tokens) {
-        search_index_by_type(offsets, to_bytes(t.first), TokenType::IPV4, names_size, index_path);
+        search_index_by_type(offsets, to_bytes(t.first), TokenType::IPV4, names_size, index_path, enc_type);
     }
 
     return offsets;
@@ -391,7 +463,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    //check_offsets_file(tokenizer, file_name + ".off");
+    check_offsets_file(tokenizer, file_name + ".off", enc_type);
 }
 
 const uint64_t write_entry_gvb(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
@@ -409,6 +481,8 @@ const uint64_t write_entry_gvb(const std::vector<uint64_t> &entry_offsets, std::
 const uint64_t write_entry_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     succinct::bit_vector_builder enc_tok_offsets;
     const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
+    const uint64_t num_bits = enc_tok_offsets.size();
+    const Pef_Header header = {num_bits, res.first, res.second};
     succinct::bit_vector enc_tok_offsets_final(&enc_tok_offsets);
 
     // Write to file
@@ -416,9 +490,8 @@ const uint64_t write_entry_pef(const std::vector<uint64_t> &entry_offsets, std::
 
     const uint64_t write_pos = file.tellp();
 
-    // Write universe and n
-    file.write(reinterpret_cast<const char*>(&res.first), sizeof(uint64_t));
-    file.write(reinterpret_cast<const char*>(&res.second), sizeof(uint64_t));
+    // Write num_bits, universe and n
+    file.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
     // Write enc_tok_offsets
     file.write(reinterpret_cast<const char*>(enc_tok_offsets_final.data().data()), entry_offsets_size);
@@ -444,15 +517,15 @@ const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_of
 
 }
 
-void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name) {
+void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type) {
     bool check = true;
-    check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA);
-    check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT);
-    // check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT);
-    // check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE);
-    // check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME);
-    // check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4);
-    //check = check && check_entry_offsets(tokenizer.entry_offsets, file_name);
+    check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA, enc_type);
+    check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT ,enc_type);
+    // check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT, enc_type);
+    // check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE, enc_type);
+    // check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME, enc_type);
+    // check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4, enc_type);
+    //check = check && check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
 
     if (check) {
         std::cout << file_name << ": Offsets file correct" << std::endl;
@@ -461,7 +534,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     }
 }
 
-bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name) {
+bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name, const uint8_t enc_type) {
     // Convert into a standard vector and into 0 indexing
     std::vector<uint64_t> entry_offsets_0;
     for (auto &cur : entry_offsets) {
@@ -564,7 +637,7 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
     }
 }
 
-const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path) {
+const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type) {
     assert(queries.size() != 0);
 
     fst::StdConstFst *fst = nullptr;
@@ -577,9 +650,9 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
         names_vec.push_back(i);
     }
     
-    FieldMap intersected_queries = search_index(queries.front(), index_path);
+    FieldMap intersected_queries = search_index(queries.front(), index_path, enc_type);
     for (auto it = queries.begin() + 1; it != queries.end(); ++it) {
-        intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(*it, index_path));
+        intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(*it, index_path, enc_type));
     }
 
     EntryMap result_entries = get_entries_offsets(intersected_queries, names_vec, data_path, index_path);
