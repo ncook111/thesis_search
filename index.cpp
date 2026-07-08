@@ -13,14 +13,6 @@
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
-bool valid_extension(const std::string &ext) {
-    return (
-        ext == ".csv" ||
-        ext == ".json" ||
-        ext == ".logfmt"
-    );
-}
-
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type) {
     const std::filesystem::path index_dir = index_dir_str;
     const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
@@ -207,13 +199,12 @@ const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint
 }
 
 const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
-    std::vector<uint8_t> enc_tok_offsets(size_to_read);
-
     Pef_Header header = {};
     std::memcpy(reinterpret_cast<char*>(&header), &file[addr_offset], sizeof(header));
 
-    std::vector<uint64_t> raw_input(size_to_read / 8);
-    std::memcpy(raw_input.data(), &file[addr_offset + sizeof(header)], size_to_read);
+    std::vector<uint64_t> raw_input((size_to_read - sizeof(header)) / 8);
+
+    std::memcpy(raw_input.data(), &file[addr_offset + sizeof(header)], size_to_read - sizeof(header));
 
     succinct::bit_vector_builder bvb2(header.num_bits);
 
@@ -532,7 +523,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
     }
 }
 
-bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name, const uint8_t enc_type) {
+const bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name, const uint8_t enc_type) {
     // Convert into a standard vector and into 0 indexing
     std::vector<uint64_t> entry_offsets_0;
     for (auto &cur : entry_offsets) {
@@ -574,6 +565,7 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
 
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2) {
     FieldMap intersection_offsets;
+    
     // Offsets is a map of file_id's to offsets
     for (auto &o : entries_1) {
         const size_t file_id = o.first;

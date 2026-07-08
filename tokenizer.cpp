@@ -358,7 +358,7 @@ void Tokenizer::printStatistics() {
     std::cout << "Total Boolean Tokens: " << boolean_tokens.size() << std::endl;
 }
 
-std::vector<std::string> Tokenizer::getAlphaTokens() {
+const std::vector<std::string> Tokenizer::getAlphaTokens() {
     std::vector<std::string> tokens;
     for (auto &i: alpha_tokens) {
         tokens.push_back(i.first);
@@ -367,7 +367,7 @@ std::vector<std::string> Tokenizer::getAlphaTokens() {
     return tokens;
 }
 
-std::vector<int64_t> Tokenizer::getNumTokens() {
+const std::vector<int64_t> Tokenizer::getNumTokens() {
     std::vector<int64_t> tokens;
     for (auto &i: num_tokens) {
         tokens.push_back(i.first);
@@ -375,7 +375,7 @@ std::vector<int64_t> Tokenizer::getNumTokens() {
 
     return tokens;
 }
-std::vector<float> Tokenizer::getFloatTokens() {
+const std::vector<float> Tokenizer::getFloatTokens() {
     std::vector<float> tokens;
     for (auto &i: float_tokens) {
         tokens.push_back(i.first);
@@ -383,7 +383,7 @@ std::vector<float> Tokenizer::getFloatTokens() {
 
     return tokens;
 }
-std::vector<time_t> Tokenizer::getDateTokens() {
+const std::vector<time_t> Tokenizer::getDateTokens() {
     std::vector<time_t> tokens;
     for (auto &i: d_tokens) {
         tokens.push_back(i.first);
@@ -391,7 +391,7 @@ std::vector<time_t> Tokenizer::getDateTokens() {
 
     return tokens;
 }
-std::vector<time_t> Tokenizer::getTimeTokens() {
+const std::vector<time_t> Tokenizer::getTimeTokens() {
     std::vector<time_t> tokens;
     for (auto &i: t_tokens) {
         tokens.push_back(i.first);
@@ -399,7 +399,7 @@ std::vector<time_t> Tokenizer::getTimeTokens() {
 
     return tokens;
 }
-std::vector<uint32_t> Tokenizer::getIPTokens() {
+const std::vector<uint32_t> Tokenizer::getIPTokens() {
         std::vector<uint32_t> tokens;
     for (auto &i: ipv4_tokens) {
         tokens.push_back(i.first);

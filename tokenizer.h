@@ -50,12 +50,12 @@ class Tokenizer {
         void printIPTokens();
         void printStatistics();
 
-        std::vector<std::string> getAlphaTokens();
-        std::vector<int64_t> getNumTokens();
-        std::vector<float> getFloatTokens();
-        std::vector<time_t> getDateTokens();
-        std::vector<time_t> getTimeTokens();
-        std::vector<uint32_t> getIPTokens();
+        const std::vector<std::string> getAlphaTokens();
+        const std::vector<int64_t> getNumTokens();
+        const std::vector<float> getFloatTokens();
+        const std::vector<time_t> getDateTokens();
+        const std::vector<time_t> getTimeTokens();
+        const std::vector<uint32_t> getIPTokens();
 
     private:
         Tokenizer() = default;

@@ -33,10 +33,11 @@ namespace EncType {
     };
 }
 
+const bool valid_extension(const std::string &ext);
 const uint8_t get_file_type(const std::string &type);
 const uint8_t get_enc_type(const std::string &type);
-MappedFile open_mmap_r(std::string file_path);
-MappedFile open_mmap_rw(std::string file_path);
+const MappedFile open_mmap_r(std::string file_path);
+const MappedFile open_mmap_rw(std::string file_path);
 
 template <class F>
 const std::vector<uint8_t> to_bytes(const F &input) {
@@ -47,14 +48,14 @@ const std::vector<uint8_t> to_bytes(const F &input) {
 } 
 
 template <class F>
-F from_bytes(const std::vector<uint8_t> &bytes) {
+const F from_bytes(const std::vector<uint8_t> &bytes) {
     F val;
     std::memcpy(&val, bytes.data(), sizeof(F));
     return val;
 }
 
 template <FstQueryType Q, MapType M, class T> 
-std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
+const std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
     std::vector<Q> tokens;
 
     // Handle strings differently to all other M types

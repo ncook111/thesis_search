@@ -4,6 +4,14 @@
 
 using namespace boost::interprocess;
 
+const bool valid_extension(const std::string &ext) {
+    return (
+        ext == ".csv" ||
+        ext == ".json" ||
+        ext == ".logfmt"
+    );
+}
+
 const uint8_t get_file_type(const std::string &type) {
     if (type == ".csv") return 0;
     if (type == ".json") return 0;
@@ -19,23 +27,16 @@ const uint8_t get_enc_type(const std::string &type) {
     throw std::invalid_argument("Encoding type not supported");
 }
 
-MappedFile open_mmap_r(std::string file_path) {
+const MappedFile open_mmap_r(std::string file_path) {
     file_mapping file_mapping(file_path.data(), read_only);
     mapped_region file_region(file_mapping, read_only);
-
-    void * file_addr = file_region.get_address();
-    std::size_t size = file_region.get_size();
 
     return MappedFile{std::move(file_mapping), std::move(file_region)};
 }
 
-MappedFile open_mmap_rw(std::string file_path) {
-    
+const MappedFile open_mmap_rw(std::string file_path) {
     file_mapping file_mapping(file_path.data(), read_write);
     mapped_region file_region(file_mapping, read_write);
-
-    void * file_addr = file_region.get_address();
-    std::size_t size = file_region.get_size();
 
     return MappedFile{std::move(file_mapping), std::move(file_region)};
 }

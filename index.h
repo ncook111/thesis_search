@@ -13,7 +13,6 @@
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
-bool valid_extension(const std::string &ext);
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type);
@@ -26,7 +25,7 @@ char* get_entry_str(const uint64_t &line_start, const uint64_t &line_end, const 
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file, const uint8_t enc_type);
 const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_name);
-bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name, const uint8_t enc_type);
+const bool check_entry_offsets(std::vector<uint64_t> entry_offsets, const std::string &file_name, const uint8_t enc_type);
 const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path);
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path);
 const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);

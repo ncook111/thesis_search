@@ -1,6 +1,3 @@
-#include <iostream>
-#include <cstdint>
-#include <cstddef>
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
 
@@ -19,9 +16,7 @@ inline const uint8_t get_length(const uint32_t num);
 void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums);
-const std::vector<std::pair<uint64_t, uint64_t>> partitioned_ef_encode_multi(succinct::bit_vector &bv_f, std::vector<std::vector<uint64_t>> &vecs);
-const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe, const uint64_t n);
-const std::vector<uint64_t> partitioned_ef_decode_multi(const succinct::bit_vector &bv_f, const std::pair<uint64_t, uint64_t> &encoded_stats);
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t &universe, const uint64_t &n);
 
 template <class F>
 std::vector<F> delta_encode(const std::vector<F> &nums) {

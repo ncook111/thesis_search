@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
         }
 
         const EntryMap results = process_queries(queries, data_path, index_path, enc_type);
-        print_entries(results, index_path, data_path);
+        //print_entries(results, index_path, data_path);
     }
 
     return 0;
