@@ -53,49 +53,26 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         tokenizer.printStatistics();
 
         const std::string file_id = std::to_string(i);
+
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
 
         std::cout << "Creating Alpha FST" << std::endl;
         create_fst<std::string>(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
-        //check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
+        check_fst(tokenizer.getAlphaTokens(), fst_dir.string() + "/" + file_id + "_alpha.fst");
         tokenizer.alpha_tokens.clear();
         std::cout << "Finished" << std::endl;
 
         std::cout << "Creating Float FST" << std::endl;
         create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),  fst_dir.string() + "/" + file_id + "_float.fst");
-        //check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
+        check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
         tokenizer.float_tokens.clear();
-        std::cout << "Finished" << std::endl;
-
-        std::cout << "Creating Int PEF" << std::endl;
-        create_pef_tokens<uint64_t>(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.pef");
-        //check_pef_tokens<uint64_t>(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.pef");
-        tokenizer.num_tokens.clear();
-        std::cout << "Finished" << std::endl;
-
-        std::cout << "Creating Date PEF" << std::endl;
-        create_pef_tokens<uint64_t>(tokenizer.getDateTokens(),  fst_dir.string() + "/" + file_id + "_date.pef");
-        //check_pef_tokens<uint64_t>(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.pef");
-        tokenizer.d_tokens.clear();
-        std::cout << "Finished" << std::endl;
-
-        std::cout << "Creating Time PEF" << std::endl;
-        create_pef_tokens<uint64_t>(tokenizer.getTimeTokens(),  fst_dir.string() + "/" + file_id + "_time.pef");
-        //check_pef_tokens<uint64_t>(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.pef");
-        tokenizer.t_tokens.clear();
-        std::cout << "Finished" << std::endl;
-
-        std::cout << "Creating IPV4 PEF" << std::endl;
-        create_pef_tokens<uint64_t>(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.pef");
-        //check_pef_tokens<uint64_t>(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.pef");
-        tokenizer.ipv4_tokens.clear();
         std::cout << "Finished" << std::endl;
 
         ++i;
     }
 
     create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
-    //check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 }
 
 const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read) {
@@ -305,7 +282,7 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
     Offsets_header header = {};
     std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
 
-    const size_t size_to_read = file_size - header.entry_offsets_header;
+    const size_t size_to_read = header.int_toks_header - header.entry_offsets_header;
 
     if (size_to_read == 0) throw std::invalid_argument("No entry offsets present in file");
 
@@ -421,7 +398,7 @@ const std::string token_type_to_str(const uint8_t &type) {
     ipv4_offsets
     ip4v_id_to_offsets
 */ 
-void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type) {
+void generate_offsets_file(Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type) {
     std::ofstream file;
     file.open(file_name + ".off", std::ios::binary);
 
@@ -431,7 +408,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     Offsets_header header = {};
     file.write(reinterpret_cast<const char*>(&header), sizeof(header)); // Reserve for later use
-    
+
     const Write_pos alpha_pos = write_offsets_to_file(tokenizer.alpha_tokens, file, enc_type);
     const Write_pos num_pos = write_offsets_to_file(tokenizer.num_tokens, file, enc_type);
     const Write_pos float_pos = write_offsets_to_file(tokenizer.float_tokens, file, enc_type);
@@ -439,6 +416,18 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
     const Write_pos time_pos = write_offsets_to_file(tokenizer.t_tokens, file, enc_type);
     const Write_pos ipv4_pos = write_offsets_to_file(tokenizer.ipv4_tokens, file, enc_type);
     const uint64_t entry_offsets_pos = write_entry_offsets_to_file(tokenizer.entry_offsets, file, enc_type); // Handled differently to above
+
+    const uint64_t num_tok_off = create_pef_tokens<uint64_t>(tokenizer.getNumTokens(), file);
+    //check_pef_tokens<uint64_t>(tokenizer.getNumTokens(), fst_dir.string() + "/" + file_id + "_int.pef");
+
+    const uint64_t date_tok_off = create_pef_tokens<uint64_t>(tokenizer.getDateTokens(),  file);
+    //check_pef_tokens<uint64_t>(tokenizer.getDateTokens(), fst_dir.string() + "/" + file_id + "_date.pef");
+
+    const uint64_t time_tok_off = create_pef_tokens<uint64_t>(tokenizer.getTimeTokens(),  file);
+    //check_pef_tokens<uint64_t>(tokenizer.getTimeTokens(), fst_dir.string() + "/" + file_id + "_time.pef");
+
+    const uint64_t ip_tok_off = create_pef_tokens<uint64_t>(tokenizer.getIPTokens(), file);
+    //check_pef_tokens<uint64_t>(tokenizer.getIPTokens(), fst_dir.string() + "/" + file_id + "_ipv4.pef");
 
 
 
@@ -450,7 +439,11 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
         date_pos.id_map_pos, date_pos.offsets_pos,
         time_pos.id_map_pos, time_pos.offsets_pos,
         ipv4_pos.id_map_pos, ipv4_pos.offsets_pos,
-        entry_offsets_pos
+        entry_offsets_pos,
+        num_tok_off,
+        date_tok_off,
+        time_tok_off,
+        ip_tok_off
     };
 
     file.seekp(0); 
@@ -458,7 +451,15 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    //check_offsets_file(tokenizer, file_name + ".off", enc_type);
+    check_offsets_file(tokenizer, file_name + ".off", enc_type);
+    check_all_pef_tokens(tokenizer, file_name + ".off");
+}
+
+void check_all_pef_tokens(Tokenizer &tokenizer, const std::string &file_path) {
+    check_pef_tokens<uint64_t>(tokenizer.getNumTokens(), file_path, TokenType::INT);
+    check_pef_tokens<uint64_t>(tokenizer.getDateTokens(), file_path, TokenType::DATE);
+    check_pef_tokens<uint64_t>(tokenizer.getTimeTokens(), file_path, TokenType::TIME);
+    check_pef_tokens<uint64_t>(tokenizer.getIPTokens(), file_path, TokenType::IPV4);
 }
 
 const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {

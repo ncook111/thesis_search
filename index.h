@@ -17,7 +17,7 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type);
-void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
+void generate_offsets_file(Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 const FieldMap search_index(const std::string &query, const std::string &index_path, const uint8_t enc_type);
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 const uint8_t str_to_token_type(const std::string &type_str);
@@ -38,6 +38,7 @@ const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint
 const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read);
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t addr_offset, const size_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t addr_offset, const size_t size_to_read);
+void check_all_pef_tokens(Tokenizer &tokenizer, const std::string &file_path);
 
 // Saved to the front of the file
 struct Offsets_header {
@@ -48,6 +49,10 @@ struct Offsets_header {
     uint64_t time_id_map_header, time_offsets_header;
     uint64_t ipv4_id_map_header, ipv4_offsets_header;
     uint64_t entry_offsets_header;
+    uint64_t int_toks_header;
+    uint64_t date_toks_header;
+    uint64_t time_toks_header;
+    uint64_t ipv4_toks_header;
 };
 
 struct Write_pos {
@@ -56,20 +61,20 @@ struct Write_pos {
 };
 
 template <MapType M>
-std::vector<M> read_pef_tokens(std::string &file_path) {
+std::vector<M> read_pef_tokens(std::string &file_path, const uint64_t &offset, const uint64_t &size_to_read) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
 
     // Read in universe and n first
-    Pef_Header header = get_bv_header(file, 0);
+    Pef_Header header = get_bv_header(file, offset);
 
     // If null return empty vec
     if (!header.n) {
         return std::vector<M>();
     }
 
-    succinct::bit_vector bv = get_bv(file, header, sizeof(header), file_size - sizeof(header));
+    succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
     std::vector<uint64_t> offsets = partitioned_ef_decode(bv, header.universe, header.n);
     
@@ -77,19 +82,14 @@ std::vector<M> read_pef_tokens(std::string &file_path) {
 }
 
 template <MapType M>
-void create_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
-    std::ofstream file;
-    file.open(file_path, std::ios::binary);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file: " + file_path);
-    }
-
+const uint64_t create_pef_tokens(const std::vector<M> &tokens, std::ofstream &file) {
     if (!tokens.size()) {
+        const uint64_t pos = file.tellp();
+
         // Write null num_bits, universe and n then return
         const Pef_Header header = {};
         file.write(reinterpret_cast<const char*>(&header), sizeof(header));
-        return;
+        return pos;
     }
 
     succinct::bit_vector_builder pef_tokens;
@@ -97,6 +97,8 @@ void create_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
     const uint64_t num_bits = pef_tokens.size();
     const Pef_Header header = {num_bits, res.first, res.second};
     succinct::bit_vector pef_tokens_final(&pef_tokens);
+
+    const uint64_t pos = file.tellp();
 
     // Write to file
     const uint64_t pef_tokens_size = pef_tokens_final.data().size() * sizeof(uint64_t);
@@ -107,17 +109,45 @@ void create_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
     // Write pef_tokens_final
     file.write(reinterpret_cast<const char*>(pef_tokens_final.data().data()), pef_tokens_size);
 
-    std::cout << "here" << std::endl;
+    return pos;
 }
 
 template <MapType M>
-bool check_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
-    std::vector<M> out = read_pef_tokens<M>(file_path);
+bool check_pef_tokens(const std::vector<M> &tokens, std::string file_path, const uint8_t type) {
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
+
+    // Read in header
+    Offsets_header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
+
+    uint64_t offset;
+    uint64_t size_to_read;
+    switch (type) {
+        case TokenType::INT: 
+            offset = header.int_toks_header;
+            size_to_read = header.date_toks_header - header.int_toks_header;
+            break;
+        case TokenType::DATE: 
+            offset = header.date_toks_header;
+            size_to_read = header.time_toks_header - header.date_toks_header;
+            break;
+        case TokenType::TIME: 
+            offset = header.time_toks_header;
+            size_to_read = header.ipv4_toks_header - header.time_toks_header;
+            break;
+        case TokenType::IPV4: 
+            offset = header.ipv4_toks_header;
+            size_to_read = file_size - header.ipv4_toks_header;
+            break;
+        default: throw std::invalid_argument("Type not valid here");
+    }
+
+    std::vector<M> out = read_pef_tokens<M>(file_path, offset, size_to_read);
 
     if (out == tokens) {
         std::cout << "correct" << std::endl;
-        std::cout << "og size: " << tokens.size();
-        std::cout << "from file: " << out.size();
         return true;
     } else {
         std::cout << "incorrect" << std::endl;
@@ -152,14 +182,42 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
             id = get_id_from_fst(*fst, query);
             if (id == -1) continue; // Not found
         } else {
-            std::string pef_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".pef";
+            std::string file_name = index_path + "/offsets/" + std::to_string(i) + ".off";
             
-            if (!std::filesystem::exists(pef_file_name)) { 
-                std::cout << pef_file_name << std::endl;
-                throw std::invalid_argument("Pef file does not exist");
+            if (!std::filesystem::exists(file_name)) { 
+                std::cout << file_name << std::endl;
+                throw std::invalid_argument("File does not exist");
             }
 
-            id = find_pef_id(pef_file_name, query);
+            // Get header
+            std::ifstream file;
+            file.open(file_name, std::ios::binary | std::ios::ate);
+
+            uint64_t file_size = file.tellg();
+
+            file.seekg(0);
+
+            Offsets_header header = {};
+            file.read(reinterpret_cast<char*>(&header), sizeof(header)); // Reserve for later use
+
+            uint64_t offset;
+            uint64_t size_to_read;
+            switch (type) {
+                case TokenType::INT: 
+                    offset = header.int_toks_header;
+                    size_to_read = header.date_toks_header - header.int_toks_header;
+                case TokenType::DATE: 
+                    offset = header.date_toks_header;
+                    size_to_read = header.time_toks_header - header.date_toks_header;
+                case TokenType::TIME: 
+                    offset = header.time_toks_header;
+                    size_to_read = header.ipv4_toks_header - header.time_toks_header;
+                case TokenType::IPV4: 
+                    offset = header.ipv4_toks_header;
+                    size_to_read = file_size - header.ipv4_toks_header;
+                default: throw std::invalid_argument("Type not valid here");
+            }
+            id = find_pef_id(file_name, offset, size_to_read, query);
         }
         
 

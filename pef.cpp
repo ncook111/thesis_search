@@ -28,20 +28,20 @@ const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv
     return decoded;
 }
 
-const int64_t find_pef_id(const std::string &file_path, const uint64_t &value) {
+const int64_t find_pef_id(const std::string &file_path, const uint64_t &offset, const uint64_t &size_to_read, const uint64_t &value) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
 
     // Read in header
-    Pef_Header header = get_bv_header(file, 0);
+    Pef_Header header = get_bv_header(file, offset);
 
     // If null return -1
     if (!header.n) {
         return -1;
     }
 
-    const succinct::bit_vector bv = get_bv(file, header, sizeof(header), file_size - sizeof(header));
+    const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
     ds2i::global_parameters params;
     ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
