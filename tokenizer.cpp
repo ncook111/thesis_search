@@ -222,7 +222,11 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
                 std::int64_t res_int;
                 res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + token_length, res_int, options);
                 if (res_err.ec == std::errc()) {
-                    num_tokens[res_int].push_back(offset);
+                    if (res_int >= 0)
+                        num_tokens[res_int].push_back(offset);
+                    else {
+                        num_tokens[res_int * -1].push_back(offset);
+                    }
                 } else if (res_err.ec == std::errc::invalid_argument) {
                     std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
                 } else if (res_err.ec == std::errc::result_out_of_range) {
@@ -251,7 +255,7 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
                 if (in.fail() || in.peek() != EOF) {
                     unprocessed = true;
                 } else {
-                    d_tokens[dateTimePoint.time_since_epoch().count()].push_back(offset);
+                    d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())].push_back(offset);
                 }
                 break;
             case TokenType::TIME:
@@ -261,7 +265,7 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
                 if (in.fail() || in.peek() != EOF) {
                     unprocessed = true;
                 } else {
-                    t_tokens[timeTimePoint.count()].push_back(offset);
+                    t_tokens[static_cast<uint64_t>(timeTimePoint.count())].push_back(offset);
                 }
                 break;
 
@@ -311,7 +315,8 @@ void Tokenizer::printFloatTokens() {
 
 void Tokenizer::printDateTokens() {
     for (const auto& [key, _] : d_tokens) {
-        std::tm* tm_info = std::gmtime(&(key));
+        time_t tm = key;
+        std::tm* tm_info = std::gmtime(&tm);
         std::ostringstream oss;
         oss << std::put_time(tm_info, "%Y-%m-%d");
         std::cout << oss.str() << std::endl;
@@ -320,7 +325,8 @@ void Tokenizer::printDateTokens() {
 
 void Tokenizer::printTimeTokens() {
     for (const auto& [key, _] : t_tokens) {
-        std::tm* tm_info = std::gmtime(&(key));
+        time_t tm = key;
+        std::tm* tm_info = std::gmtime(&tm);
         std::ostringstream oss;
         oss << std::put_time(tm_info, "%T");
         std::cout << oss.str() << std::endl;; 
@@ -367,8 +373,8 @@ const std::vector<std::string> Tokenizer::getAlphaTokens() {
     return tokens;
 }
 
-const std::vector<int64_t> Tokenizer::getNumTokens() {
-    std::vector<int64_t> tokens;
+const std::vector<uint64_t> Tokenizer::getNumTokens() {
+    std::vector<uint64_t> tokens;
     for (auto &i: num_tokens) {
         tokens.push_back(i.first);
     }
@@ -383,24 +389,24 @@ const std::vector<float> Tokenizer::getFloatTokens() {
 
     return tokens;
 }
-const std::vector<time_t> Tokenizer::getDateTokens() {
-    std::vector<time_t> tokens;
+const std::vector<uint64_t> Tokenizer::getDateTokens() {
+    std::vector<uint64_t> tokens;
     for (auto &i: d_tokens) {
         tokens.push_back(i.first);
     }
 
     return tokens;
 }
-const std::vector<time_t> Tokenizer::getTimeTokens() {
-    std::vector<time_t> tokens;
+const std::vector<uint64_t> Tokenizer::getTimeTokens() {
+    std::vector<uint64_t> tokens;
     for (auto &i: t_tokens) {
         tokens.push_back(i.first);
     }
 
     return tokens;
 }
-const std::vector<uint32_t> Tokenizer::getIPTokens() {
-        std::vector<uint32_t> tokens;
+const std::vector<uint64_t> Tokenizer::getIPTokens() {
+        std::vector<uint64_t> tokens;
     for (auto &i: ipv4_tokens) {
         tokens.push_back(i.first);
     }

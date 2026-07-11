@@ -33,6 +33,7 @@ namespace EncType {
     };
 }
 
+const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);
 const uint8_t get_file_type(const std::string &type);
 const uint8_t get_enc_type(const std::string &type);

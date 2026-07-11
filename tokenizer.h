@@ -33,11 +33,12 @@ class Tokenizer {
         void close();
 
         std::map<std::string, std::vector<uint64_t>> alpha_tokens;
-        std::map<int64_t, std::vector<uint64_t>> num_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> num_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> neg_num_tokens;
         std::map<float, std::vector<uint64_t>> float_tokens;
-        std::map<time_t, std::vector<uint64_t>> d_tokens;
-        std::map<time_t, std::vector<uint64_t>> t_tokens;
-        std::map<uint32_t, std::vector<uint64_t>> ipv4_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> d_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> t_tokens;
+        std::map<uint64_t, std::vector<uint64_t>> ipv4_tokens;
         std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
         std::vector<bool> boolean_tokens;
         std::vector<uint64_t> entry_offsets; // Denotes the start point for all entries in the file (newline for csv and logfmt, {} for json)
@@ -51,11 +52,11 @@ class Tokenizer {
         void printStatistics();
 
         const std::vector<std::string> getAlphaTokens();
-        const std::vector<int64_t> getNumTokens();
+        const std::vector<uint64_t> getNumTokens();
         const std::vector<float> getFloatTokens();
-        const std::vector<time_t> getDateTokens();
-        const std::vector<time_t> getTimeTokens();
-        const std::vector<uint32_t> getIPTokens();
+        const std::vector<uint64_t> getDateTokens();
+        const std::vector<uint64_t> getTimeTokens();
+        const std::vector<uint64_t> getIPTokens();
 
     private:
         Tokenizer() = default;

@@ -9,6 +9,7 @@
 #include "fst.h"
 #include "helper.h"
 #include "custom_types.h"
+#include "pef.h"
 
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
@@ -49,16 +50,80 @@ struct Offsets_header {
     uint64_t entry_offsets_header;
 };
 
-struct Pef_Header {
-    uint64_t num_bits;
-    uint64_t universe;
-    uint64_t n;
-};
-
 struct Write_pos {
   uint64_t id_map_pos;
   uint64_t offsets_pos;
 };
+
+template <MapType M>
+std::vector<M> read_pef_tokens(std::string &file_path) {
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
+
+    // Read in universe and n first
+    Pef_Header header = get_bv_header(file, 0);
+
+    // If null return empty vec
+    if (!header.n) {
+        return std::vector<M>();
+    }
+
+    succinct::bit_vector bv = get_bv(file, header, sizeof(header), file_size - sizeof(header));
+
+    std::vector<uint64_t> offsets = partitioned_ef_decode(bv, header.universe, header.n);
+    
+    return offsets;
+}
+
+template <MapType M>
+void create_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
+    std::ofstream file;
+    file.open(file_path, std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + file_path);
+    }
+
+    if (!tokens.size()) {
+        // Write null num_bits, universe and n then return
+        const Pef_Header header = {};
+        file.write(reinterpret_cast<const char*>(&header), sizeof(header));
+        return;
+    }
+
+    succinct::bit_vector_builder pef_tokens;
+    const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(pef_tokens, tokens);
+    const uint64_t num_bits = pef_tokens.size();
+    const Pef_Header header = {num_bits, res.first, res.second};
+    succinct::bit_vector pef_tokens_final(&pef_tokens);
+
+    // Write to file
+    const uint64_t pef_tokens_size = pef_tokens_final.data().size() * sizeof(uint64_t);
+
+    // Write num_bits, universe and n
+    file.write(reinterpret_cast<const char*>(&header), sizeof(header));
+
+    // Write pef_tokens_final
+    file.write(reinterpret_cast<const char*>(pef_tokens_final.data().data()), pef_tokens_size);
+
+    std::cout << "here" << std::endl;
+}
+
+template <MapType M>
+bool check_pef_tokens(const std::vector<M> &tokens, std::string file_path) {
+    std::vector<M> out = read_pef_tokens<M>(file_path);
+
+    if (out == tokens) {
+        std::cout << "correct" << std::endl;
+        std::cout << "og size: " << tokens.size();
+        std::cout << "from file: " << out.size();
+        return true;
+    } else {
+        std::cout << "incorrect" << std::endl;
+        return false;
+    }
+}
 
 template <QueryType Q>
 void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
@@ -66,18 +131,37 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
     // Get list of all fst files filtered by type
     size_t i = 0;
     for (; i < files_indexed; ++i) {
-        std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
         std::string offset_file_name = index_path + "/offsets/" + std::to_string(i) + ".off";
-        if (!std::filesystem::exists(fst_file_name)) { 
-            std::cout << fst_file_name << std::endl;
-            throw std::invalid_argument("Fst file does not exist");
+        if (!std::filesystem::exists(offset_file_name)) { 
+            std::cout << offset_file_name << std::endl;
+            throw std::invalid_argument("Offset file does not exist");
         }
 
-        fst::StdConstFst *fst = nullptr;
-        read_from_disk(fst, fst_file_name);
+        int64_t id;
+        if constexpr (std::is_same_v<Q, std::string> || std::is_same_v<Q, std::vector<uint8_t>>) {
+            std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
 
-        int id = get_id_from_fst(*fst, query);
-        if (id == -1) continue; // Not found
+            if (!std::filesystem::exists(fst_file_name)) { 
+                std::cout << fst_file_name << std::endl;
+                throw std::invalid_argument("Fst file does not exist");
+            }
+
+            fst::StdConstFst *fst = nullptr;
+            read_from_disk(fst, fst_file_name);
+
+            id = get_id_from_fst(*fst, query);
+            if (id == -1) continue; // Not found
+        } else {
+            std::string pef_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".pef";
+            
+            if (!std::filesystem::exists(pef_file_name)) { 
+                std::cout << pef_file_name << std::endl;
+                throw std::invalid_argument("Pef file does not exist");
+            }
+
+            id = find_pef_id(pef_file_name, query);
+        }
+        
 
         std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
         std::vector<uint64_t> tokens = get_tok_offsets_from_file(id, id_offsets_map, offset_file_name, type, enc_type);
