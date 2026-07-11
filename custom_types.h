@@ -3,7 +3,8 @@
 
 template <typename T>
     concept QueryType = std::same_as<T, std::string> ||
-    std::same_as<T, std::vector<uint8_t>>;
+    std::same_as<T, std::vector<uint8_t>> ||
+    std::same_as<T, uint64_t>;
 
 template <typename L>
     concept MapType = std::same_as<L, std::string> ||

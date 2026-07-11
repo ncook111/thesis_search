@@ -1,0 +1,72 @@
+#include <utility>
+#include "helper.h"
+#include "pef.h"
+#include "partitioned_sequence.hpp"
+#include <succinct/bit_vector.hpp>
+
+// Encoding a single vector with ef
+const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums) {
+    const uint64_t universe = nums.back() + 1;
+    const uint64_t n = nums.size();
+
+    if (nums.size())
+        ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, ds2i::global_parameters()); 
+
+    return std::make_pair(universe, n);
+}
+
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t &universe, const uint64_t &n) {
+    std::vector<uint64_t> decoded;
+
+    ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n, ds2i::global_parameters());
+
+    decoded.reserve(n);
+    for (uint64_t i = 0; i < n; ++i) {
+        decoded.push_back(e.move(i).second);
+    }
+
+    return decoded;
+}
+
+const int64_t find_pef_id(const std::string &file_path, const uint64_t &value) {
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
+
+    // Read in header
+    Pef_Header header = get_bv_header(file, 0);
+
+    // If null return -1
+    if (!header.n) {
+        return -1;
+    }
+
+    const succinct::bit_vector bv = get_bv(file, header, sizeof(header), file_size - sizeof(header));
+
+    ds2i::global_parameters params;
+    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
+
+    std::pair<uint64_t, uint64_t> res = e.next_geq(value);
+
+    if (res.second == value) {
+        return res.first; 
+    } else {
+        return -1;
+    }
+}
+
+const Pef_Header get_bv_header(const uint8_t *file, const uint64_t &offset) {
+    Pef_Header header = {};
+    std::memcpy(reinterpret_cast<char*>(&header), &file[offset], sizeof(header));
+
+    return header;
+}
+
+const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t &offset, const uint64_t size_to_read) {
+    std::vector<uint64_t> raw_input((size_to_read) / 8);
+    std::memcpy(raw_input.data(), &file[offset], size_to_read);
+    succinct::bit_vector_builder bvb2(header.num_bits);
+    succinct::bit_vector_builder::bits_type &target = bvb2.move_bits(); 
+    std::copy(raw_input.begin(), raw_input.end(), target.begin());
+    return succinct::bit_vector(&bvb2);
+}

@@ -33,6 +33,7 @@ add_executable(ingest
     fst.cpp
     index.cpp
     helper.cpp
+    pef.cpp
 )
 
 target_include_directories(ingest PRIVATE

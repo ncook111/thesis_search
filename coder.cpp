@@ -325,25 +325,3 @@ const std::vector<uint64_t> gvb_decode_uint64_t(const std::vector<uint8_t> &byte
 
     return decoded;
 }
-
-// Encoding a single vector with ef
-const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums) {
-    const uint64_t universe = nums.back() + 1;
-    const uint64_t n = nums.size();
-    ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, ds2i::global_parameters()); 
-
-    return std::make_pair(universe, n);
-}
-
-const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t &universe, const uint64_t &n) {
-    std::vector<uint64_t> decoded;
-
-    ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n, ds2i::global_parameters());
-
-    decoded.reserve(n);
-    for (uint64_t i = 0; i < n; ++i) {
-        decoded.push_back(e.move(i).second);
-    }
-
-    return decoded;
-}
