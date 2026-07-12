@@ -63,13 +63,20 @@ void get_paths(const G &fst, int state, std::string &current,
     }
 }
 
-template <class F, class G>
-std::set<F> get_strings_from_fst(const G &fst) {
-    std::set<F> results;
+template <class G>
+std::set<std::string> get_strings_from_fst(const G &fst) {
+    std::set<std::string> results;
     if (fst.Start() == fst::kNoStateId) return results;
-    F current;
+    std::string current;
     get_paths(fst, fst.Start(), current, results);
     return results;
+}
+
+template <class G>
+std::vector<std::string> get_vec_strings_from_fst(const G &fst) {
+    const std::set<std::string> results = get_strings_from_fst(fst);
+    const std::vector<std::string> results_vec(results.begin(), results.end());
+    return results_vec;
 }
 
 template <class G, QueryType Q>
@@ -168,7 +175,7 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
         std::set<M> set;
 
         if constexpr (std::is_same_v<M, std::string>) {
-            set = get_strings_from_fst<M>(*fst);
+            set = get_strings_from_fst(*fst);
         } else {
             std::set<std::vector<uint8_t>> vals = get_sequences_from_fst<std::vector<uint8_t>>(*fst);
 
@@ -190,6 +197,13 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
         }
 
         return out == tokens;
+}
+
+template <class G>
+const std::string id_to_string(const G &fst, const uint64_t &id) {
+    const std::vector<std::string> strings = get_vec_strings_from_fst(fst);
+
+    return strings[id];
 }
 
 #endif

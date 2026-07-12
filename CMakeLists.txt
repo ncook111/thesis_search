@@ -10,22 +10,19 @@ endif()
 
 list(PREPEND CMAKE_PREFIX_PATH /opt/homebrew)
 
-# --- dependencies ---
+# dependencies
 find_package(Boost REQUIRED)
 
 find_path(OPENFST_INCLUDE_DIR fst/fstlib.h)
 find_library(OPENFST_LIBRARY fst)
 
 if(NOT OPENFST_INCLUDE_DIR OR NOT OPENFST_LIBRARY)
-    message(FATAL_ERROR "OpenFST not found — check `brew install openfst`")
+    message(FATAL_ERROR "OpenFST not found, check `brew install openfst`")
 endif()
 
-# succinct has its own CMakeLists.txt that generates succinct_config.hpp
-# via configure_file() — must be added as a subdirectory, not just an
-# include path, or that header will never be generated.
 add_subdirectory(third_party/ds2i/succinct)
 
-# --- target ---
+# target
 add_executable(ingest
     ingest.cpp
     coder.cpp
@@ -34,6 +31,7 @@ add_executable(ingest
     index.cpp
     helper.cpp
     pef.cpp
+    search.cpp
 )
 
 target_include_directories(ingest PRIVATE

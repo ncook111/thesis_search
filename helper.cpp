@@ -41,3 +41,33 @@ const MappedFile open_mmap_rw(std::string file_path) {
 
     return MappedFile{std::move(file_mapping), std::move(file_region)};
 }
+
+const std::string token_type_to_str(const uint8_t &type) {
+    switch (type) {
+        case TokenType::ALPHA:
+            return "alpha";
+        case TokenType::INT:
+            return "int";
+        case TokenType::FLOAT:
+            return "float";
+        case TokenType::DATE:
+            return "date";
+        case TokenType::TIME:
+            return "time";
+        case TokenType::IPV4:
+            return "ipv4";
+        default:
+            throw std::invalid_argument("Type not valid");
+    }
+}
+
+const uint8_t str_to_token_type(const std::string &type_str) {
+    if (type_str == "alpha") return TokenType::ALPHA;
+    if (type_str == "int") return TokenType::INT;
+    if (type_str == "float") return TokenType::FLOAT;
+    if (type_str == "date") return TokenType::DATE;
+    if (type_str == "time") return TokenType::TIME;
+    if (type_str == "ipv4") return TokenType::IPV4;
+
+    return TokenType::INVALID;
+}

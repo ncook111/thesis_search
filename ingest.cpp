@@ -4,6 +4,7 @@
 #include "ingest.h"
 #include "coder.h"
 #include "index.h"
+#include "search.h"
 
 constexpr uint8_t ARG_MIN = 5; // Minimum arguments required for normal operation
 
@@ -23,39 +24,72 @@ int main(int argc, char *argv[]) {
     const std::string data_path = argv[3];
     const std::string index_path = argv[4];
 
-    // Create index mode
-    if (act_mode == "-c") {
-        if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
-            std::cout << "Index already exists" << std::endl;
-            return 0;
-        }
+    if (act_mode == "-c") { // Create index mode
+        return create_mode(index_path, data_path, enc_type);
+    } else if (act_mode == "-r") { // Recreate index mode
+        return recreate_mode(index_path, data_path, enc_type);
+    } else if (act_mode == "-s") { // Index search mode
+        return search_mode(index_path, data_path, enc_type, argc, argv);
+    } else {
+        std::cout << "Invalid mode. Help: ingest help" << std::endl;
+        return 1;
+    }
+}
 
+int create_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type) {
+    if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
+        std::cout << "Index already exists" << std::endl;
+        return 1;
+    }
+
+    try {
         create_index(index_path, data_path, enc_type);
-    // Recreate index mode
-    } else if (act_mode == "-r") {
-        if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
-            std::cout << "Not a valid existing index folder" << std::endl;
-            return 0;
-        }
-        
-        std::filesystem::remove_all(index_path);
+    } catch (const std::exception &e) {
+        std::cout << "Error when creating index: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
+
+int recreate_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type) {
+    if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
+        std::cout << "Not a valid existing index folder" << std::endl;
+        return 1;
+    }
+    
+    std::filesystem::remove_all(index_path);
+
+    try {
         create_index(index_path, data_path, enc_type);
-    // Index search mode
-    } else if (act_mode == "-s") {
-        if (argc == ARG_MIN) {
-            std::cout << "Help: ingest help" << std::endl;
-            return 0;
-        }
+    } catch (const std::exception &e) {
+        std::cout << "Error when recreating index: " << e.what() << std::endl;
+        return 1;
+    }
 
-        std::vector<std::string> queries;
-        for (size_t i = ARG_MIN; i < argc; i++) {
-            queries.push_back(argv[i]);
-            std::cout << argv[i] << std::endl;
-        }
+    return 0;
+}
 
+int search_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type, const int argc, char *argv[]) {
+    if (argc == ARG_MIN) {
+        std::cout << "Help: ingest help" << std::endl;
+        return 1;
+    }
+
+    std::vector<std::string> queries;
+    for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
+        queries.push_back(argv[i]);
+    }
+
+
+    try {
         const EntryMap results = process_queries(queries, data_path, index_path, enc_type);
         print_entries(results, index_path, data_path);
+    } catch (const std::exception &e) {
+        std::cout << "Error when searching index: " << e.what() << std::endl;
+        return 1;
     }
+
 
     return 0;
 }

@@ -15,7 +15,7 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-const bool Tokenizer::is_int(const std::string &s) {
+const bool Tokenizer::is_int(const std::string &s) const {
     size_t i = s.front() == '+' || s.front() == '-' ? 1 : 0;
 
     if (i == s.size()) return false;
@@ -27,7 +27,7 @@ const bool Tokenizer::is_int(const std::string &s) {
     return true;
 }
 
-const bool Tokenizer::is_float(const std::string &s) {
+const bool Tokenizer::is_float(const std::string &s) const {
     // Preprocess string for float compliance
     for (auto &c : s) {
         if (!std::isdigit(c) && c != '+' && c != '-' && c != '.') {
@@ -51,7 +51,7 @@ const bool Tokenizer::is_float(const std::string &s) {
     return false;
 }
 
-const bool Tokenizer::is_date(const std::string &s) {
+const bool Tokenizer::is_date(const std::string &s) const {
     if (s.size() != 10) return false;
     if (!std::isdigit(s.at(0))) return false;
     if (!std::isdigit(s.at(1))) return false;
@@ -67,7 +67,7 @@ const bool Tokenizer::is_date(const std::string &s) {
     return true;
 }
 
-const bool Tokenizer::is_time(const std::string &s) {
+const bool Tokenizer::is_time(const std::string &s) const {
     // Determine if time present
     if (s.size() != 8) return false;
     if (!std::isdigit(s.at(0))) return false;
@@ -82,7 +82,7 @@ const bool Tokenizer::is_time(const std::string &s) {
     return true;
 }
 
-const bool Tokenizer::is_ipv4(const std::string &s) {
+const bool Tokenizer::is_ipv4(const std::string &s) const {
     if (s.size() < 7 || s.size() > 15) return false; // Max length of ipv4
 
     // Check only valid chars
@@ -121,15 +121,15 @@ const bool Tokenizer::is_ipv4(const std::string &s) {
     return true;
 }
 
-const bool Tokenizer::is_ipv6(const std::string &s) {
+const bool Tokenizer::is_ipv6(const std::string &s) const {
     return false;
 }
 
-const bool Tokenizer::is_bool(const std::string& s) {
+const bool Tokenizer::is_bool(const std::string& s) const {
     return (s == "true" || s == "false");
 }
 
-inline const uint8_t Tokenizer::numeric_type(const std::string &s) {
+inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
     if (is_int(s)) { return TokenType::INT; }
     if (is_float(s)) { return TokenType::FLOAT; }
     if (is_date(s)) { return TokenType::DATE; }
@@ -364,7 +364,7 @@ void Tokenizer::printStatistics() {
     std::cout << "Total Boolean Tokens: " << boolean_tokens.size() << std::endl;
 }
 
-const std::vector<std::string> Tokenizer::getAlphaTokens() {
+const std::vector<std::string> Tokenizer::getAlphaTokens() const {
     std::vector<std::string> tokens;
     for (auto &i: alpha_tokens) {
         tokens.push_back(i.first);
@@ -373,7 +373,7 @@ const std::vector<std::string> Tokenizer::getAlphaTokens() {
     return tokens;
 }
 
-const std::vector<uint64_t> Tokenizer::getNumTokens() {
+const std::vector<uint64_t> Tokenizer::getNumTokens() const {
     std::vector<uint64_t> tokens;
     for (auto &i: num_tokens) {
         tokens.push_back(i.first);
@@ -381,7 +381,7 @@ const std::vector<uint64_t> Tokenizer::getNumTokens() {
 
     return tokens;
 }
-const std::vector<float> Tokenizer::getFloatTokens() {
+const std::vector<float> Tokenizer::getFloatTokens() const {
     std::vector<float> tokens;
     for (auto &i: float_tokens) {
         tokens.push_back(i.first);
@@ -389,7 +389,7 @@ const std::vector<float> Tokenizer::getFloatTokens() {
 
     return tokens;
 }
-const std::vector<uint64_t> Tokenizer::getDateTokens() {
+const std::vector<uint64_t> Tokenizer::getDateTokens() const {
     std::vector<uint64_t> tokens;
     for (auto &i: d_tokens) {
         tokens.push_back(i.first);
@@ -397,7 +397,7 @@ const std::vector<uint64_t> Tokenizer::getDateTokens() {
 
     return tokens;
 }
-const std::vector<uint64_t> Tokenizer::getTimeTokens() {
+const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
     std::vector<uint64_t> tokens;
     for (auto &i: t_tokens) {
         tokens.push_back(i.first);
@@ -405,7 +405,7 @@ const std::vector<uint64_t> Tokenizer::getTimeTokens() {
 
     return tokens;
 }
-const std::vector<uint64_t> Tokenizer::getIPTokens() {
+const std::vector<uint64_t> Tokenizer::getIPTokens() const {
         std::vector<uint64_t> tokens;
     for (auto &i: ipv4_tokens) {
         tokens.push_back(i.first);
