@@ -5,12 +5,16 @@
 #include <succinct/bit_vector.hpp>
 
 // Encoding a single vector with ef
-const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums) {
+const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv, const std::vector<uint64_t> &nums) {
     const uint64_t universe = nums.back() + 1;
     const uint64_t n = nums.size();
+    succinct::bit_vector_builder bvb;
 
     if (nums.size())
-        ds2i::partitioned_sequence<>::write(bv, nums.begin(), universe, n, ds2i::global_parameters()); 
+        ds2i::partitioned_sequence<>::write(bvb, nums.begin(), universe, n, ds2i::global_parameters()); 
+
+    succinct::bit_vector tmp(&bvb);
+    bv.swap(tmp);
 
     return std::make_pair(universe, n);
 }

@@ -85,22 +85,21 @@ const uint64_t create_pef_tokens(const std::vector<M> &tokens, std::ofstream &fi
         return pos;
     }
 
-    succinct::bit_vector_builder pef_tokens;
+    succinct::bit_vector pef_tokens;
     const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(pef_tokens, tokens);
     const uint64_t num_bits = pef_tokens.size();
     const Pef_Header header = {num_bits, res.first, res.second};
-    const succinct::bit_vector pef_tokens_final(&pef_tokens);
 
     const uint64_t pos = file.tellp();
 
     // Write to file
-    const uint64_t pef_tokens_size = pef_tokens_final.data().size() * sizeof(uint64_t);
+    const uint64_t pef_tokens_size = pef_tokens.data().size() * sizeof(uint64_t);
 
     // Write num_bits, universe and n
     file.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
-    // Write pef_tokens_final
-    file.write(reinterpret_cast<const char*>(pef_tokens_final.data().data()), pef_tokens_size);
+    // Write pef_tokens
+    file.write(reinterpret_cast<const char*>(pef_tokens.data().data()), pef_tokens_size);
 
     return pos;
 }
@@ -181,24 +180,23 @@ const Write_pos write_offsets_pef(const std::map<M, std::vector<uint64_t>> &toke
         }
 
 
-        succinct::bit_vector_builder enc_tok_offsets;
-        const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
-        const uint64_t num_bits = enc_tok_offsets.size();
+        std::__1::unique_ptr<succinct::bit_vector> owned_enc_tok_offsets = std::make_unique<succinct::bit_vector>();
+        const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(*owned_enc_tok_offsets, offsets_dedup);
+        const uint64_t num_bits = owned_enc_tok_offsets.get()->size();
 
         const Pef_Header header = {num_bits, res.first, res.second};
 
-        all_enc_tok_offsets.push_back(std::make_pair(header, std::make_unique<succinct::bit_vector>(&enc_tok_offsets)));
+        all_enc_tok_offsets.push_back(std::make_pair(header, std::move(owned_enc_tok_offsets)));
 
         id_to_offset.push_back(offset);
 
         offset += sizeof(header) + all_enc_tok_offsets.back().second->data().size() * sizeof(uint64_t);
     }
 
-    succinct::bit_vector_builder enc_id_to_offset;
+    succinct::bit_vector enc_id_to_offset;
     const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_id_to_offset, id_to_offset);
     const uint64_t num_bits = enc_id_to_offset.size();
     const Pef_Header header = {num_bits, res.first, res.second};
-    succinct::bit_vector final_enc_id_to_offset = &enc_id_to_offset;
 
     // Write to file
     const uint64_t first_write_pos = file.tellp();
@@ -207,8 +205,8 @@ const Write_pos write_offsets_pef(const std::map<M, std::vector<uint64_t>> &toke
     file.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
     // Write id_to_offsets data
-    uint64_t size = final_enc_id_to_offset.data().size() * sizeof(uint64_t);
-    file.write(reinterpret_cast<const char*>(final_enc_id_to_offset.data().data()), size);
+    uint64_t size = enc_id_to_offset.data().size() * sizeof(uint64_t);
+    file.write(reinterpret_cast<const char*>(enc_id_to_offset.data().data()), size);
 
 
     const uint64_t second_write_pos = file.tellp();
@@ -276,17 +274,15 @@ bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens
                 offsets_dedup.push_back(off);
             }
 
-            succinct::bit_vector_builder enc_tok_offsets;
+            succinct::bit_vector enc_tok_offsets;
             const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
             const uint64_t num_bits = enc_tok_offsets.size();
 
             const Pef_Header header = {num_bits, res.first, res.second};
 
-            succinct::bit_vector fin(&enc_tok_offsets);
-
             id_to_offset.push_back(offset);
 
-            offset += sizeof(header) + fin.data().size() * sizeof(uint64_t);
+            offset += sizeof(header) + enc_tok_offsets.data().size() * sizeof(uint64_t);
         }
     } else {
         throw std::invalid_argument("Encoding type not supported");

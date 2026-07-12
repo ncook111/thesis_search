@@ -364,14 +364,13 @@ const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offset
 }
 
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
-    succinct::bit_vector_builder enc_tok_offsets;
+    succinct::bit_vector enc_tok_offsets;
     const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
     const uint64_t num_bits = enc_tok_offsets.size();
     const Pef_Header header = {num_bits, res.first, res.second};
-    const succinct::bit_vector enc_tok_offsets_final(&enc_tok_offsets);
 
     // Write to file
-    const uint64_t entry_offsets_size = enc_tok_offsets_final.data().size() * sizeof(uint64_t);
+    const uint64_t entry_offsets_size = enc_tok_offsets.data().size() * sizeof(uint64_t);
 
     const uint64_t write_pos = file.tellp();
 
@@ -379,7 +378,7 @@ const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offset
     file.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
     // Write enc_tok_offsets
-    file.write(reinterpret_cast<const char*>(enc_tok_offsets_final.data().data()), entry_offsets_size);
+    file.write(reinterpret_cast<const char*>(enc_tok_offsets.data().data()), entry_offsets_size);
 
     return write_pos;
 }
