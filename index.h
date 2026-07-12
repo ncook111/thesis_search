@@ -16,7 +16,7 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
-const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t &token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type);
+const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type);
 void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file, const uint8_t enc_type);
@@ -24,14 +24,14 @@ const std::vector<uint64_t> get_entry_offsets_from_file(const std::string &file_
 const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets, const std::string &file_name, const uint8_t enc_type);
 const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offsets, std::ofstream &file);
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file);
-const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read);
-const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read);
-const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read); 
-const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t &addr_offset, const uint64_t &size_to_read);
+const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t addr_offset, const uint64_t size_to_read);
+const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t addr_offset, const uint64_t size_to_read);
+const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint64_t addr_offset, const uint64_t size_to_read); 
+const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t addr_offset, const uint64_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t addr_offset, const size_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t addr_offset, const size_t size_to_read);
 void check_all_pef_tokens(const Tokenizer &tokenizer, const std::string &file_path);
-std::pair<uint64_t, uint64_t> get_pef_header_details_by_type(const uint8_t *file, const uint64_t &file_size, const uint8_t type);
+std::pair<uint64_t, uint64_t> get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size, const uint8_t type);
 
 // Saved to the front of the file
 struct Offsets_header {
@@ -54,7 +54,7 @@ struct Write_pos {
 };
 
 template <MapType M>
-std::vector<M> read_pef_tokens(std::string &file_path, const uint64_t &offset, const uint64_t &size_to_read) {
+std::vector<M> read_pef_tokens(std::string &file_path, const uint64_t offset, const uint64_t size_to_read) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();

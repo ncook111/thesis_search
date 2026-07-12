@@ -29,7 +29,7 @@ const bool Tokenizer::is_int(const std::string &s) const {
 
 const bool Tokenizer::is_float(const std::string &s) const {
     // Preprocess string for float compliance
-    for (auto &c : s) {
+    for (const auto &c : s) {
         if (!std::isdigit(c) && c != '+' && c != '-' && c != '.') {
             return false;
         }
@@ -86,8 +86,7 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
     if (s.size() < 7 || s.size() > 15) return false; // Max length of ipv4
 
     // Check only valid chars
-    for (auto it = s.begin(); it != s.end(); ++it) {
-        const char c = *it;
+    for (const auto c : s) {
         if (std::isdigit(c) || c == '.') continue;
         else return false;
     }
@@ -105,8 +104,7 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
 
     if (parts.size() != 4) return false;
 
-    for (auto it = parts.begin(); it != parts.end(); ++it) {
-        const std::string curr = (*it);
+    for (const auto curr : parts) {
         std::uint64_t res_int;
         fast_float::from_chars_result res_err = fast_float::from_chars(curr.data(), curr.data() + curr.size(), res_int);
         if (res_err.ec == std::errc()) {
@@ -184,7 +182,7 @@ void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const ui
 
 void Tokenizer::tokenize_string(const std::string &input) {
     std::string curr_token;
-    size_t input_size = input.size();
+    const size_t input_size = input.size();
 
     for (size_t i = 0; i < input_size; ++i) {  
         if (isalnum(input[i])
@@ -296,25 +294,25 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
 }
 
 void Tokenizer::printAlphaTokens() {
-    for (const auto& [key, _] : alpha_tokens) {
+    for (const auto &[key, _] : alpha_tokens) {
         std::cout << key << std::endl;;
     }
 }
 
 void Tokenizer::printNumTokens() {
-    for (const auto& [key, _] : num_tokens) {
+    for (const auto &[key, _] : num_tokens) {
         std::cout << key << std::endl;
     }
 }
 
 void Tokenizer::printFloatTokens() {
-    for (const auto& [key, _] : float_tokens) {
+    for (const auto &[key, _] : float_tokens) {
         std::cout << key << std::endl;
     }
 }
 
 void Tokenizer::printDateTokens() {
-    for (const auto& [key, _] : d_tokens) {
+    for (const auto &[key, _] : d_tokens) {
         time_t tm = key;
         std::tm* tm_info = std::gmtime(&tm);
         std::ostringstream oss;
@@ -324,7 +322,7 @@ void Tokenizer::printDateTokens() {
 }
 
 void Tokenizer::printTimeTokens() {
-    for (const auto& [key, _] : t_tokens) {
+    for (const auto &[key, _] : t_tokens) {
         time_t tm = key;
         std::tm* tm_info = std::gmtime(&tm);
         std::ostringstream oss;
@@ -366,7 +364,7 @@ void Tokenizer::printStatistics() {
 
 const std::vector<std::string> Tokenizer::getAlphaTokens() const {
     std::vector<std::string> tokens;
-    for (auto &i: alpha_tokens) {
+    for (const auto &i: alpha_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -375,7 +373,7 @@ const std::vector<std::string> Tokenizer::getAlphaTokens() const {
 
 const std::vector<uint64_t> Tokenizer::getNumTokens() const {
     std::vector<uint64_t> tokens;
-    for (auto &i: num_tokens) {
+    for (const auto &i: num_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -383,7 +381,7 @@ const std::vector<uint64_t> Tokenizer::getNumTokens() const {
 }
 const std::vector<float> Tokenizer::getFloatTokens() const {
     std::vector<float> tokens;
-    for (auto &i: float_tokens) {
+    for (const auto &i: float_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -391,7 +389,7 @@ const std::vector<float> Tokenizer::getFloatTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getDateTokens() const {
     std::vector<uint64_t> tokens;
-    for (auto &i: d_tokens) {
+    for (const auto &i: d_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -399,7 +397,7 @@ const std::vector<uint64_t> Tokenizer::getDateTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
     std::vector<uint64_t> tokens;
-    for (auto &i: t_tokens) {
+    for (const auto &i: t_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -407,7 +405,7 @@ const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getIPTokens() const {
         std::vector<uint64_t> tokens;
-    for (auto &i: ipv4_tokens) {
+    for (const auto &i: ipv4_tokens) {
         tokens.push_back(i.first);
     }
 

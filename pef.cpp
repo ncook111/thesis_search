@@ -15,7 +15,7 @@ const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_b
     return std::make_pair(universe, n);
 }
 
-const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t &universe, const uint64_t &n) {
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe, const uint64_t n) {
     std::vector<uint64_t> decoded;
 
     ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n, ds2i::global_parameters());
@@ -28,7 +28,7 @@ const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv
     return decoded;
 }
 
-const int64_t find_pef_id(const std::string &file_path, const uint64_t &offset, const uint64_t &size_to_read, const uint64_t &value) {
+const int64_t find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t value) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -55,14 +55,14 @@ const int64_t find_pef_id(const std::string &file_path, const uint64_t &offset, 
     }
 }
 
-const Pef_Header get_bv_header(const uint8_t *file, const uint64_t &offset) {
+const Pef_Header get_bv_header(const uint8_t *file, const uint64_t offset) {
     Pef_Header header = {};
     std::memcpy(reinterpret_cast<char*>(&header), &file[offset], sizeof(header));
 
     return header;
 }
 
-const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t &offset, const uint64_t size_to_read) {
+const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t offset, const uint64_t size_to_read) {
     std::vector<uint64_t> raw_input((size_to_read) / 8);
     std::memcpy(raw_input.data(), &file[offset], size_to_read);
     succinct::bit_vector_builder bvb2(header.num_bits);

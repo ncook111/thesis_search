@@ -200,7 +200,7 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
 }
 
 template <class G>
-const std::string id_to_string(const G &fst, const uint64_t &id) {
+const std::string id_to_string(const G &fst, const uint64_t id) {
     const std::vector<std::string> strings = get_vec_strings_from_fst(fst);
 
     return strings[id];

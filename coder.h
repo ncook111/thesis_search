@@ -16,7 +16,7 @@ inline const uint8_t get_length(const uint32_t num);
 void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector_builder &bv, const std::vector<uint64_t> &nums);
-const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t &universe, const uint64_t &n);
+const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe, const uint64_t n);
 
 template <class F>
 std::vector<F> delta_encode(const std::vector<F> &nums) {
