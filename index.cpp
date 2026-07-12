@@ -175,7 +175,7 @@ const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint
 
 
 // Output converts offsets values from file from 1 indexing back to 0 indexing
-const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type) {
+const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
     const MappedFile mf = open_mmap_r(file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();

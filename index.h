@@ -16,7 +16,7 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
-const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, uint8_t type, const uint8_t enc_type);
+const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type);
 const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets, std::ofstream &file, const uint8_t enc_type);
@@ -54,7 +54,7 @@ struct Write_pos {
 };
 
 template <MapType M>
-std::vector<M> read_pef_tokens(std::string &file_path, const uint64_t offset, const uint64_t size_to_read) {
+std::vector<M> read_pef_tokens(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -106,7 +106,7 @@ const uint64_t create_pef_tokens(const std::vector<M> &tokens, std::ofstream &fi
 }
 
 template <MapType M>
-bool check_pef_tokens(const std::vector<M> &tokens, std::string file_path, const uint8_t type) {
+bool check_pef_tokens(const std::vector<M> &tokens, const std::string file_path, const uint8_t type) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -251,7 +251,7 @@ const Write_pos write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &
 }
 
 template <MapType M>
-bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, uint8_t type, const uint8_t enc_type) {
+bool check_offsets_file_by_type(const std::map<M, std::vector<uint64_t>> &tokens_map, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
     std::vector<uint64_t> id_to_offset;
     uint64_t offset = 1;
 

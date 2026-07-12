@@ -28,14 +28,14 @@ const uint8_t get_enc_type(const std::string &type) {
     throw std::invalid_argument("Encoding type not supported");
 }
 
-const MappedFile open_mmap_r(std::string file_path) {
+const MappedFile open_mmap_r(const std::string &file_path) {
     file_mapping file_mapping(file_path.data(), read_only);
     mapped_region file_region(file_mapping, read_only);
 
     return MappedFile{std::move(file_mapping), std::move(file_region)};
 }
 
-const MappedFile open_mmap_rw(std::string file_path) {
+const MappedFile open_mmap_rw(const std::string &file_path) {
     file_mapping file_mapping(file_path.data(), read_write);
     mapped_region file_region(file_mapping, read_write);
 

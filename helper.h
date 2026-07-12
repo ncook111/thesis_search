@@ -37,8 +37,8 @@ const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);
 const uint8_t get_file_type(const std::string &type);
 const uint8_t get_enc_type(const std::string &type);
-const MappedFile open_mmap_r(std::string file_path);
-const MappedFile open_mmap_rw(std::string file_path);
+const MappedFile open_mmap_r(const std::string &file_path);
+const MappedFile open_mmap_rw(const std::string &file_path);
 const std::string token_type_to_str(const uint8_t &type);
 const uint8_t str_to_token_type(const std::string &type_str);
 
