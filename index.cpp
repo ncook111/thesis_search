@@ -178,21 +178,21 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, c
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
     
-    std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
+    const std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
 
     return get_tok_offsets(token_id, id_to_offset, res.first, res.second, file, enc_type);
 }
 
-const std::vector<uint64_t> get_tok_offsets_from_file(const std::vector<uint64_t> token_ids, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
+const std::vector<uint64_t> get_tok_offsets_from_file(const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
     const MappedFile mf = open_mmap_r(file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
     
-    std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
+    const std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
 
     std::vector<uint64_t> offsets;
     
-    for (const auto id : token_ids) {
+    for (size_t id = token_ids.min; id <= token_ids.max; ++id) {
         std::vector<uint64_t> cur_offsets = get_tok_offsets(id, id_to_offset, res.first, res.second, file, enc_type);
         offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()), std::make_move_iterator(cur_offsets.end()));
     }

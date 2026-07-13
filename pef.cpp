@@ -3,6 +3,7 @@
 #include "pef.h"
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
+#include <optional>
 
 // Encoding a single vector with ef
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv, const std::vector<uint64_t> &nums) {
@@ -32,7 +33,7 @@ const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv
     return decoded;
 }
 
-const std::vector<uint64_t> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
+const std::optional<Range> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
     const uint64_t min = range.min;
     const uint64_t max = range.max;
     
@@ -45,7 +46,7 @@ const std::vector<uint64_t> find_range_pef_id(const std::string &file_path, cons
 
     // If null return empty vector
     if (!header.n) {
-        return std::vector<uint64_t>();
+        return std::nullopt;
     }
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
@@ -54,20 +55,34 @@ const std::vector<uint64_t> find_range_pef_id(const std::string &file_path, cons
     ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
 
     std::vector<uint64_t> ids;
+    Range ids_range = {};
+    
     uint64_t cur = min;
-    while (cur <= max) {
-        std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
+    std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
+    if (res.second <= max) {
+        ids_range.min = res.first;
+        ids_range.max = res.first;
 
-        if (res.second <= max) ids.push_back(res.first);
+        cur = res.second + 1;
 
-        if (res.first >= header.n - 1) {
-            break;
-        } else {
-            cur = res.second + 1;
+        while (cur <= max) {
+            std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
+
+            if (res.second <= max)
+                ids_range.max = res.first;
+
+
+            if (res.first >= header.n - 1) {
+                break;
+            } else {
+                cur = res.second + 1;
+            }
         }
-    }
 
-    return ids;
+        return std::make_optional(ids_range);
+    } else {
+        return std::nullopt;
+    } 
 }
 
 const std::optional<uint64_t> find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t value) {
@@ -105,10 +120,13 @@ const Pef_Header get_bv_header(const uint8_t *file, const uint64_t offset) {
 }
 
 const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t offset, const uint64_t size_to_read) {
-    std::vector<uint64_t> raw_input((size_to_read) / 8);
-    std::memcpy(raw_input.data(), &file[offset], size_to_read);
+    const uint64_t* raw_input = reinterpret_cast<const uint64_t*>(&file[offset]);
+    const uint64_t num_words = size_to_read / 8;
+
     succinct::bit_vector_builder bvb2(header.num_bits);
     succinct::bit_vector_builder::bits_type &target = bvb2.move_bits(); 
-    std::copy(raw_input.begin(), raw_input.end(), target.begin());
+
+    std::copy(raw_input, raw_input + num_words, target.begin());
+
     return succinct::bit_vector(&bvb2);
 }

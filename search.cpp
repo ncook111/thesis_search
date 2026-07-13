@@ -144,7 +144,7 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
     }
 }
 
-const std::vector<uint64_t> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type) {
+const std::optional<Range> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type) {
     const MappedFile mf = open_mmap_r(offset_file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -163,13 +163,13 @@ void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t 
             throw std::invalid_argument("Offset file does not exist");
         }
 
-        const std::vector<uint64_t> ids = get_range_id_pef(range, offset_file_name, type);
+        const std::optional<Range> ids = get_range_id_pef(range, offset_file_name, type);
 
-        if (!ids.size()) continue; // No token id found for current query
+        if (!ids) continue; // No token id found for current query
 
         const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
 
-        offsets[i] = get_tok_offsets_from_file(ids, id_offsets_map, offset_file_name, type, enc_type);
+        offsets[i] = get_tok_offsets_from_file(*std::move(ids), id_offsets_map, offset_file_name, type, enc_type);
     }
 }
 
