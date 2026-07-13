@@ -10,28 +10,15 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
 
     // If a range query, create a range
     std::pair<Range, uint8_t> range_data = {{-1, -1}, 0}; // Construct dummy range_data
-    if (is_range_query(query)) range_data = get_range_query(tokens, query);
+    if (is_range_query(query))
+        range_data = get_range_query(tokens, query);
 
-    // Check index/fsts directory exists
-    if (!std::filesystem::exists(index_path + "/fsts")) {
-        throw std::invalid_argument("Fst's directory does not exist");
-    }
-
-    // Check index/fsts directory exists
-    if (!std::filesystem::exists(index_path + "/offsets")) {
-        throw std::invalid_argument("Offset's directory does not exist");
-    }
-
-    // Check file_mappings file exists
-    if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
-        throw std::invalid_argument("file_mappings file does not exist");
-    }
+    check_index_dir_valid(index_path);
 
     // Read in file_mappings fst
     fst::StdConstFst *fst = nullptr;
     read_from_disk(fst, index_path + "/file_mappings.fst");
-    const std::set<std::string> names = get_strings_from_fst(*fst);
-    const size_t names_size = names.size();
+    const size_t names_size = get_strings_from_fst(*fst).size();
 
     FieldMap offsets;
 
@@ -69,18 +56,22 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
 
 const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type) {
     assert(queries.size() != 0);
+    
+    FieldMap intersected_queries;
+    for (const auto query : queries) {
+        if (!intersected_queries.size()) {
+            intersected_queries = search_index(query, index_path, enc_type);
+        } else {
+            intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(query, index_path, enc_type));
+        } 
+    }
 
     fst::StdConstFst *fst = nullptr;
     read_from_disk(fst, index_path + "/file_mappings.fst");
     const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
-    
-    FieldMap intersected_queries = search_index(queries.front(), index_path, enc_type);
-    for (auto it = queries.begin() + 1; it != queries.end(); ++it) {
-        intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(*it, index_path, enc_type));
-    }
 
     const EntryMap result_entries = get_entries_offsets(intersected_queries, names, data_path, index_path, enc_type);
-
+    
     return result_entries;
 }
 
@@ -160,7 +151,9 @@ const std::vector<int64_t> get_range_id_pef(Range range, const std::string &offs
     return find_range_pef_id(offset_file_name, tok_details.first, tok_details.second, range);
 }
 
-void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
+void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
+    std::cout << "Range: " << range.min << " : " << range.max << std::endl;
+
     for (size_t i = 0; i < files_indexed; ++i) {
         const std::string offset_file_name = index_path + "/offsets/" + std::to_string(i) + ".off";
         if (!std::filesystem::exists(offset_file_name)) { 
@@ -174,6 +167,7 @@ void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t 
         if (!ids.size()) continue; // No token id found for current query
 
         for (const auto id : ids) {
+            std::cout << id << std::endl;
             const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
 
             if (id_offsets_map.size()) {
@@ -187,7 +181,7 @@ void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t 
 const bool is_range_query(const std::string &query) {
     // Check if query in the form of a range query
     // Matches "[a,b]", where a and b are any combination of the characters [0-9+\-.:]
-    std::regex pattern(R"(\[[0-9+\-.:]*,[0-9+\-.:]*\])"); 
+    const std::regex pattern(R"(\[[0-9+\-.:]*,[0-9+\-.:]*\])"); 
 
     return std::regex_match(query, pattern);
 }
@@ -229,13 +223,13 @@ const std::pair<Range, uint8_t> get_range_query(const Tokenizer &tokens, const s
     }
 
     // Use previous regex in is_range_query, but with 2 capture groups
-    std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])"); 
+    const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])"); 
     std::smatch match;
 
     std::regex_match(query, match, pattern);
 
-    std::string a = match[1].str();
-    std::string b = match[2].str();
+    const std::string a = match[1].str();
+    const std::string b = match[2].str();
 
     // Form [a,b]
     Range range = {};

@@ -32,6 +32,7 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t addr_offset, const size_t size_to_read);
 void check_all_pef_tokens(const Tokenizer &tokenizer, const std::string &file_path);
 std::pair<uint64_t, uint64_t> get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size, const uint8_t type);
+void check_index_dir_valid(const std::string &index_path);
 
 // Saved to the front of the file
 struct Offsets_header {

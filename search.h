@@ -14,7 +14,7 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path);
 const std::vector<int64_t> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type);
-void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, size_t files_indexed, const std::string &index_path, const uint8_t enc_type);
+void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type);
 const bool is_range_query(const std::string &query);
 const std::pair<Range, uint8_t> get_range_query(const Tokenizer &tokens, const std::string &query);
 

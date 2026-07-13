@@ -467,3 +467,17 @@ std::pair<uint64_t, uint64_t> get_pef_header_details_by_type(const uint8_t *file
 
     return {offset, size_to_read};
 }
+
+void check_index_dir_valid(const std::string &index_path) {
+    // Check valid fst directory
+    if (!std::filesystem::exists(index_path + "/fsts"))
+        throw std::invalid_argument("Fst's directory does not exist");
+
+    // Check valid offsets directory
+    if (!std::filesystem::exists(index_path + "/offsets"))
+        throw std::invalid_argument("Offset's directory does not exist");
+
+    // Check file_mappings file exists
+    if (!std::filesystem::exists(index_path + "/file_mappings.fst"))
+        throw std::invalid_argument("file_mappings file does not exist");
+}
