@@ -293,25 +293,25 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset) {
     }
 }
 
-void Tokenizer::printAlphaTokens() {
+void Tokenizer::printAlphaTokens() const {
     for (const auto &[key, _] : alpha_tokens) {
         std::cout << key << std::endl;;
     }
 }
 
-void Tokenizer::printNumTokens() {
+void Tokenizer::printNumTokens() const {
     for (const auto &[key, _] : num_tokens) {
         std::cout << key << std::endl;
     }
 }
 
-void Tokenizer::printFloatTokens() {
+void Tokenizer::printFloatTokens() const {
     for (const auto &[key, _] : float_tokens) {
         std::cout << key << std::endl;
     }
 }
 
-void Tokenizer::printDateTokens() {
+void Tokenizer::printDateTokens() const {
     for (const auto &[key, _] : d_tokens) {
         time_t tm = key;
         std::tm* tm_info = std::gmtime(&tm);
@@ -321,7 +321,7 @@ void Tokenizer::printDateTokens() {
     }
 }
 
-void Tokenizer::printTimeTokens() {
+void Tokenizer::printTimeTokens() const {
     for (const auto &[key, _] : t_tokens) {
         time_t tm = key;
         std::tm* tm_info = std::gmtime(&tm);
@@ -331,7 +331,7 @@ void Tokenizer::printTimeTokens() {
     }
 }
 
-void Tokenizer::printIPTokens() {
+void Tokenizer::printIPTokens() const {
 
 }
 
@@ -351,7 +351,7 @@ Tokenizer Tokenizer::from_string(const std::string &file_path) {
     return t;
 }
 
-void Tokenizer::printStatistics() {
+void Tokenizer::printStatistics() const {
     std::cout << "Total Alpha Tokens: " << alpha_tokens.size() << std::endl;
     std::cout << "Total Integer Tokens: " << num_tokens.size() << std::endl;
     std::cout << "Total Float Tokens: " << float_tokens.size() << std::endl;

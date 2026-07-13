@@ -43,13 +43,13 @@ class Tokenizer {
         std::vector<bool> boolean_tokens;
         std::vector<uint64_t> entry_offsets; // Denotes the start point for all entries in the file (newline for csv and logfmt, {} for json)
 
-        void printAlphaTokens();
-        void printNumTokens();
-        void printFloatTokens();
-        void printDateTokens();
-        void printTimeTokens();
-        void printIPTokens();
-        void printStatistics();
+        void printAlphaTokens() const;
+        void printNumTokens() const;
+        void printFloatTokens() const;
+        void printDateTokens() const;
+        void printTimeTokens() const;
+        void printIPTokens() const;
+        void printStatistics() const;
 
         const std::vector<std::string> getAlphaTokens() const;
         const std::vector<uint64_t> getNumTokens() const;
