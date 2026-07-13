@@ -32,9 +32,9 @@ const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv
     return decoded;
 }
 
-const std::vector<int64_t> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
-    const int64_t min = range.min;
-    const int64_t max = range.max;
+const std::vector<uint64_t> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
+    const uint64_t min = range.min;
+    const uint64_t max = range.max;
     
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
@@ -45,7 +45,7 @@ const std::vector<int64_t> find_range_pef_id(const std::string &file_path, const
 
     // If null return empty vector
     if (!header.n) {
-        return std::vector<int64_t>();
+        return std::vector<uint64_t>();
     }
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
@@ -53,10 +53,10 @@ const std::vector<int64_t> find_range_pef_id(const std::string &file_path, const
     ds2i::global_parameters params;
     ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
 
-    std::vector<int64_t> ids;
-    int64_t cur = min;
+    std::vector<uint64_t> ids;
+    uint64_t cur = min;
     while (cur <= max) {
-        std::pair<int64_t, int64_t> res = e.next_geq(cur);
+        std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
 
         if (res.second <= max) ids.push_back(res.first);
 
@@ -70,7 +70,7 @@ const std::vector<int64_t> find_range_pef_id(const std::string &file_path, const
     return ids;
 }
 
-const int64_t find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t value) {
+const std::optional<uint64_t> find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t value) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -80,7 +80,7 @@ const int64_t find_pef_id(const std::string &file_path, const uint64_t offset, c
 
     // If null return -1
     if (!header.n) {
-        return -1;
+        return std::nullopt;
     }
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
@@ -93,7 +93,7 @@ const int64_t find_pef_id(const std::string &file_path, const uint64_t offset, c
     if (res.second == value) {
         return res.first; 
     } else {
-        return -1;
+        return std::nullopt;
     }
 }
 

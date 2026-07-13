@@ -133,16 +133,18 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
         const char *file = static_cast<char*>(mf.addr());
         const size_t file_size = mf.size();
 
-        for (auto it = (i.second).begin(); it < (i.second).end() - 1; it += 2) {
-            uint64_t size = *(it + 1) - *it;
-            std::cout << "Line: ";
-            std::cout.write(&file[*it], size);
-            std::cout << "\n";
+        if (!i.second.empty()) {
+            for (auto it = (i.second).begin(); it < (i.second).end() - 1; it += 2) {
+                uint64_t size = *(it + 1) - *it;
+                std::cout << "Line: ";
+                std::cout.write(&file[*it], size);
+                std::cout << "\n";
+            }
         }
     }
 }
 
-const std::vector<int64_t> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type) {
+const std::vector<uint64_t> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type) {
     const MappedFile mf = open_mmap_r(offset_file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -161,20 +163,13 @@ void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t 
             throw std::invalid_argument("Offset file does not exist");
         }
 
-        const std::vector<int64_t> ids = get_range_id_pef(range, offset_file_name, type);
-        std::cout << "Size: " << ids.size() << std::endl;
+        const std::vector<uint64_t> ids = get_range_id_pef(range, offset_file_name, type);
 
         if (!ids.size()) continue; // No token id found for current query
 
-        for (const auto id : ids) {
-            std::cout << id << std::endl;
-            const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
+        const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
 
-            if (id_offsets_map.size()) {
-                std::vector<uint64_t> tok_offsets = get_tok_offsets_from_file(id, id_offsets_map, offset_file_name, type, enc_type);
-                offsets[i].insert(offsets[i].end(), std::make_move_iterator(tok_offsets.begin()), std::make_move_iterator(tok_offsets.end()));
-            }
-        }
+        offsets[i] = get_tok_offsets_from_file(ids, id_offsets_map, offset_file_name, type, enc_type);
     }
 }
 

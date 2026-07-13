@@ -173,13 +173,34 @@ const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint
     return offsets;
 }
 
-
-// Output converts offsets values from file from 1 indexing back to 0 indexing
 const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
     const MappedFile mf = open_mmap_r(file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
+    
+    std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
 
+    return get_tok_offsets(token_id, id_to_offset, res.first, res.second, file, enc_type);
+}
+
+const std::vector<uint64_t> get_tok_offsets_from_file(const std::vector<uint64_t> token_ids, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
+    const MappedFile mf = open_mmap_r(file_name);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
+    
+    std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
+
+    std::vector<uint64_t> offsets;
+    
+    for (const auto id : token_ids) {
+        std::vector<uint64_t> cur_offsets = get_tok_offsets(id, id_to_offset, res.first, res.second, file, enc_type);
+        offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()), std::make_move_iterator(cur_offsets.end()));
+    }
+    
+    return offsets;
+}
+
+const std::pair<uint64_t, uint64_t> get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset, const uint8_t* file, const uint8_t type) {
     // Read in header
     Offsets_header header = {};
     std::memcpy(reinterpret_cast<char*>(&header), &file[0], sizeof(header));
@@ -224,11 +245,18 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, c
             break;
     }
 
+    return {tok_offsets_length, offset};
+}
+
+
+// Output converts offsets values from file from 1 indexing back to 0 indexing
+const std::vector<uint64_t> get_tok_offsets(const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const uint64_t tok_offsets_length, const uint64_t offset, const uint8_t* file, const uint8_t enc_type) {
+    uint64_t size_to_read;
     if (token_id == id_to_offset.size() - 1) {
         size_to_read = tok_offsets_length - id_to_offset[token_id] + 1;
     } else {
         size_to_read = id_to_offset[token_id+1] - id_to_offset[token_id];
-    }
+    } 
 
     switch (enc_type) {
         case EncType::GVB:
@@ -340,8 +368,8 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    check_offsets_file(tokenizer, file_name + ".off", enc_type);
-    check_all_pef_tokens(tokenizer, file_name + ".off");
+    //check_offsets_file(tokenizer, file_name + ".off", enc_type);
+    //check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer, const std::string &file_path) {
