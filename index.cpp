@@ -178,9 +178,9 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const uint64_t token_id, c
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
     
-    const std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
+    const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
 
-    return get_tok_offsets(token_id, id_to_offset, res.first, res.second, file, enc_type);
+    return get_tok_offsets(token_id, id_to_offset, length, offset, file, enc_type);
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
@@ -188,12 +188,13 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const Range token_ids, con
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
     
-    const std::pair<uint64_t, uint64_t> res = get_tok_offsets_setup(id_to_offset, file, type);
+    const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
 
     std::vector<uint64_t> offsets;
     
-    for (size_t id = token_ids.min; id <= token_ids.max; ++id) {
-        std::vector<uint64_t> cur_offsets = get_tok_offsets(id, id_to_offset, res.first, res.second, file, enc_type);
+    const auto [min, max] = token_ids;
+    for (size_t id = min; id <= max; ++id) {
+        std::vector<uint64_t> cur_offsets = get_tok_offsets(id, id_to_offset, length, offset, file, enc_type);
         offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()), std::make_move_iterator(cur_offsets.end()));
     }
     
@@ -393,9 +394,9 @@ const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offset
 
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     succinct::bit_vector enc_tok_offsets;
-    const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
+    const auto [universe, n] = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
     const uint64_t num_bits = enc_tok_offsets.size();
-    const Pef_Header header = {num_bits, res.first, res.second};
+    const Pef_Header header = {num_bits, universe, n};
 
     // Write to file
     const uint64_t entry_offsets_size = enc_tok_offsets.data().size() * sizeof(uint64_t);

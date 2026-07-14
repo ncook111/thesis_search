@@ -34,8 +34,7 @@ const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv
 }
 
 const std::optional<Range> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
-    const uint64_t min = range.min;
-    const uint64_t max = range.max;
+    const auto [min, max] = range;
     
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
