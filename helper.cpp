@@ -71,3 +71,13 @@ const uint8_t str_to_token_type(const std::string &type_str) {
 
     return TokenType::INVALID;
 }
+
+const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec) {
+    std::vector<uint64_t> dedup;
+    for (const auto &v : vec) {
+        if (dedup.size() && dedup.back() == v) continue;
+        dedup.push_back(v);
+    }
+
+    return dedup;
+}

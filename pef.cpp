@@ -1,9 +1,9 @@
-#include <utility>
 #include "helper.h"
 #include "pef.h"
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
 #include <optional>
+#include <utility>
 
 // Encoding a single vector with ef
 const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &bv, const std::vector<uint64_t> &nums) {
@@ -45,47 +45,42 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path, const
     Pef_Header header = get_bv_header(file, offset);
 
     // If null return empty vector
-    if (!header.n) {
-        return std::nullopt;
-    }
+    if (!header.n) return std::nullopt;
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
     ds2i::global_parameters params;
     ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
 
-    std::vector<uint64_t> ids;
     Range ids_range = {};
     
     uint64_t cur = min;
-    std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
-    if (res.second <= max) {
-        ids_range.min = res.first;
-        ids_range.max = res.first;
+    auto /*uint64_t*/ [pef_id, value] = e.next_geq(cur);
 
-        cur = res.second + 1;
-
-        while (cur <= max) {
-            std::pair<uint64_t, uint64_t> res = e.next_geq(cur);
-
-            if (res.second <= max)
-                ids_range.max = res.first;
-
-
-            if (res.first >= header.n - 1) {
-                break;
-            } else {
-                cur = res.second + 1;
-            }
-        }
-
-        return std::make_optional(ids_range);
-    } else {
+    if (value > max)
         return std::nullopt;
-    } 
+
+    ids_range.min = pef_id;
+    ids_range.max = pef_id;
+    cur = value + 1;
+
+    while (cur <= max) {
+        std::tie(pef_id, value) = e.next_geq(cur);
+
+        if (value <= max)
+            ids_range.max = pef_id;
+
+        if (pef_id >= header.n - 1) {
+            break;
+        } else {
+            cur = value + 1;
+        }
+    }
+
+    return std::make_optional(ids_range);
 }
 
-const std::optional<uint64_t> find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t value) {
+const std::optional<uint64_t> find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t id) {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
@@ -93,23 +88,16 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path, const ui
     // Read in header
     Pef_Header header = get_bv_header(file, offset);
 
-    // If null return -1
-    if (!header.n) {
-        return std::nullopt;
-    }
+    if (!header.n) return std::nullopt;
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
     ds2i::global_parameters params;
     ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
 
-    std::pair<uint64_t, uint64_t> res = e.next_geq(value);
+    const auto /*uint64_t*/ [pef_id, value] = e.next_geq(id);
 
-    if (res.second == value) {
-        return res.first; 
-    } else {
-        return std::nullopt;
-    }
+    return (value == id) ? std::make_optional(pef_id) : std::nullopt;
 }
 
 const Pef_Header get_bv_header(const uint8_t *file, const uint64_t offset) {

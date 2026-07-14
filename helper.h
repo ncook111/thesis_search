@@ -41,6 +41,7 @@ const MappedFile open_mmap_r(const std::string &file_path);
 const MappedFile open_mmap_rw(const std::string &file_path);
 const std::string token_type_to_str(const uint8_t &type);
 const uint8_t str_to_token_type(const std::string &type_str);
+const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec);
 
 template <class F>
 const std::vector<uint8_t> to_bytes(const F &input) {

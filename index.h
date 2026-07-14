@@ -67,9 +67,7 @@ std::vector<M> read_pef_tokens(const std::string &file_path, const uint64_t offs
     const Pef_Header header = get_bv_header(file, offset);
 
     // If null return empty vec
-    if (!header.n) {
-        return std::vector<M>();
-    }
+    if (!header.n) return std::vector<M>();
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
@@ -90,9 +88,9 @@ const uint64_t create_pef_tokens(const std::vector<M> &tokens, std::ofstream &fi
     }
 
     succinct::bit_vector pef_tokens;
-    const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(pef_tokens, tokens);
+    const auto [universe, n] = partitioned_ef_encode(pef_tokens, tokens);
     const uint64_t num_bits = pef_tokens.size();
-    const Pef_Header header = {num_bits, res.first, res.second};
+    const Pef_Header header = {num_bits, universe, n};
 
     const uint64_t pos = file.tellp();
 
@@ -133,15 +131,9 @@ const Write_pos write_offsets_gvb(const std::map<M, std::vector<uint64_t>> &toke
 
     uint64_t offset = 1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
                          // A value of 0 is used as a terminator when decoding in under special circumstances
-    for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
+    for (const auto &[_, offsets] : tokens_map) {
         // Duplicate docids may be present from tokenization stage, remove them
-        const std::vector<uint64_t> &offsets = it->second;
-        std::vector<uint64_t> offsets_dedup;
-        for (auto &off : offsets) {
-            if (offsets_dedup.size() && offsets_dedup.back() == off) continue;
-            offsets_dedup.push_back(off);
-            assert(off != 0);
-        }
+        std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
 
         assert(offsets_dedup.size() != 0);
 
@@ -174,21 +166,15 @@ const Write_pos write_offsets_pef(const std::map<M, std::vector<uint64_t>> &toke
 
     uint64_t offset = 1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
                          // A value of 0 is used as terminator when decoding
-    for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
+    for (const auto &[_, offsets] : tokens_map) {
         // Duplicate docids may be present from tokenization stage, remove them
-        const std::vector<uint64_t> &offsets = it->second;
-        std::vector<uint64_t> offsets_dedup;
-        for (auto &off : offsets) {
-            if (offsets_dedup.size() && offsets_dedup.back() == off) continue;
-            offsets_dedup.push_back(off);
-        }
-
+        std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
 
         std::__1::unique_ptr<succinct::bit_vector> owned_enc_tok_offsets = std::make_unique<succinct::bit_vector>();
-        const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(*owned_enc_tok_offsets, offsets_dedup);
+        const auto [universe, n] = partitioned_ef_encode(*owned_enc_tok_offsets, offsets_dedup);
         const uint64_t num_bits = owned_enc_tok_offsets.get()->size();
 
-        const Pef_Header header = {num_bits, res.first, res.second};
+        const Pef_Header header = {num_bits, universe, n};
 
         all_enc_tok_offsets.push_back(std::make_pair(header, std::move(owned_enc_tok_offsets)));
 
@@ -198,9 +184,9 @@ const Write_pos write_offsets_pef(const std::map<M, std::vector<uint64_t>> &toke
     }
 
     succinct::bit_vector enc_id_to_offset;
-    const std::pair<uint64_t, uint64_t> res = partitioned_ef_encode(enc_id_to_offset, id_to_offset);
+    const auto [universe, n] = partitioned_ef_encode(enc_id_to_offset, id_to_offset);
     const uint64_t num_bits = enc_id_to_offset.size();
-    const Pef_Header header = {num_bits, res.first, res.second};
+    const Pef_Header header = {num_bits, universe, n};
 
     // Write to file
     const uint64_t first_write_pos = file.tellp();

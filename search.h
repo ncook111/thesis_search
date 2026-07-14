@@ -13,7 +13,7 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
 const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path);
-const std::optional<Range> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type);
+const std::optional<Range> get_range_id_pef(const Range &range, const std::string &offset_file_name, const uint8_t type);
 void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type);
 const bool is_range_query(const std::string &query);
 const std::pair<Range, uint8_t> get_range_query(const Tokenizer &tokens, const std::string &query);
@@ -67,9 +67,8 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
         // Defer check for file existence until it will be used within get_id
         const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
 
-        std::cout << "here1" << std::endl;
         const std::optional<uint64_t> id = get_id(query, offset_file_name, fst_file_name, type);
-        std::cout << "here2" << std::endl;
+        
         if (!id) continue; // No token id found for current query
 
         const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);

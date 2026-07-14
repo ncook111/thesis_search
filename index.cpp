@@ -419,10 +419,8 @@ const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_of
     switch (enc_type) {
         case EncType::GVB:
             return write_entry_offsets_gvb(entry_offsets, file);
-            break;
         case EncType::PEF:
             return write_entry_offsets_pef(entry_offsets, file);
-            break;
         default:
             throw std::invalid_argument("Not a valid encoding type");
     }

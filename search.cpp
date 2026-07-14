@@ -78,10 +78,8 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
 const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path, const uint8_t enc_type) {
     EntryMap all_line_offsets;
     // Offsets is a map of file_id's to offsets
-    for (const auto &o : offsets_map) {
-        const uint64_t file_id = o.first;
+    for (const auto &[file_id, token_offsets] : offsets_map) {
         const std::string index_file_path = index_path + "/offsets/" + std::to_string(file_id)+ ".off";
-        const std::vector<uint64_t> &token_offsets = o.second;
 
         // All entry offsets for current data file:
         const std::vector<uint64_t> entry_offsets = get_entry_offsets_from_file(index_file_path, enc_type);
@@ -101,17 +99,15 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
     FieldMap intersection_offsets;
     
     // Offsets is a map of file_id's to offsets
-    for (const auto &o : entries_1) {
-        const size_t file_id = o.first;
+    for (const auto &[file_id, docids] : entries_1) {
         if (!entries_2.contains(file_id)) continue;
 
-        const std::vector<uint64_t> &docids_1 = o.second;
-        const std::vector<uint64_t> &docids_2 = entries_2.at(file_id);
+        const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
         std::vector<uint64_t> &intersect_docids = intersection_offsets[file_id];
-        for (const auto &docid : docids_1) {
+        for (const auto &docid : docids) {
             // Check DocId present in both maps using binary search
-            const auto it = std::lower_bound(docids_2.begin(), docids_2.end(), docid);
-            if (it != docids_2.end() && *it == docid) {
+            const auto it = std::lower_bound(docids_cmp.begin(), docids_cmp.end(), docid);
+            if (it != docids_cmp.end() && *it == docid) {
                 intersect_docids.push_back(docid);
             }
         }
@@ -124,17 +120,16 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
     fst::StdConstFst *fst = nullptr;
     read_from_disk(fst, index_path + "/file_mappings.fst");
 
-    for (const auto &i : map) {
-        const std::string file_name = id_to_string(*fst, i.first);
+    for (const auto &[file_id, entries] : map) {
+        const std::string file_name = id_to_string(*fst, file_id);
         std::cout << "File: " << file_name << std::endl;
-        const uint64_t file_id = i.first;
         const std::string file_path = data_path + '/' + file_name;
+        
         const MappedFile mf = open_mmap_r(file_path);
         const char *file = static_cast<char*>(mf.addr());
-        const size_t file_size = mf.size();
 
-        if (!i.second.empty()) {
-            for (auto it = (i.second).begin(); it < (i.second).end() - 1; it += 2) {
+        if (!entries.empty()) {
+            for (auto it = (entries).begin(); it < (entries).end() - 1; it += 2) {
                 uint64_t size = *(it + 1) - *it;
                 std::cout << "Line: ";
                 std::cout.write(&file[*it], size);
@@ -144,7 +139,7 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
     }
 }
 
-const std::optional<Range> get_range_id_pef(Range range, const std::string &offset_file_name, const uint8_t type) {
+const std::optional<Range> get_range_id_pef(const Range &range, const std::string &offset_file_name, const uint8_t type) {
     const MappedFile mf = open_mmap_r(offset_file_name);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
