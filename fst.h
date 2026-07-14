@@ -4,6 +4,7 @@
 #include <fst/fstlib.h>
 #include "helper.h"
 #include "custom_types.h"
+#include "pef.h"
 
 void read_from_disk(fst::StdConstFst *&fst, const std::string &file_name);
 
@@ -151,6 +152,32 @@ int get_id_from_fst(const G &fst, const std::vector<uint8_t> &query) {
 
     return (fst.Final(state) != fst::TropicalWeight::Zero()) ? word_id : -1;
 }
+
+// template <class G>
+// const Range get_id_range_from_fst(const G &fst, const std::vector<uint8_t> &query) {
+//     if (fst.Start() == fst::kNoStateId) return -1;
+
+//     long state = fst.Start();
+//     long word_id = -1;
+
+//     for (uint8_t b : query) {
+//         const int64_t label = static_cast<int64_t>(b) + 1;
+//         bool found = false;
+//         for (fst::ArcIterator<G> aiter(fst, state); !aiter.Done(); aiter.Next()) {
+//             const auto &arc = aiter.Value();
+//             if (arc.ilabel == label) {
+//                 if (arc.olabel != 0)
+//                     word_id = arc.olabel - 1;
+//                 state = arc.nextstate;
+//                 found = true;
+//                 break;
+//             }
+//         }
+//         if (!found) return -1;
+//     }
+
+//     return (fst.Final(state) != fst::TropicalWeight::Zero()) ? word_id : -1;
+// }
 
 template <FstQueryType Q> 
 void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
