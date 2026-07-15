@@ -191,6 +191,7 @@ const std::vector<uint64_t> get_tok_offsets_from_file(const Range token_ids, con
     const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
 
     std::vector<uint64_t> offsets;
+
     
     const auto [min, max] = token_ids;
     for (size_t id = min; id <= max; ++id) {

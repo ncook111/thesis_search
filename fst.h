@@ -5,6 +5,7 @@
 #include "helper.h"
 #include "custom_types.h"
 #include "pef.h"
+#include <optional>
 
 void read_from_disk(fst::StdConstFst *&fst, const std::string &file_name);
 
@@ -104,6 +105,7 @@ int get_id_from_fst(const G &fst, const Q &query) {
     return (fst.Final(state) != fst::TropicalWeight::Zero()) ? word_id : -1;
 }
 
+
 template <class G>
 void get_paths(const G &fst, int state, std::vector<uint8_t> &current,
                std::set<std::vector<uint8_t>> &results) {
@@ -153,31 +155,56 @@ int get_id_from_fst(const G &fst, const std::vector<uint8_t> &query) {
     return (fst.Final(state) != fst::TropicalWeight::Zero()) ? word_id : -1;
 }
 
-// template <class G>
-// const Range get_id_range_from_fst(const G &fst, const std::vector<uint8_t> &query) {
-//     if (fst.Start() == fst::kNoStateId) return -1;
+template <class G>
+int64_t get_bound_from_fst(const G &fst, float val, bool bound) {
+    std::set<std::vector<uint8_t>> all_float = get_sequences_from_fst<std::vector<uint8_t>>(fst);
+    std::vector<float> float_vec;
+    
+    for (const auto &fl : all_float) {
+        float_vec.push_back(from_bytes<float>(fl));
+    }
 
-//     long state = fst.Start();
-//     long word_id = -1;
+    std::sort(float_vec.begin(), float_vec.end());
 
-//     for (uint8_t b : query) {
-//         const int64_t label = static_cast<int64_t>(b) + 1;
-//         bool found = false;
-//         for (fst::ArcIterator<G> aiter(fst, state); !aiter.Done(); aiter.Next()) {
-//             const auto &arc = aiter.Value();
-//             if (arc.ilabel == label) {
-//                 if (arc.olabel != 0)
-//                     word_id = arc.olabel - 1;
-//                 state = arc.nextstate;
-//                 found = true;
-//                 break;
-//             }
-//         }
-//         if (!found) return -1;
-//     }
+    const auto it = std::lower_bound(float_vec.begin(), float_vec.end(), val);
 
-//     return (fst.Final(state) != fst::TropicalWeight::Zero()) ? word_id : -1;
-// }
+    if (it == float_vec.end()) {
+        return float_vec.size() - 1;
+    } else {
+        if (!bound && it != float_vec.begin())
+            return get_id_from_fst(fst, to_bytes(*(it-1)));
+        else
+            return get_id_from_fst(fst, to_bytes(*it));
+            
+    }
+}
+
+template <class G>
+const std::optional<Range> get_id_range_from_fst(const G &fst, const std::pair<float, float> &range) {
+    const auto [min, max] = range;
+    int64_t min_id, max_id;
+    
+    if (min == -std::numeric_limits<float>::infinity())
+        min_id = 0;
+    else 
+        min_id = get_id_from_fst(fst, to_bytes(min));
+    
+    if (max == std::numeric_limits<float>::infinity())
+        max_id = get_sequences_from_fst<std::vector<uint8_t>>(fst).size() - 1;
+    else
+        max_id = get_id_from_fst(fst, to_bytes(max));
+
+    if (min_id == -1) {
+        min_id = get_bound_from_fst(fst, min, true);
+    }
+    
+    if (max_id == -1) {
+        max_id = get_bound_from_fst(fst, max, false);
+    }
+    Range ret = {min_id, max_id};
+
+    return std::make_optional(Range(min_id, max_id));
+}
 
 template <FstQueryType Q> 
 void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {

@@ -3,15 +3,24 @@
 #include "tokenizer.h"
 #include "search.h"
 #include "fst.h"
+#include "ezytinger.h"
 #include <regex>
 
 const FieldMap search_index(const std::string &query, const std::string &index_path, const uint8_t enc_type) {
     const Tokenizer tokens = Tokenizer::from_string(query);
 
     // If a range query, create a range
-    std::pair<Range, uint8_t> range_data = {{-1, -1}, 0}; // Construct dummy range_data
-    if (is_range_query(query))
-        range_data = get_range_query(tokens, query);
+    Range range; // Construct dummy range
+    std::pair<float, float> range_float;
+    uint8_t range_type = TokenType::INVALID;
+    if (is_range_query(query)) {
+        range_type = get_range_query_type(tokens);
+
+        if (range_type == TokenType::FLOAT)
+            range_float = get_range_query_float(tokens, query);
+        else
+            range = get_range_query(tokens, query, range_type);
+    }
 
     check_index_dir_valid(index_path);
 
@@ -23,8 +32,11 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
     FieldMap offsets;
 
     // If range only need to process this, then return
-    if (range_data.first.min != -1) {
-        search_index_by_range(offsets, range_data.first, range_data.second, names_size, index_path, enc_type);
+    if (range_type != TokenType::INVALID) {
+        if (range_type == TokenType::FLOAT)
+            search_index_by_range(offsets, range_float, range_type, names_size, index_path, enc_type);
+        else
+            search_index_by_range(offsets, range, range_type, names_size, index_path, enc_type); 
         return offsets;
     }
 
@@ -148,26 +160,6 @@ const std::optional<Range> get_range_id_pef(const Range &range, const std::strin
     return find_range_pef_id(offset_file_name, tok_details.first, tok_details.second, range);
 }
 
-void search_index_by_range(FieldMap &offsets, const Range &range, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
-    std::cout << "Range: " << range.min << " : " << range.max << std::endl;
-
-    for (size_t i = 0; i < files_indexed; ++i) {
-        const std::string offset_file_name = index_path + "/offsets/" + std::to_string(i) + ".off";
-        if (!std::filesystem::exists(offset_file_name)) { 
-            std::cout << offset_file_name << std::endl;
-            throw std::invalid_argument("Offset file does not exist");
-        }
-
-        const std::optional<Range> ids = get_range_id_pef(range, offset_file_name, type);
-
-        if (!ids) continue; // No token id found for current query
-
-        const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
-
-        offsets[i] = get_tok_offsets_from_file(*std::move(ids), id_offsets_map, offset_file_name, type, enc_type);
-    }
-}
-
 const bool is_range_query(const std::string &query) {
     // Check if query in the form of a range query
     // Matches "[a,b]", where a and b are any combination of the characters [0-9+\-.:]
@@ -176,41 +168,54 @@ const bool is_range_query(const std::string &query) {
     return std::regex_match(query, pattern);
 }
 
-const std::pair<Range, uint8_t> get_range_query(const Tokenizer &tokens, const std::string &query) {
-    // Check that tokens only contains 1-2 tokens of a single valid query type
-    // Valid query types are int/date/time/ip
-    std::vector<uint64_t> range_tokens;
-
-    const size_t alpha_size = tokens.getAlphaTokens().size();
-    const size_t int_size = tokens.getNumTokens().size();
-    const size_t float_size = tokens.getFloatTokens().size();
-    const size_t date_size = tokens.getDateTokens().size();
-    const size_t time_size = tokens.getTimeTokens().size();
-    const size_t ipv4_size = tokens.getIPTokens().size();
-
-    uint8_t type;
-    // Alpha and float cannot be used in range query so throw error
-    if (alpha_size != 0 || float_size != 0) {
-        std::cout << tokens.getAlphaTokens().front() << std::endl;
+const uint8_t get_range_query_type(const Tokenizer &tokens) {
+    uint8_t type = TokenType::INVALID;
+    // Alpha cannot be used in range query so throw error
+    if (tokens.getAlphaTokens().size()) {
         throw std::invalid_argument("Range query cannot contain alphabetical or float tokens");
-    } else if (int_size == 1 || int_size == 2) {
-        range_tokens = tokens.getNumTokens();
+    } else if (tokens.getNumTokens().size()) {
+        if (type != TokenType::INVALID) throw std::invalid_argument("Range query must contain a single type");
         type = TokenType::INT;
-    } else if (date_size == 1 || date_size == 2) {
-        if (range_tokens.size()) throw std::invalid_argument("Range query must contain a single type");
-        range_tokens = tokens.getDateTokens();
+    } else if (tokens.getFloatTokens().size()) {
+        type = TokenType::FLOAT;
+    } else if (tokens.getDateTokens().size()) {
+        if (type != TokenType::INVALID) throw std::invalid_argument("Range query must contain a single type");
         type = TokenType::DATE;
-    } else if (time_size == 1 || time_size == 2) {
-        if (range_tokens.size()) throw std::invalid_argument("Range query must contain a single type");
-        range_tokens = tokens.getTimeTokens();
+    } else if (tokens.getTimeTokens().size()) {
+        if (type != TokenType::INVALID) throw std::invalid_argument("Range query must contain a single type");
         type = TokenType::TIME;
-    } else if (ipv4_size == 1 || ipv4_size == 2) {
-        if (range_tokens.size()) throw std::invalid_argument("Range query must contain a single type");
-        range_tokens = tokens.getIPTokens();
+    } else if (tokens.getIPTokens().size()) {
+        if (type != TokenType::INVALID) throw std::invalid_argument("Range query must contain a single type");
         type = TokenType::IPV4;
     } else {
         throw std::invalid_argument("Range query invalid");
     }
+
+    return type;
+}
+
+const Range get_range_query(const Tokenizer &tokens, const std::string &query, const uint8_t type) {
+    std::vector<uint64_t> range_tokens;
+
+    switch (type) {
+        case TokenType::INT:
+            range_tokens = tokens.getNumTokens();
+            break;
+        case TokenType::DATE:
+            range_tokens = tokens.getDateTokens();
+            break;
+        case TokenType::TIME:
+            range_tokens = tokens.getTimeTokens();
+            break;
+        case TokenType:: IPV4:
+            range_tokens = tokens.getIPTokens();
+            break;
+        default:
+            throw std::invalid_argument("Invalid type");
+    }
+
+    if (range_tokens.size() > 2)
+        throw std::invalid_argument("Range query invalid");
 
     // Use previous regex in is_range_query, but with 2 capture groups
     const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])"); 
@@ -236,5 +241,41 @@ const std::pair<Range, uint8_t> get_range_query(const Tokenizer &tokens, const s
         range = {0, static_cast<int64_t>(range_tokens[0])};
     }
 
-    return {range, type};
+    return range;
+}
+
+const std::pair<float, float> get_range_query_float(const Tokenizer &tokens, const std::string &query) {
+    std::vector<float> range_tokens = tokens.getFloatTokens();
+    
+    if (range_tokens.size() > 2)
+        throw std::invalid_argument("Range query invalid");
+
+    // Use previous regex in is_range_query, but with 2 capture groups
+    const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])"); 
+    std::smatch match;
+
+    std::regex_match(query, match, pattern);
+
+    const std::string a = match[1].str();
+    const std::string b = match[2].str();
+
+    // Form [a,b]
+    float min, max;
+    if (a.size() != 0 && b.size()) {
+        assert(range_tokens.size() == 2);
+        min = range_tokens[0];
+        max = range_tokens[1];
+    // Form [a,]
+    } else if (a.size()) {
+        assert(range_tokens.size() == 1);
+        min = range_tokens[0];
+        max = std::numeric_limits<float>::infinity();
+    // Form [,b]
+    } else {
+        assert(range_tokens.size() == 1);
+        min = -std::numeric_limits<float>::infinity();
+        max = range_tokens[0];
+    }
+
+    return std::make_pair(min, max);
 }

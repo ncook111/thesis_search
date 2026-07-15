@@ -21,34 +21,42 @@ const std::pair<uint64_t, uint64_t> partitioned_ef_encode(succinct::bit_vector &
 }
 
 const std::vector<uint64_t> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe, const uint64_t n) {
-    std::vector<uint64_t> decoded;
-
     ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n, ds2i::global_parameters());
 
-    decoded.reserve(n);
-    for (uint64_t i = 0; i < n; ++i) {
-        decoded.push_back(e.move(i).second);
+    std::vector<uint64_t> decoded(n);
+    decoded[0] = e.move(0).second;
+    for (uint64_t i = 1; i < n; ++i) {
+        decoded[i] = e.next().second;
     }
 
     return decoded;
 }
 
-const std::optional<Range> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {
-    const auto [min, max] = range;
-    
-    const std::optional<uint64_t> min_id = find_pef_id(file_path, offset, size_to_read, min);
-    std::optional<uint64_t> max_id = find_pef_id(file_path, offset, size_to_read, max);
+const std::optional<Range> find_range_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const Range range) {  
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
 
-    std::cout << "here" << std::endl;
-    if (!min_id) return std::nullopt;
+    // Read in header
+    Pef_Header header = get_bv_header(file, offset);
 
-    if (!max_id) max_id = std::make_optional(get_pef_n(file_path, offset));
+    if (!header.n) return std::nullopt;
 
-    Range ret = {static_cast<int64_t>(*std::move(min_id)), static_cast<int64_t>(*std::move(max_id))};
+    const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
-    std:: cout << ret.min << std::endl;
-    std:: cout << ret.max << std::endl;
-    return std::make_optional(ret);
+    ds2i::global_parameters params;
+    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
+
+    const auto /*uint64_t*/ [pef_id_min, value_min] = e.next_geq(range.min);
+    auto /*uint64_t*/ [pef_id_max, value_max] = e.next_geq(range.max);
+
+    if (pef_id_min == header.n) return std::nullopt;
+    if (pef_id_max == header.n) --pef_id_max;
+
+    return std::make_optional(Range(
+        static_cast<int64_t>(pef_id_min),
+        static_cast<int64_t>(pef_id_max)
+    ));
 }
 
 const std::optional<uint64_t> find_pef_id(const std::string &file_path, const uint64_t offset, const uint64_t size_to_read, const uint64_t id) {
@@ -70,18 +78,6 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path, const ui
 
     return (value == id) ? std::make_optional(pef_id) : std::nullopt;
 }
-
-const uint64_t get_pef_n(const std::string &file_path, const uint64_t offset) {
-    const MappedFile mf = open_mmap_r(file_path);
-    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
-    const size_t file_size = mf.size();
-
-    // Read in header
-    Pef_Header header = get_bv_header(file, offset);
-
-    return header.n;
-}
-
 
 const Pef_Header get_bv_header(const uint8_t *file, const uint64_t offset) {
     Pef_Header header = {};
