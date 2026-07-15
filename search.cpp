@@ -3,7 +3,7 @@
 #include "tokenizer.h"
 #include "search.h"
 #include "fst.h"
-#include "ezytinger.h"
+#include "eytzinger.h"
 #include <regex>
 
 const FieldMap search_index(const std::string &query, const std::string &index_path, const uint8_t enc_type) {
@@ -115,13 +115,14 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
         if (!entries_2.contains(file_id)) continue;
 
         const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
+        const std::vector<uint64_t> eyt = make_eytzinger(docids_cmp);
         std::vector<uint64_t> &intersect_docids = intersection_offsets[file_id];
         for (const auto &docid : docids) {
             // Check DocId present in both maps using binary search
-            const auto it = std::lower_bound(docids_cmp.begin(), docids_cmp.end(), docid);
-            if (it != docids_cmp.end() && *it == docid) {
+            uint64_t val = eytzinger_search(docid, eyt);
+            if (val != eyt.size() && eyt[val] == docid)
                 intersect_docids.push_back(docid);
-            }
+
         }
     }
 

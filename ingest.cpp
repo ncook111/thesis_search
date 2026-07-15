@@ -83,7 +83,7 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
 
     try {
         const EntryMap results = process_queries(queries, data_path, index_path, enc_type);
-        print_entries(results, index_path, data_path);
+        //print_entries(results, index_path, data_path);
     } catch (const std::exception &e) {
         std::cout << "Error when searching index: " << e.what() << std::endl;
         return 1;
