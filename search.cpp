@@ -70,7 +70,7 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
     assert(queries.size() != 0);
     
     FieldMap intersected_queries;
-    for (const auto query : queries) {
+    for (const auto &query : queries) {
         if (!intersected_queries.size()) {
             intersected_queries = search_index(query, index_path, enc_type);
         } else {
@@ -98,7 +98,7 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
 
         // For each token_offset, get closest prev newline and match in file to get offset to end of line
         std::vector<uint64_t> &line_offsets = all_line_offsets[file_id];
-        for (const auto &cur : token_offsets) {
+        for (const auto cur : token_offsets) {
             line_offsets.push_back(entry_offsets[cur]);
             line_offsets.push_back(entry_offsets[cur + 1] - 1);
         }
@@ -115,14 +115,13 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
         if (!entries_2.contains(file_id)) continue;
 
         const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
-        const std::vector<uint64_t> eyt = make_eytzinger(docids_cmp);
+        const Eytzinger eyt(docids_cmp);
         std::vector<uint64_t> &intersect_docids = intersection_offsets[file_id];
-        for (const auto &docid : docids) {
+        for (const auto docid : docids) {
             // Check DocId present in both maps using binary search
-            uint64_t val = eytzinger_search(docid, eyt);
-            if (val != eyt.size() && eyt[val] == docid)
+            const uint64_t val = eyt.search(docid);
+            if (val != eyt.size() && eyt.at(val) == docid)
                 intersect_docids.push_back(docid);
-
         }
     }
 

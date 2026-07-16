@@ -395,7 +395,9 @@ const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offset
 
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     succinct::bit_vector enc_tok_offsets;
+    std::cout << "here1" << std::endl;
     const auto [universe, n] = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
+    std::cout << "here2" << std::endl;
     const uint64_t num_bits = enc_tok_offsets.size();
     const Pef_Header header = {num_bits, universe, n};
 
@@ -409,7 +411,7 @@ const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offset
 
     // Write enc_tok_offsets
     file.write(reinterpret_cast<const char*>(enc_tok_offsets.data().data()), entry_offsets_size);
-
+    std::cout << "here3" << std::endl;
     return write_pos;
 }
 
