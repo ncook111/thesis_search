@@ -29,7 +29,7 @@ const bool Tokenizer::is_int(const std::string &s) const {
 
 const bool Tokenizer::is_float(const std::string &s) const {
     // Preprocess string for float compliance
-    for (const auto &c : s) {
+    for (const auto c : s) {
         if (!std::isdigit(c) && c != '+' && c != '-' && c != '.') {
             return false;
         }
@@ -373,7 +373,7 @@ const std::vector<std::string> Tokenizer::getAlphaTokens() const {
 
 const std::vector<uint64_t> Tokenizer::getNumTokens() const {
     std::vector<uint64_t> tokens;
-    for (const auto &i: num_tokens) {
+    for (const auto i: num_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -381,7 +381,7 @@ const std::vector<uint64_t> Tokenizer::getNumTokens() const {
 }
 const std::vector<float> Tokenizer::getFloatTokens() const {
     std::vector<float> tokens;
-    for (const auto &i: float_tokens) {
+    for (const auto i: float_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -389,7 +389,7 @@ const std::vector<float> Tokenizer::getFloatTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getDateTokens() const {
     std::vector<uint64_t> tokens;
-    for (const auto &i: d_tokens) {
+    for (const auto i: d_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -397,7 +397,7 @@ const std::vector<uint64_t> Tokenizer::getDateTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
     std::vector<uint64_t> tokens;
-    for (const auto &i: t_tokens) {
+    for (const auto i: t_tokens) {
         tokens.push_back(i.first);
     }
 
@@ -405,7 +405,7 @@ const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
 }
 const std::vector<uint64_t> Tokenizer::getIPTokens() const {
         std::vector<uint64_t> tokens;
-    for (const auto &i: ipv4_tokens) {
+    for (const auto i: ipv4_tokens) {
         tokens.push_back(i.first);
     }
 

@@ -52,8 +52,7 @@ fst::StdVectorFst create_trie(const std::vector<Q> &sequences) {
 }
 
 template <class G>
-void get_paths(const G &fst, int state, std::string &current,
-               std::set<std::string> &results) {
+void get_paths(const G &fst, const int state, std::string &current, std::set<std::string> &results) {
     if (fst.Final(state) != fst::TropicalWeight::Zero())
         results.insert(current);
 
@@ -107,7 +106,7 @@ int get_id_from_fst(const G &fst, const Q &query) {
 
 
 template <class G>
-void get_paths(const G &fst, int state, std::vector<uint8_t> &current,
+void get_paths(const G &fst, const int state, std::vector<uint8_t> &current,
                std::set<std::vector<uint8_t>> &results) {
     if (fst.Final(state) != fst::TropicalWeight::Zero())
         results.insert(current);
@@ -156,7 +155,7 @@ int get_id_from_fst(const G &fst, const std::vector<uint8_t> &query) {
 }
 
 template <class G>
-int64_t get_bound_from_fst(const G &fst, float val, bool bound) {
+int64_t get_bound_from_fst(const G &fst, const float val, const bool bound) {
     std::set<std::vector<uint8_t>> all_float = get_sequences_from_fst<std::vector<uint8_t>>(fst);
     std::vector<float> float_vec;
     

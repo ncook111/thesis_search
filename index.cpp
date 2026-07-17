@@ -52,7 +52,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
         tokenizer.printStatistics();
 
-        const std::string file_id = std::to_string(i);
+        const std::string file_id = std::to_string(i++);
 
         generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
 
@@ -67,8 +67,6 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         check_fst(tokenizer.getFloatTokens(), fst_dir.string() + "/" + file_id + "_float.fst");
         tokenizer.float_tokens.clear();
         std::cout << "Finished" << std::endl;
-
-        ++i;
     }
 
     create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
@@ -105,7 +103,6 @@ const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_nam
     size_t size_to_read = 0;
     size_t addr_offset = 0;
 
-    // Should only ever be requesting id_offsets if present?
     switch (type) {
         case TokenType::ALPHA:
             size_to_read = header.alpha_offsets_header - header.alpha_id_map_header;
@@ -395,9 +392,7 @@ const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offset
 
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     succinct::bit_vector enc_tok_offsets;
-    std::cout << "here1" << std::endl;
     const auto [universe, n] = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
-    std::cout << "here2" << std::endl;
     const uint64_t num_bits = enc_tok_offsets.size();
     const Pef_Header header = {num_bits, universe, n};
 
@@ -451,7 +446,7 @@ void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name
 const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets, const std::string &file_name, const uint8_t enc_type) {
     // Convert into 0 indexing
     std::vector<uint64_t> entry_offsets_0;
-    for (const auto &cur : entry_offsets) {
+    for (const auto cur : entry_offsets) {
         entry_offsets_0.push_back(cur - 1);
     }
 

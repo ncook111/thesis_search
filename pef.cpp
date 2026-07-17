@@ -44,8 +44,7 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path, const
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
-    ds2i::global_parameters params;
-    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
+    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, ds2i::global_parameters());
 
     const auto /*uint64_t*/ [pef_id_min, value_min] = e.next_geq(range.min);
     auto /*uint64_t*/ [pef_id_max, value_max] = e.next_geq(range.max);
@@ -71,10 +70,9 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path, const ui
 
     const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header), size_to_read - sizeof(header));
 
-    ds2i::global_parameters params;
-    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, params);
+    ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n, ds2i::global_parameters());
 
-    const auto /*uint64_t*/ [pef_id, value] = e.next_geq(id);
+    const auto [pef_id, value] = e.next_geq(id);
 
     return (value == id) ? std::make_optional(pef_id) : std::nullopt;
 }

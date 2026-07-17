@@ -44,22 +44,22 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
         search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path, enc_type);
     }
 
-    for (const auto &t : tokens.getNumTokens()) {
+    for (const auto t : tokens.getNumTokens()) {
         search_index_by_type(offsets, t, TokenType::INT, names_size, index_path, enc_type);
     }
 
-    for (const auto &t : tokens.getFloatTokens()) {
+    for (const auto t : tokens.getFloatTokens()) {
         search_index_by_type(offsets, to_bytes(t), TokenType::FLOAT, names_size, index_path, enc_type);
     }
 
-    for (const auto &t : tokens.getDateTokens()) {
+    for (const auto t : tokens.getDateTokens()) {
         search_index_by_type(offsets, t, TokenType::DATE, names_size, index_path, enc_type);
     }
 
-    for (const auto &t : tokens.getTimeTokens()) {
+    for (const auto t : tokens.getTimeTokens()) {
         search_index_by_type(offsets, t, TokenType::TIME, names_size, index_path, enc_type);
     }
-    for (const auto &t : tokens.getIPTokens()) {
+    for (const auto t : tokens.getIPTokens()) {
         search_index_by_type(offsets, t, TokenType::IPV4, names_size, index_path, enc_type);
     }
 
@@ -115,14 +115,10 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
         if (!entries_2.contains(file_id)) continue;
 
         const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
-        const Eytzinger eyt(docids_cmp);
-        std::vector<uint64_t> &intersect_docids = intersection_offsets[file_id];
-        for (const auto docid : docids) {
-            // Check DocId present in both maps using binary search
-            const uint64_t val = eyt.search(docid);
-            if (val != eyt.size() && eyt.at(val) == docid)
-                intersect_docids.push_back(docid);
-        }
+
+        intersection_offsets[file_id].reserve(std::min(docids.size(), docids_cmp.size()));
+
+        std::set_intersection(docids.begin(), docids.end(), docids_cmp.begin(), docids_cmp.end(), std::back_inserter(intersection_offsets[file_id]));
     }
 
     return intersection_offsets;
@@ -141,7 +137,7 @@ void print_entries(const EntryMap &map, const std::string &index_path, const std
         const char *file = static_cast<char*>(mf.addr());
 
         if (!entries.empty()) {
-            for (auto it = (entries).begin(); it < (entries).end() - 1; it += 2) {
+            for (auto it = entries.begin(); it < entries.end() - 1; it += 2) {
                 uint64_t size = *(it + 1) - *it;
                 std::cout << "Line: ";
                 std::cout.write(&file[*it], size);
@@ -163,9 +159,17 @@ const std::optional<Range> get_range_id_pef(const Range &range, const std::strin
 const bool is_range_query(const std::string &query) {
     // Check if query in the form of a range query
     // Matches "[a,b]", where a and b are any combination of the characters [0-9+\-.:]
-    const std::regex pattern(R"(\[[0-9+\-.:]*,[0-9+\-.:]*\])"); 
+    const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])"); 
+    std::smatch match;
 
-    return std::regex_match(query, pattern);
+    int res = std::regex_match(query, match, pattern);
+
+    const std::string a = match[1].str();
+    const std::string b = match[2].str();
+
+    if (a == b) return false;
+
+    return res;
 }
 
 const uint8_t get_range_query_type(const Tokenizer &tokens) {

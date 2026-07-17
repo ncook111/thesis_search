@@ -54,7 +54,7 @@ const std::optional<uint64_t> get_id(const Q &query, const std::string &offset_f
 }
 
 template <QueryType Q>
-void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
+void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
     const std::string type_str = token_type_to_str(type);
 
     // Get list of all fst files filtered by type
