@@ -16,6 +16,8 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include "csv.hpp"
 #include <string_view>
+#include <iostream>
+#include "simdjson.h"
 
 const bool Tokenizer::is_int(const std::string &s) const {
     size_t i = s.front() == '+' || s.front() == '-' ? 1 : 0;
@@ -139,36 +141,181 @@ inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
     return TokenType::ALPHA;
 }
 
-void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) {
+void Tokenizer::tokenize_file() {
+    switch (type) {
+        case FileType::CSV:
+            tokenize_csv();
+            break;
+        case FileType::JSON:
+            tokenize_json();
+            break;
+        case FileType::LOGFMT:
+            tokenize_logfmt();
+            break;
+        default:
+            break;
+    }
+}
+
+void Tokenizer::tokenize_csv() {
     csv::CSVFormat format;
     format.variable_columns(csv::VariableColumnPolicy::THROW);
     csv::CSVReader reader(file_path, format);
+
+    generate_entry_offsets();
+
+    std::string curr_token;
+    uint64_t i = 2; // Start from 1 to account for header row
+    for (const csv::CSVRow &row: reader) { // Input iterator
+
+        for (csv::CSVField &field: row) {
+            std::string_view line = field.get<std::string_view>();
+            for (const auto c : line) {
+                if (isalnum(c)
+                    || c == '+'
+                    || c == '-'
+                    || c == '.'
+                    || c == ':') {
+                    curr_token.push_back(c);
+                } else {
+                    if (curr_token.size()) {
+                        processToken(curr_token, i);
+                    }
+                }
+            }
+
+            // Process leftover token if present
+            if (curr_token.size()) {
+                processToken(curr_token, i); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+            }
+
+            break;
+        }
+        if (i % 10000 == 0)
+            std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
+       
+        ++i;
+    }
+
+    // Process leftover token if present
+    if (curr_token.size()) {
+        processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+    }
+
+    std::cout << "Lines: " << entry_offsets.size() << std::endl;
+}
+
+void Tokenizer::generate_entry_offsets() {
+    // Line scanner preprocessing
+    // Only checking for newlines atm
+
+    switch(type) {
+        case FileType::CSV:
+            generate_entry_offsets_csv();
+            break;
+        case FileType::JSON:
+            generate_entry_offsets_json();
+            break;
+        case FileType::LOGFMT:
+            break;
+        default:
+            break;
+    }
+}
+
+void Tokenizer::generate_entry_offsets_csv() {
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
 
     // Set up entry_offsets with inital value of 1
     // Offsets required to start at 1
     entry_offsets.push_back(1);
 
-    // Line scanner preprocessing
-    // Only checking for newlines atm
+    bool in_string = false;
+    bool escaped = false;
+    for (size_t i = 1; i < file_size; ++i) {
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (file[i] == '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (file[i] == '"') {
+            in_string = !in_string;
+            continue;
+        }
+
+        if (in_string) continue;
+ 
+        if (file[i] == '\n')
+            entry_offsets.push_back(i + 2); // Start offset 1 after newline
+    }
+
+    entry_offsets.push_back(file_size + 2);
+}
+
+void Tokenizer::generate_entry_offsets_json() {
     const MappedFile mf = open_mmap_r(file_path);
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
 
+    // Set up entry_offsets with inital value of 1
+    // Offsets required to start at 1
+    entry_offsets.push_back(1);
+
+    int depth = 1;
+    bool in_string = false;
+    bool escaped = false;
     for (size_t i = 1; i < file_size; ++i) {
-        if (file[i] == '\n')
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (file[i] == '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (file[i] == '"') {
+            in_string = !in_string;
+            continue;
+        }
+
+        if (in_string) continue;
+
+        // Only count newlines if depth == 0, i.e. not within a json object
+        if (file[i] == '{')
+            ++depth;
+        else if (file[i] == '}')
+            --depth;   
+        else if (depth == 0 && file[i] == '\n')
             entry_offsets.push_back(i + 2); // Start offset 1 after newline
-        else if (file[i-1] == '\r')
-            entry_offsets.push_back(i + 1); // Start offset 1 after carriage return
     }
 
     entry_offsets.push_back(file_size + 2);
+}
+
+void Tokenizer::tokenize_json() {
+    using namespace simdjson;
+
+    ondemand::parser parser;
+    padded_string json = padded_string::load(file_path);
+    ondemand::document_stream docs = parser.iterate_many(json);
+
+    generate_entry_offsets();
 
     std::string curr_token;
     uint64_t i = 1; // Start from 1 to account for header row
-    for (const csv::CSVRow &row: reader) { // Input iterator
-
-        for (csv::CSVField &field: row) {
-            std::string_view line = field.get<std::string_view>();
+    for (auto doc : docs) { // Input iterator
+        ondemand::object obj = doc.get_object();
+        for (auto field : obj) {
+            const std::string_view line = field.value().raw_json_token();
             for (const auto c : line) {
                 if (isalnum(c)
                     || c == '+'
@@ -200,8 +347,8 @@ void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) 
     }
 
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
-    std::cout << "Total bytes read: " << file_size << std::endl;
 }
+void Tokenizer::tokenize_logfmt() {}
 
 void Tokenizer::tokenize_string(const std::string &input) {
     std::string curr_token;
@@ -360,7 +507,9 @@ void Tokenizer::printIPTokens() const {
 
 Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type) {
     Tokenizer t;
-    t.tokenize_file(file_path, type);
+    t.file_path = file_path;
+    t.type = type;
+    t.tokenize_file();
 
     return t;
 }

@@ -20,8 +20,8 @@ if(NOT OPENFST_INCLUDE_DIR OR NOT OPENFST_LIBRARY)
     message(FATAL_ERROR "OpenFST not found, check `brew install openfst`")
 endif()
 
-add_subdirectory(third_party/ds2i/succinct)
 add_subdirectory(third_party/csv-parser)
+add_subdirectory(third_party/ds2i/succinct)
 
 # target
 add_executable(ingest
@@ -33,12 +33,14 @@ add_executable(ingest
     helper.cpp
     pef.cpp
     search.cpp
+    third_party/simdjson/simdjson.cpp
 )
 
 target_include_directories(ingest PRIVATE
     include
     ${OPENFST_INCLUDE_DIR}
     third_party/ds2i
+    third_party/simdjson
 )
 
 target_link_libraries(ingest PRIVATE

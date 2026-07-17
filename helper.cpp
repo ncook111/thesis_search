@@ -15,8 +15,8 @@ const bool valid_extension(const std::string &ext) {
 
 const uint8_t get_file_type(const std::string &type) {
     if (type == ".csv") return 0;
-    if (type == ".json") return 0;
-    if (type == ".logfmt") return 0;
+    if (type == ".json") return 1;
+    if (type == ".logfmt") return 2;
 
     throw std::invalid_argument("File type not supported");
 }

@@ -49,6 +49,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
         std::cout << f.filename().string() << std::endl;
 
         const uint8_t type = get_file_type(f.extension());
+
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
         tokenizer.printStatistics();
 
@@ -406,7 +407,6 @@ const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offset
 
     // Write enc_tok_offsets
     file.write(reinterpret_cast<const char*>(enc_tok_offsets.data().data()), entry_offsets_size);
-    std::cout << "here3" << std::endl;
     return write_pos;
 }
 

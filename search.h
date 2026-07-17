@@ -77,6 +77,10 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
         if (id_offsets_map.size()) {
             offsets[i] = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
         }
+
+        for (auto off : offsets[i]) {
+            std::cout << off << std::endl;
+        }
     }
 }
 

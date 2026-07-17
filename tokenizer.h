@@ -60,9 +60,15 @@ class Tokenizer {
 
     private:
         Tokenizer() = default;
-        void tokenize_file(const std::string &file_path, const uint8_t type);
+        void tokenize_file();
         void tokenize_string(const std::string &input);
         void processToken(std::string &curr_token, const uint64_t offset);
+        void tokenize_csv();
+        void tokenize_json();
+        void tokenize_logfmt();
+        void generate_entry_offsets();
+        void generate_entry_offsets_csv();
+        void generate_entry_offsets_json();
         inline const uint8_t numeric_type(const std::string& s) const;
         const bool is_ipv6(const std::string& s) const;
         const bool is_ipv4(const std::string& s) const;
@@ -72,6 +78,7 @@ class Tokenizer {
         const bool is_int(const std::string& s) const;
         const bool is_bool(const std::string& s) const;
 
+        std::string file_path;
         uint8_t type;
 };
 
