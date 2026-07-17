@@ -14,6 +14,8 @@
 #include <fstream>
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include "csv.hpp"
+#include <string_view>
 
 const bool Tokenizer::is_int(const std::string &s) const {
     size_t i = s.front() == '+' || s.front() == '-' ? 1 : 0;
@@ -137,44 +139,61 @@ inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
     return TokenType::ALPHA;
 }
 
-void Tokenizer::tokenize_file(void *file_addr, const size_t &file_size, const uint8_t type) {
-    const char *file = static_cast<char*>(file_addr);
-
-    std::string curr_token;
+void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) {
+    csv::CSVReader reader(file_path);
 
     // Set up entry_offsets with inital value of 1
     // Offsets required to start at 1
     entry_offsets.push_back(1);
 
-    for (size_t bytes_read = 0; bytes_read < file_size; ++bytes_read) {
-        if (isalnum(file[bytes_read])
-            || file[bytes_read] == '+'
-            || file[bytes_read] == '-'
-            || file[bytes_read] == '.'
-            || file[bytes_read] == ':') {
-            curr_token.push_back(file[bytes_read]);
-        } else {
-            if (curr_token.size()) {
-                processToken(curr_token, entry_offsets.size()); // Current DocId is size of entry_offsets vec
+    // Line scanner preprocessing
+    // Only checking for newlines atm
+    const MappedFile mf = open_mmap_r(file_path);
+    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
+    const size_t file_size = mf.size();
+
+    for (size_t i = 0; i < file_size; ++i) {
+        if (file[i] == '\n')
+            entry_offsets.push_back(i + 2); // Start offset 1 after newline
+    }
+
+    entry_offsets.push_back(file_size + 2);
+
+    std::string curr_token;
+    uint64_t i = 1; // Start from 1 to account for header row
+    for (const csv::CSVRow &row: reader) { // Input iterator
+
+        for (csv::CSVField &field: row) {
+            std::string line = field.get<>();
+            for (const auto c : line) {
+                if (isalnum(c)
+                    || c == '+'
+                    || c == '-'
+                    || c == '.'
+                    || c == ':') {
+                    curr_token.push_back(c);
+                } else {
+                    if (curr_token.size()) {
+                        processToken(curr_token, i);
+                    }
+                }
             }
 
-            if (file[bytes_read] == '\n') {
-                // Push new entry
-                entry_offsets.push_back(bytes_read + 2); // Start offset 1 after newline
+            // Process leftover token if present
+            if (curr_token.size()) {
+                processToken(curr_token, i); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
             }
         }
-
-        if (bytes_read % 1000000 == 0)
-            std::cout << "Processed: " << (float)(bytes_read/(float)file_size) * 100 << "%" << std::endl;
+        if (i % 10000 == 0)
+            std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
+       
+        ++i;
     }
 
     // Process leftover token if present
     if (curr_token.size()) {
         processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
-
-    // Final dummy docId representing eof
-    entry_offsets.push_back(file_size + 2);
 
     std::cout << "Lines: " << entry_offsets.size();
     std::cout << "Total bytes read: " << file_size << std::endl;
@@ -336,10 +355,8 @@ void Tokenizer::printIPTokens() const {
 }
 
 Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type) {
-    MappedFile mf = open_mmap_r(file_path);
-
     Tokenizer t;
-    t.tokenize_file(mf.addr(), mf.size(), type);
+    t.tokenize_file(file_path, type);
 
     return t;
 }

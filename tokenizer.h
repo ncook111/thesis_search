@@ -60,7 +60,7 @@ class Tokenizer {
 
     private:
         Tokenizer() = default;
-        void tokenize_file(void *file_addr, const size_t &file_size, const uint8_t type);
+        void tokenize_file(const std::string &file_path, const uint8_t type);
         void tokenize_string(const std::string &input);
         void processToken(std::string &curr_token, const uint64_t offset);
         inline const uint8_t numeric_type(const std::string& s) const;

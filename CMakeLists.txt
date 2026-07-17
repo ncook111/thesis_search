@@ -21,6 +21,7 @@ if(NOT OPENFST_INCLUDE_DIR OR NOT OPENFST_LIBRARY)
 endif()
 
 add_subdirectory(third_party/ds2i/succinct)
+add_subdirectory(third_party/csv-parser)
 
 # target
 add_executable(ingest
@@ -42,6 +43,7 @@ target_include_directories(ingest PRIVATE
 
 target_link_libraries(ingest PRIVATE
     succinct
+    csv       
     Boost::boost
     ${OPENFST_LIBRARY}
 )
