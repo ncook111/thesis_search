@@ -50,9 +50,6 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
 
         const uint8_t type = get_file_type(f.extension());
         Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
-        for (auto t : tokenizer.getAlphaTokens()) {
-            std::cout << t << std::endl;
-        }
         tokenizer.printStatistics();
 
         const std::string file_id = std::to_string(i++);

@@ -140,7 +140,9 @@ inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
 }
 
 void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) {
-    csv::CSVReader reader(file_path);
+    csv::CSVFormat format;
+    format.variable_columns(csv::VariableColumnPolicy::THROW);
+    csv::CSVReader reader(file_path, format);
 
     // Set up entry_offsets with inital value of 1
     // Offsets required to start at 1
@@ -152,9 +154,11 @@ void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) 
     const uint8_t *file = static_cast<uint8_t*>(mf.addr());
     const size_t file_size = mf.size();
 
-    for (size_t i = 0; i < file_size; ++i) {
+    for (size_t i = 1; i < file_size; ++i) {
         if (file[i] == '\n')
             entry_offsets.push_back(i + 2); // Start offset 1 after newline
+        else if (file[i-1] == '\r')
+            entry_offsets.push_back(i + 1); // Start offset 1 after carriage return
     }
 
     entry_offsets.push_back(file_size + 2);
@@ -164,7 +168,7 @@ void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) 
     for (const csv::CSVRow &row: reader) { // Input iterator
 
         for (csv::CSVField &field: row) {
-            std::string line = field.get<>();
+            std::string_view line = field.get<std::string_view>();
             for (const auto c : line) {
                 if (isalnum(c)
                     || c == '+'
@@ -195,7 +199,7 @@ void Tokenizer::tokenize_file(const std::string &file_path, const uint8_t type) 
         processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
 
-    std::cout << "Lines: " << entry_offsets.size();
+    std::cout << "Lines: " << entry_offsets.size() << std::endl;
     std::cout << "Total bytes read: " << file_size << std::endl;
 }
 
