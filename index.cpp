@@ -284,6 +284,8 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t addr_offset, const size_t size_to_read) {
     // Read in universe and n first
+    std::cout << "read entrys offset: " << addr_offset << std::endl;
+    std::cout << "read total size: " << size_to_read << std::endl;
     const Pef_Header header = get_bv_header(file, addr_offset);
     const succinct::bit_vector bv = get_bv(file, header, addr_offset + sizeof(header), size_to_read - sizeof(header));
 
@@ -368,7 +370,7 @@ void generate_offsets_file(const Tokenizer &tokenizer, const std::string &file_n
 
     file.close();
 
-    //check_offsets_file(tokenizer, file_name + ".off", enc_type);
+    check_offsets_file(tokenizer, file_name + ".off", enc_type);
     //check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
@@ -393,6 +395,7 @@ const uint64_t write_entry_offsets_gvb(const std::vector<uint64_t> &entry_offset
 
 const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offsets, std::ofstream &file) {
     succinct::bit_vector enc_tok_offsets;
+
     const auto [universe, n] = partitioned_ef_encode(enc_tok_offsets, entry_offsets);
     const uint64_t num_bits = enc_tok_offsets.size();
     const Pef_Header header = {num_bits, universe, n};
@@ -401,6 +404,8 @@ const uint64_t write_entry_offsets_pef(const std::vector<uint64_t> &entry_offset
     const uint64_t entry_offsets_size = enc_tok_offsets.data().size() * sizeof(uint64_t);
 
     const uint64_t write_pos = file.tellp();
+    std::cout << "entrys offset: " << write_pos << std::endl;
+    std::cout << "total size: " << sizeof(header) + entry_offsets_size << std::endl;
 
     // Write num_bits, universe and n
     file.write(reinterpret_cast<const char*>(&header), sizeof(header));
@@ -428,12 +433,12 @@ const uint64_t write_entry_offsets_to_file(const std::vector<uint64_t> &entry_of
 
 void check_offsets_file(const Tokenizer &tokenizer, const std::string &file_name, const uint8_t enc_type) {
     bool check = true;
-    check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA, enc_type);
-    check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT ,enc_type);
-    check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT, enc_type);
-    check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE, enc_type);
-    check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME, enc_type);
-    check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4, enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA, enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT ,enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT, enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE, enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME, enc_type);
+    //check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4, enc_type);
     check = check && check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
 
     if (check) {
@@ -459,6 +464,9 @@ const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets, const
        std::cout << "Entry offsets incorrect: " << std::endl;
        std::cout << "read in size: " << input.size() << std::endl;
        std::cout << "og size: " << entry_offsets_0.size() << std::endl;
+       for (auto i : entry_offsets_0) {
+            //std::cout << i << std::endl;
+       }
        return false;
     }
 }

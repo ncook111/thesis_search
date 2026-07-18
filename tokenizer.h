@@ -66,6 +66,7 @@ class Tokenizer {
         void tokenize_csv();
         void tokenize_json();
         void tokenize_logfmt();
+        void tokenize_field(const std::string_view field_str, const uint64_t row_num);
         void generate_entry_offsets();
         void generate_entry_offsets_csv();
         void generate_entry_offsets_json();

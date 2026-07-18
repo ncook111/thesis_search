@@ -164,42 +164,15 @@ void Tokenizer::tokenize_csv() {
 
     generate_entry_offsets();
 
-    std::string curr_token;
     uint64_t i = 2; // Start from 1 to account for header row
     for (const csv::CSVRow &row: reader) { // Input iterator
+        for (csv::CSVField &field: row)
+            tokenize_field(field.get<std::string_view>(), i);
 
-        for (csv::CSVField &field: row) {
-            std::string_view line = field.get<std::string_view>();
-            for (const auto c : line) {
-                if (isalnum(c)
-                    || c == '+'
-                    || c == '-'
-                    || c == '.'
-                    || c == ':') {
-                    curr_token.push_back(c);
-                } else {
-                    if (curr_token.size()) {
-                        processToken(curr_token, i);
-                    }
-                }
-            }
-
-            // Process leftover token if present
-            if (curr_token.size()) {
-                processToken(curr_token, i); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-            }
-
-            break;
-        }
         if (i % 10000 == 0)
             std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
        
         ++i;
-    }
-
-    // Process leftover token if present
-    if (curr_token.size()) {
-        processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
 
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
@@ -252,11 +225,14 @@ void Tokenizer::generate_entry_offsets_csv() {
 
         if (in_string) continue;
  
-        if (file[i] == '\n')
+        if (file[i] == '\n') {
+            assert(entry_offsets.back() < (i + 2));
             entry_offsets.push_back(i + 2); // Start offset 1 after newline
+        }
     }
 
-    entry_offsets.push_back(file_size + 2);
+    if (entry_offsets.size() % 2 == 1)
+        entry_offsets.push_back(file_size + 2);
 }
 
 void Tokenizer::generate_entry_offsets_json() {
@@ -294,11 +270,13 @@ void Tokenizer::generate_entry_offsets_json() {
             ++depth;
         else if (file[i] == '}')
             --depth;   
-        else if (depth == 0 && file[i] == '\n')
+        else if (depth == 0 && file[i] == '\n') {
             entry_offsets.push_back(i + 2); // Start offset 1 after newline
+        }
     }
 
-    entry_offsets.push_back(file_size + 2);
+    if (entry_offsets.size() % 2 == 1)
+        entry_offsets.push_back(file_size + 2);
 }
 
 void Tokenizer::tokenize_json() {
@@ -310,45 +288,45 @@ void Tokenizer::tokenize_json() {
 
     generate_entry_offsets();
 
-    std::string curr_token;
     uint64_t i = 1; // Start from 1 to account for header row
     for (auto doc : docs) { // Input iterator
         ondemand::object obj = doc.get_object();
-        for (auto field : obj) {
-            const std::string_view line = field.value().raw_json_token();
-            for (const auto c : line) {
-                if (isalnum(c)
-                    || c == '+'
-                    || c == '-'
-                    || c == '.'
-                    || c == ':') {
-                    curr_token.push_back(c);
-                } else {
-                    if (curr_token.size()) {
-                        processToken(curr_token, i);
-                    }
-                }
-            }
+        for (auto field : obj)
+            tokenize_field(field.value().raw_json_token(), i);
 
-            // Process leftover token if present
-            if (curr_token.size()) {
-                processToken(curr_token, i); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-            }
-        }
         if (i % 10000 == 0)
             std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
        
         ++i;
     }
 
-    // Process leftover token if present
-    if (curr_token.size()) {
-        processToken(curr_token, entry_offsets.size()); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-    }
-
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
+
 void Tokenizer::tokenize_logfmt() {}
+
+void Tokenizer::tokenize_field(const std::string_view field_str, const uint64_t row_num) {
+    std::string curr_token;
+    
+    for (const char c : field_str) {
+        if (isalnum(c)
+            || c == '+'
+            || c == '-'
+            || c == '.'
+            || c == ':') {
+            curr_token.push_back(c);
+        } else {
+            if (curr_token.size()) {
+                processToken(curr_token, row_num);
+            }
+        }
+    }
+
+    // Process leftover token if present
+    if (curr_token.size()) {
+        processToken(curr_token, row_num); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+    }
+}
 
 void Tokenizer::tokenize_string(const std::string &input) {
     std::string curr_token;

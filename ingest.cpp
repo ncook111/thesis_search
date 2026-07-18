@@ -25,9 +25,9 @@ int main(int argc, char *argv[]) {
     const std::string index_path = argv[4];
 
     if (act_mode == "-c") { // Create index mode
-        return create_mode(index_path, data_path, enc_type);
+        return create_mode(index_path, data_path, enc_type, argc, argv);
     } else if (act_mode == "-r") { // Recreate index mode
-        return recreate_mode(index_path, data_path, enc_type);
+        return recreate_mode(index_path, data_path, enc_type, argc, argv);
     } else if (act_mode == "-s") { // Index search mode
         return search_mode(index_path, data_path, enc_type, argc, argv);
     } else {
@@ -36,10 +36,15 @@ int main(int argc, char *argv[]) {
     }
 }
 
-int create_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type) {
+int create_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type, const int argc, char *argv[]) {
     if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
         std::cout << "Index already exists" << std::endl;
         return 1;
+    }
+
+    std::vector<std::string> fields;
+    for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
+        fields.push_back(argv[i]);
     }
 
     try {
@@ -52,13 +57,18 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
     return 0;
 }
 
-int recreate_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type) {
+int recreate_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type, const int argc, char *argv[]) {
     if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
         std::cout << "Not a valid existing index folder" << std::endl;
         return 1;
     }
     
     std::filesystem::remove_all(index_path);
+
+    std::vector<std::string> fields;
+    for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
+        fields.push_back(argv[i]);
+    }
 
     try {
         create_index(index_path, data_path, enc_type);

@@ -83,6 +83,7 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
     const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
 
     const EntryMap result_entries = get_entries_offsets(intersected_queries, names, data_path, index_path, enc_type);
+
     
     return result_entries;
 }
