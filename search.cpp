@@ -125,6 +125,18 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
     return intersection_offsets;
 }
 
+const std::vector<uint64_t> get_docid_intersection(const std::vector<uint64_t> &docids, const std::vector<uint64_t> &docids_cmp) {
+    std::vector<uint64_t> intersection;
+    
+    if (docids_cmp.size() == 0) {
+        std::cout << "here" << std::endl;
+    }
+    intersection.reserve(std::min(docids.size(), docids_cmp.size()));
+    std::set_intersection(docids.begin(), docids.end(), docids_cmp.begin(), docids_cmp.end(), std::back_inserter(intersection));
+
+    return intersection;
+}
+
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path) {
     fst::StdConstFst *fst = nullptr;
     read_from_disk(fst, index_path + "/file_mappings.fst");

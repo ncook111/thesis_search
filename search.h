@@ -12,6 +12,7 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
 const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);
 const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
+const std::vector<uint64_t> get_docid_intersection(const std::vector<uint64_t> &docids, const std::vector<uint64_t> &docids_cmp);
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path);
 const std::optional<Range> get_range_id_pef(const Range &range, const std::string &offset_file_name, const uint8_t type);
 const bool is_range_query(const std::string &query);
@@ -54,7 +55,7 @@ const std::optional<uint64_t> get_id(const Q &query, const std::string &offset_f
 }
 
 template <QueryType Q>
-void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
+void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type, const size_t files_indexed, const std::string &index_path, const uint8_t enc_type) {
     const std::string type_str = token_type_to_str(type);
 
     // Get list of all fst files filtered by type
@@ -68,14 +69,24 @@ void search_index_by_type(FieldMap &offsets, const Q &query, const uint8_t type,
         // Defer check for file existence until it will be used within get_id
         const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
 
-        const std::optional<uint64_t> id = get_id(query, offset_file_name, fst_file_name, type);
+        const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
         
-        if (!id) continue; // No token id found for current query
+        // No token id found for current token, clear list of offsets and continue
+        if (!id) {
+            offsets[i].clear();
+            continue;
+        }
 
         const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
 
         if (id_offsets_map.size()) {
-            offsets[i] = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
+            std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
+            // Get intersection if second token in query
+            if (offsets.contains(i)) {
+                offsets[i] = get_docid_intersection(offsets[i], offsets_cmp);
+            } else {
+                offsets[i] = std::move(offsets_cmp);
+            }
         }
     }
 }
