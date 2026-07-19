@@ -108,9 +108,16 @@ const EntryMap process_queries(const std::vector<std::string> &queries,
         combined_queries = get_entries_offsets_intersection(
             combined_queries, search_index(query, index_path, enc_type));
         break;
+      case QueryMode::COMP:
+          combined_queries = get_entries_offsets_union(
+            combined_queries, search_index(query, index_path, enc_type));
       default:
         throw std::invalid_argument("Query type not valid");
       }
+    }
+
+    if (query_mode == QueryMode::COMP) {
+      combined_queries = get_entries_offsets_compliment(combined_queries, index_path, enc_type);
     }
   }
 
@@ -227,6 +234,32 @@ const FieldMap get_entries_offsets_union(const FieldMap &entries_1,
   }
 
   return union_offsets;
+}
+
+const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std::string &index_path, const uint8_t enc_type) {
+  FieldMap compliment_offsets;
+
+  fst::StdConstFst *fst = nullptr;
+  read_from_disk(fst, index_path + "/file_mappings.fst");
+  const uint64_t num_files = get_vec_strings_from_fst(*fst).size();
+
+  for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
+    const std::vector<uint64_t> &entries_cmp = entries.at(file_id);
+    const uint64_t total_num_entries = get_entry_offsets_from_file(index_path + "/offsets/" + std::to_string(file_id) + ".off", enc_type).size() - 1;
+
+    std::vector<uint64_t> all_entries;
+    all_entries.reserve(total_num_entries);
+
+    for (uint64_t i = 0; i < total_num_entries; ++i) {
+      all_entries.push_back(i);
+    }
+
+    std::set_difference(all_entries.begin(), all_entries.end(), entries_cmp.begin(),
+                          entries_cmp.end(),
+                          std::back_inserter(compliment_offsets[file_id]));
+  }
+
+  return compliment_offsets;
 }
 
 const std::vector<uint64_t>

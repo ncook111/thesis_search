@@ -161,7 +161,7 @@ template <class G>
 int64_t get_bound_from_fst(const G &fst, const float val, const bool bound) {
   std::set<std::vector<uint8_t>> all_float =
       get_sequences_from_fst<std::vector<uint8_t>>(fst);
-  std::vector<float> float_vec(all_float.size());
+  std::vector<float> float_vec;
 
   for (const auto &fl : all_float) {
     float_vec.push_back(from_bytes<float>(fl));

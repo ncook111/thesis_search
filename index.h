@@ -43,7 +43,7 @@ const uint64_t
 write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
                             std::ofstream &file, const uint8_t enc_type);
 const std::vector<uint64_t>
-get_entry_offsets_from_file(const std::string &file_namem,
+get_entry_offsets_from_file(const std::string &file_name,
                             const uint8_t enc_type);
 const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets,
                                const std::string &file_name,

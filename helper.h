@@ -32,6 +32,7 @@ namespace QueryMode {
 enum Value : uint8_t {
   UNION = 0,
   INTER = 1,
+  COMP = 2,
 };
 }
 

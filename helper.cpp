@@ -34,6 +34,8 @@ const uint8_t get_query_mode(const std::string &mode) {
     return QueryMode::UNION;
   if (mode == "-i")
     return QueryMode::INTER;
+  if (mode == "-n")
+    return QueryMode::COMP;
 
   throw std::invalid_argument("Query type not supported");
 }

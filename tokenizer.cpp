@@ -207,8 +207,6 @@ void Tokenizer::tokenize_csv() {
   if (fields.empty())
     fields = reader.get_col_names();
 
-  entry_offsets.push_back(1);
-
   uint64_t i = 1;
   for (const csv::CSVRow &row : reader) { // Input iterator
     entry_offsets.push_back(row.byte_offset() + 1);
@@ -222,7 +220,7 @@ void Tokenizer::tokenize_csv() {
     ++i;
   }
 
-  entry_offsets.push_back(file_size + 1);
+  entry_offsets.push_back(file_size + 2);
   std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
 
