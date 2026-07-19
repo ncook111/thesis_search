@@ -27,14 +27,14 @@ add_subdirectory(third_party/ds2i/succinct)
 
 # target
 add_executable(ingest
-    ingest.cpp
-    coder.cpp
-    tokenizer.cpp
-    fst.cpp
-    index.cpp
-    helper.cpp
-    pef.cpp
-    search.cpp
+    src/ingest.cpp
+    src/coder.cpp
+    src/tokenizer.cpp
+    src/fst.cpp
+    src/index.cpp
+    src/helper.cpp
+    src/pef.cpp
+    src/search.cpp
     third_party/simdjson/simdjson.cpp
 )
 
