@@ -1,43 +1,38 @@
 #ifndef HELPER_H
 #define HELPER_H
 
-#include <vector>
-#include <map>
+#include "custom_types.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include "custom_types.h"
+#include <map>
+#include <vector>
 
 using namespace boost::interprocess;
 
 struct MappedFile {
-    file_mapping mapping;
-    mapped_region region;
+  file_mapping mapping;
+  mapped_region region;
 
-    void* addr() const { return region.get_address(); }
-    std::size_t size() const { return region.get_size(); }
+  [[nodiscard]] void *addr() const { return region.get_address(); }
+  [[nodiscard]] std::size_t size() const { return region.get_size(); }
 };
 
 namespace FileType {
-    enum Value : uint8_t {
-        CSV = 0,
-        JSON = 1,
-        LOGFMT = 2,
-        INVALID = 3
-    };
+enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
 namespace EncType {
-    enum Value : uint8_t {
-        GVB = 0,
-        PEF = 1,
-    };
+enum Value : uint8_t {
+  GVB = 0,
+  PEF = 1,
+};
 }
 
 namespace QueryMode {
-    enum Value : uint8_t {
-        UNION = 0,
-        INTER = 1,
-    };
+enum Value : uint8_t {
+  UNION = 0,
+  INTER = 1,
+};
 }
 
 const bool pef_or_fst(const uint8_t type);
@@ -51,37 +46,35 @@ const uint8_t str_to_token_type(const std::string &type_str);
 const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec);
 const uint8_t get_query_mode(const std::string &mode);
 
-template <class F>
-const std::vector<uint8_t> to_bytes(const F &input) {
-    std::vector<uint8_t> bytes(sizeof(input));
-    std::memcpy(bytes.data(), &input, sizeof(input));
+template <class F> const std::vector<uint8_t> to_bytes(const F &input) {
+  std::vector<uint8_t> bytes(sizeof(input));
+  std::memcpy(bytes.data(), &input, sizeof(input));
 
-    return bytes;
-} 
-
-template <class F>
-const F from_bytes(const std::vector<uint8_t> &bytes) {
-    F val;
-    std::memcpy(&val, bytes.data(), sizeof(F));
-    return val;
+  return bytes;
 }
 
-template <FstQueryType Q, MapType M, class T> 
+template <class F> const F from_bytes(const std::vector<uint8_t> &bytes) {
+  F val;
+  std::memcpy(&val, bytes.data(), sizeof(F));
+  return val;
+}
+
+template <FstQueryType Q, MapType M, class T>
 const std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
-    std::vector<Q> tokens;
+  std::vector<Q> tokens;
 
-    // Handle strings differently to all other M types
-    if constexpr (std::is_same_v<M, std::string>) {
-        for (auto &tok : tokens_map) {
-            tokens.push_back(tok.first);
-        }
-    } else {
-        for (auto &tok : tokens_map) {
-            tokens.push_back(to_bytes(tok.first));
-        }
+  // Handle strings differently to all other M types
+  if constexpr (std::is_same_v<M, std::string>) {
+    for (auto &tok : tokens_map) {
+      tokens.push_back(tok.first);
     }
+  } else {
+    for (auto &tok : tokens_map) {
+      tokens.push_back(to_bytes(tok.first));
+    }
+  }
 
-    return tokens;
+  return tokens;
 }
 
 #endif
