@@ -42,25 +42,31 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
 
     for (const auto &t : tokens.getAlphaTokens()) {
         search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
 
     for (const auto t : tokens.getNumTokens()) {
         search_index_by_type(offsets, t, TokenType::INT, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
 
     for (const auto t : tokens.getFloatTokens()) {
         search_index_by_type(offsets, to_bytes(t), TokenType::FLOAT, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
 
     for (const auto t : tokens.getDateTokens()) {
         search_index_by_type(offsets, t, TokenType::DATE, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
 
     for (const auto t : tokens.getTimeTokens()) {
         search_index_by_type(offsets, t, TokenType::TIME, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
     for (const auto t : tokens.getIPTokens()) {
         search_index_by_type(offsets, t, TokenType::IPV4, names_size, index_path, enc_type);
+        if (offsets.empty()) return offsets;
     }
 
     return offsets;
@@ -188,9 +194,6 @@ const FieldMap get_entries_offsets_union(const FieldMap &entries_1, const FieldM
 const std::vector<uint64_t> get_docid_intersection(const std::vector<uint64_t> &docids, const std::vector<uint64_t> &docids_cmp) {
     std::vector<uint64_t> intersection;
     
-    if (docids_cmp.size() == 0) {
-        std::cout << "here" << std::endl;
-    }
     intersection.reserve(std::min(docids.size(), docids_cmp.size()));
     std::set_intersection(docids.begin(), docids.end(), docids_cmp.begin(), docids_cmp.end(), std::back_inserter(intersection));
 

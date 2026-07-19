@@ -158,6 +158,8 @@ void Tokenizer::tokenize_file() {
 }
 
 void Tokenizer::tokenize_csv() {
+    std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+
     csv::CSVFormat format;
     format.variable_columns(csv::VariableColumnPolicy::THROW);
     csv::CSVReader reader(file_path, format);
@@ -165,62 +167,25 @@ void Tokenizer::tokenize_csv() {
     if (fields.empty())
         fields = reader.get_col_names();
 
-    generate_entry_offsets_csv();
+    entry_offsets.push_back(1);
 
-    uint64_t doc_id = 2; // Doc_ids 1-indexed, but also need to skip first "doc" containing csv field info
+    uint64_t i = 1;
     for (const csv::CSVRow &row: reader) { // Input iterator
+        entry_offsets.push_back(row.byte_offset() + 1);
         for (const std::string &f : fields)
-            tokenize_field(row[f].get<std::string_view>(), doc_id);
-        if (doc_id % 10000 == 0)
-            std::cout << "Processed: " << (float)(doc_id/(float)entry_offsets.size()) * 100 << "%" << std::endl;
+            tokenize_field(row[f].get<std::string_view>(), entry_offsets.size());
+        if (i % 10000 == 0)
+            std::cout << "Processed: " << (float)(row.byte_offset()/(float)file_size) * 100 << "%" << std::endl;
        
-        ++doc_id;
+        ++i;
     }
 
+    entry_offsets.push_back(file_size + 1);
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
 
-void Tokenizer::generate_entry_offsets_csv() {
-    const MappedFile mf = open_mmap_r(file_path);
-    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
-    const size_t file_size = mf.size();
-
-    // Set up entry_offsets with inital value of 1
-    // Offsets required to start at 1
-    entry_offsets.push_back(1);
-
-    bool in_string = false;
-    bool escaped = false;
-    for (size_t i = 1; i < file_size; ++i) {
-        if (escaped) {
-            escaped = false;
-            continue;
-        }
-
-        if (file[i] == '\\') {
-            escaped = true;
-            continue;
-        }
-
-        if (file[i] == '"') {
-            in_string = !in_string;
-            continue;
-        }
-
-        if (in_string) continue;
- 
-        if (file[i] == '\n') {
-            assert(entry_offsets.back() < (i + 2));
-            entry_offsets.push_back(i + 2); // Start offset 1 after newline
-        }
-    }
-
-    if (entry_offsets.size() % 2 == 1)
-        entry_offsets.push_back(file_size + 2);
-}
-
 void Tokenizer::tokenize_json() {
-    const size_t file_size = open_mmap_r(file_path).size();
+    std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
 
     using namespace simdjson;
 
@@ -230,7 +195,7 @@ void Tokenizer::tokenize_json() {
     auto error = parser.iterate_many(json).get(stream);
 
     uint64_t doc_id = 1; // Doc_id's 1-indexed
-    for(auto j = stream.begin(); j != stream.end(); ++j) {
+    for (auto j = stream.begin(); j != stream.end(); ++j) {
         auto doc = *j;
         ondemand::object obj;
 
