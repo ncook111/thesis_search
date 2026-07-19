@@ -28,6 +28,13 @@ const uint8_t get_enc_type(const std::string &type) {
     throw std::invalid_argument("Encoding type not supported");
 }
 
+const uint8_t get_query_mode(const std::string &mode) {
+    if (mode == "-u") return QueryMode::UNION;
+    if (mode == "-i") return QueryMode::INTER;
+
+    throw std::invalid_argument("Query type not supported");
+}
+
 const MappedFile open_mmap_r(const std::string &file_path) {
     file_mapping file_mapping(file_path.data(), read_only);
     mapped_region file_region(file_mapping, read_only);

@@ -9,9 +9,11 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 
 const FieldMap search_index(const std::string &query, const std::string &index_path, const uint8_t enc_type);
-const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);
+const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type, const uint8_t query_mode);
+const std::vector<size_t> get_file_ids_union(const FieldMap &entries_1, const FieldMap &entries_2);
 const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vector<std::string> &file_names, const std::string &data_path, const std::string &index_path, const uint8_t enc_type);
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2);
+const FieldMap get_entries_offsets_union(const FieldMap &entries_1, const FieldMap &entries_2);
 const std::vector<uint64_t> get_docid_intersection(const std::vector<uint64_t> &docids, const std::vector<uint64_t> &docids_cmp);
 void print_entries(const EntryMap &map, const std::string &index_path, const std::string &data_path);
 const std::optional<Range> get_range_id_pef(const Range &range, const std::string &offset_file_name, const uint8_t type);
@@ -73,6 +75,7 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         
         // No token id found for current token, clear list of offsets and continue
         if (!id) {
+            std::cout << "here" << std::endl;
             offsets[i].clear();
             continue;
         }

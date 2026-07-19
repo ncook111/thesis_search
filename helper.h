@@ -33,6 +33,13 @@ namespace EncType {
     };
 }
 
+namespace QueryMode {
+    enum Value : uint8_t {
+        UNION = 0,
+        INTER = 1,
+    };
+}
+
 const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);
 const uint8_t get_file_type(const std::string &type);
@@ -42,6 +49,7 @@ const MappedFile open_mmap_rw(const std::string &file_path);
 const std::string token_type_to_str(const uint8_t &type);
 const uint8_t str_to_token_type(const std::string &type_str);
 const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec);
+const uint8_t get_query_mode(const std::string &mode);
 
 template <class F>
 const std::vector<uint8_t> to_bytes(const F &input) {

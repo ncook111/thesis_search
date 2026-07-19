@@ -66,15 +66,25 @@ const FieldMap search_index(const std::string &query, const std::string &index_p
     return offsets;
 }
 
-const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type) {
+const EntryMap process_queries(const std::vector<std::string> &queries, const std::string &data_path, const std::string &index_path, const uint8_t enc_type, const uint8_t query_mode) {
     assert(queries.size() != 0);
     
-    FieldMap intersected_queries;
+    FieldMap combined_queries;
     for (const auto &query : queries) {
-        if (!intersected_queries.size()) {
-            intersected_queries = search_index(query, index_path, enc_type);
+        if (combined_queries.empty()) {
+            combined_queries = search_index(query, index_path, enc_type);
         } else {
-            intersected_queries = get_entries_offsets_intersection(intersected_queries, search_index(query, index_path, enc_type));
+            switch (query_mode) {
+                case QueryMode::UNION: 
+                    combined_queries = get_entries_offsets_union(combined_queries, search_index(query, index_path, enc_type));
+                    break;
+                case QueryMode::INTER:
+                    combined_queries = get_entries_offsets_intersection(combined_queries, search_index(query, index_path, enc_type));
+                    break;
+                default:
+                    throw std::invalid_argument("Query type not valid");
+            }
+           
         } 
     }
 
@@ -82,7 +92,7 @@ const EntryMap process_queries(const std::vector<std::string> &queries, const st
     read_from_disk(fst, index_path + "/file_mappings.fst");
     const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
 
-    const EntryMap result_entries = get_entries_offsets(intersected_queries, names, data_path, index_path, enc_type);
+    const EntryMap result_entries = get_entries_offsets(combined_queries, names, data_path, index_path, enc_type);
 
     
     return result_entries;
@@ -108,13 +118,31 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map, const std::vecto
     return all_line_offsets;
 }
 
+const std::vector<size_t> get_file_ids_union(const FieldMap &entries_1, const FieldMap &entries_2) {
+    std::vector<size_t> file_ids;
+    for (const auto &[file_id, docids] : entries_1) {
+        file_ids.push_back(file_id);
+    }
+
+    for (const auto &[file_id, docids] : entries_2) {
+        if (entries_1.contains(file_id)) continue;
+        file_ids.push_back(file_id);
+    }
+
+    return file_ids;
+}
+
 const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const FieldMap &entries_2) {
     FieldMap intersection_offsets;
     
-    // Offsets is a map of file_id's to offsets
-    for (const auto &[file_id, docids] : entries_1) {
+    // Get vector of union of file_id's for both entries_1 and entries_2
+    const std::vector<size_t> file_ids = get_file_ids_union(entries_1, entries_2);
+
+    for (const auto file_id : file_ids) {
+        if (!entries_1.contains(file_id)) continue;
         if (!entries_2.contains(file_id)) continue;
 
+        const std::vector<uint64_t> &docids = entries_1.at(file_id);
         const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
 
         intersection_offsets[file_id].reserve(std::min(docids.size(), docids_cmp.size()));
@@ -123,6 +151,38 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1, const
     }
 
     return intersection_offsets;
+}
+
+const FieldMap get_entries_offsets_union(const FieldMap &entries_1, const FieldMap &entries_2) {
+    FieldMap union_offsets;
+
+    // Get vector of union of file_id's for both entries_1 and entries_2
+    const std::vector<size_t> file_ids = get_file_ids_union(entries_1, entries_2);
+    
+    // Offsets is a map of file_id's to offsets
+    for (const auto &[file_id, docids] : entries_1) {
+        if (!entries_1.contains(file_id) && !entries_2.contains(file_id)) {
+            continue;
+        } else if (!entries_1.contains(file_id)) {
+            std::vector<uint64_t> &union_vec = union_offsets[file_id];
+            const std::vector<uint64_t> &entries_vec = entries_2.at(file_id);
+            union_vec.insert(union_vec.end(), entries_vec.begin(), entries_vec.end());
+            continue;
+        } else if (!entries_2.contains(file_id)) {
+            std::vector<uint64_t> &union_vec = union_offsets[file_id];
+            const std::vector<uint64_t> &entries_vec = entries_1.at(file_id);
+            union_vec.insert(union_vec.end(), entries_vec.begin(), entries_vec.end());
+            continue;
+        }
+
+        const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
+
+        union_offsets[file_id].reserve(docids.size() + docids_cmp.size());
+
+        std::set_union(docids.begin(), docids.end(), docids_cmp.begin(), docids_cmp.end(), std::back_inserter(union_offsets[file_id]));
+    }
+
+    return union_offsets;
 }
 
 const std::vector<uint64_t> get_docid_intersection(const std::vector<uint64_t> &docids, const std::vector<uint64_t> &docids_cmp) {

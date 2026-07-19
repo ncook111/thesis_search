@@ -81,18 +81,21 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
 }
 
 int search_mode(const std::string &index_path, const std::string &data_path, const uint8_t enc_type, const int argc, char *argv[]) {
-    if (argc == ARG_MIN) {
+    if (argc == ARG_MIN + 1) {
         std::cout << "Help: ingest help" << std::endl;
         return 1;
     }
 
+    uint8_t query_mode = get_query_mode(argv[ARG_MIN]);
+    std::cout << argv[ARG_MIN] << std::endl;
+
     std::vector<std::string> queries;
-    for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
+    for (size_t i = ARG_MIN + 1; i < static_cast<uint64_t>(argc); i++) {
         queries.push_back(argv[i]);
     }
 
     try {
-        const EntryMap results = process_queries(queries, data_path, index_path, enc_type);
+        const EntryMap results = process_queries(queries, data_path, index_path, enc_type, query_mode);
         print_entries(results, index_path, data_path);
     } catch (const std::exception &e) {
         std::cout << "Error when searching index: " << e.what() << std::endl;
