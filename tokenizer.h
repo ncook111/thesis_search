@@ -28,7 +28,7 @@ namespace TokenType {
 
 class Tokenizer {
     public:
-        static Tokenizer from_file(const std::string &file_path, const uint8_t type); // Takes in path to file in which to tokenize
+        static Tokenizer from_file(const std::string &file_path, const uint8_t type, const std::vector<std::string> &fields); // Takes in path to file in which to tokenize
         static Tokenizer from_string(const std::string &input); // Takes in string in which to tokenize
         void close();
 
@@ -66,10 +66,8 @@ class Tokenizer {
         void tokenize_csv();
         void tokenize_json();
         void tokenize_logfmt();
-        void tokenize_field(const std::string_view field_str, const uint64_t row_num);
-        void generate_entry_offsets();
+        void tokenize_field(const std::string_view field_str, const uint64_t doc_id);
         void generate_entry_offsets_csv();
-        void generate_entry_offsets_json();
         inline const uint8_t numeric_type(const std::string& s) const;
         const bool is_ipv6(const std::string& s) const;
         const bool is_ipv4(const std::string& s) const;
@@ -80,6 +78,7 @@ class Tokenizer {
         const bool is_bool(const std::string& s) const;
 
         std::string file_path;
+        std::vector<std::string> fields;
         uint8_t type;
 };
 

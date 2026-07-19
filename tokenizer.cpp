@@ -162,38 +162,27 @@ void Tokenizer::tokenize_csv() {
     format.variable_columns(csv::VariableColumnPolicy::THROW);
     csv::CSVReader reader(file_path, format);
 
-    generate_entry_offsets();
+    generate_entry_offsets_csv();
 
-    uint64_t i = 2; // Start from 1 to account for header row
+    uint64_t doc_id = 2; // Doc_ids 1-indexed, but also need to skip first "doc" containing csv field info
     for (const csv::CSVRow &row: reader) { // Input iterator
-        for (csv::CSVField &field: row)
-            tokenize_field(field.get<std::string_view>(), i);
+        // If given specific fields to index
+        if (fields.size()) {
+            for (auto f : fields)
+                tokenize_field(row[f].get<std::string_view>(), doc_id);
+        // Otherwise index all fields
+        } else {
+            for (csv::CSVField &field: row)
+                tokenize_field(field.get<std::string_view>(), doc_id);
+        }
 
-        if (i % 10000 == 0)
-            std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
+        if (doc_id % 10000 == 0)
+            std::cout << "Processed: " << (float)(doc_id/(float)entry_offsets.size()) * 100 << "%" << std::endl;
        
-        ++i;
+        ++doc_id;
     }
 
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
-}
-
-void Tokenizer::generate_entry_offsets() {
-    // Line scanner preprocessing
-    // Only checking for newlines atm
-
-    switch(type) {
-        case FileType::CSV:
-            generate_entry_offsets_csv();
-            break;
-        case FileType::JSON:
-            generate_entry_offsets_json();
-            break;
-        case FileType::LOGFMT:
-            break;
-        default:
-            break;
-    }
 }
 
 void Tokenizer::generate_entry_offsets_csv() {
@@ -235,79 +224,60 @@ void Tokenizer::generate_entry_offsets_csv() {
         entry_offsets.push_back(file_size + 2);
 }
 
-void Tokenizer::generate_entry_offsets_json() {
-    const MappedFile mf = open_mmap_r(file_path);
-    const uint8_t *file = static_cast<uint8_t*>(mf.addr());
-    const size_t file_size = mf.size();
-
-    // Set up entry_offsets with inital value of 1
-    // Offsets required to start at 1
-    entry_offsets.push_back(1);
-
-    int depth = 1;
-    bool in_string = false;
-    bool escaped = false;
-    for (size_t i = 1; i < file_size; ++i) {
-        if (escaped) {
-            escaped = false;
-            continue;
-        }
-
-        if (file[i] == '\\') {
-            escaped = true;
-            continue;
-        }
-
-        if (file[i] == '"') {
-            in_string = !in_string;
-            continue;
-        }
-
-        if (in_string) continue;
-
-        // Only count newlines if depth == 0, i.e. not within a json object
-        if (file[i] == '{')
-            ++depth;
-        else if (file[i] == '}')
-            --depth;   
-        else if (depth == 0 && file[i] == '\n') {
-            entry_offsets.push_back(i + 2); // Start offset 1 after newline
-        }
-    }
-
-    if (entry_offsets.size() % 2 == 1)
-        entry_offsets.push_back(file_size + 2);
-}
-
 void Tokenizer::tokenize_json() {
+    const size_t file_size = open_mmap_r(file_path).size();
+
     using namespace simdjson;
 
     ondemand::parser parser;
+    simdjson::ondemand::document_stream stream;
     padded_string json = padded_string::load(file_path);
-    ondemand::document_stream docs = parser.iterate_many(json);
+    auto error = parser.iterate_many(json).get(stream);
 
-    generate_entry_offsets();
+    uint64_t doc_id = 1; // Doc_id's 1-indexed
+    for(auto j = stream.begin(); j != stream.end(); ++j) {
+        auto doc = *j;
+        ondemand::object obj;
 
-    uint64_t i = 1; // Start from 1 to account for header row
-    for (auto doc : docs) { // Input iterator
-        ondemand::object obj = doc.get_object();
-        for (auto field : obj)
-            tokenize_field(field.value().raw_json_token(), i);
+        auto error = doc.get_object().get(obj);
+        if (error)
+            throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
 
-        if (i % 10000 == 0)
-            std::cout << "Processed: " << (float)(i/(float)entry_offsets.size()) * 100 << "%" << std::endl;
+
+        // If given specific fields to index
+        if (fields.size()) {
+            for (auto f : fields) {
+                std::string_view text;
+                error = obj[f].value().get(text);
+
+                if (error)
+                    throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
+
+                tokenize_field(text, doc_id);
+            }
+        // Otherwise index all fields
+        } else {
+            for (auto field : obj)
+                tokenize_field(field.value().raw_json_token(), doc_id);
+        }
+
+        entry_offsets.push_back(j.current_index() + 1);
+
+        if (doc_id % 10000 == 0)
+            std::cout << "Processed: " << (float)(j.current_index()/(float)file_size) * 100 << "%" << std::endl;
        
-        ++i;
+        ++doc_id;
     }
+
+    entry_offsets.push_back(file_size + 1);
 
     std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
 
 void Tokenizer::tokenize_logfmt() {}
 
-void Tokenizer::tokenize_field(const std::string_view field_str, const uint64_t row_num) {
+void Tokenizer::tokenize_field(const std::string_view field_str, const uint64_t doc_id) {
     std::string curr_token;
-    
     for (const char c : field_str) {
         if (isalnum(c)
             || c == '+'
@@ -317,14 +287,14 @@ void Tokenizer::tokenize_field(const std::string_view field_str, const uint64_t 
             curr_token.push_back(c);
         } else {
             if (curr_token.size()) {
-                processToken(curr_token, row_num);
+                processToken(curr_token, doc_id);
             }
         }
     }
 
     // Process leftover token if present
     if (curr_token.size()) {
-        processToken(curr_token, row_num); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+        processToken(curr_token, doc_id); // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
     }
 }
 
@@ -483,9 +453,10 @@ void Tokenizer::printIPTokens() const {
 
 }
 
-Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type) {
+Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type, const std::vector<std::string> &fields) {
     Tokenizer t;
     t.file_path = file_path;
+    t.fields = fields;
     t.type = type;
     t.tokenize_file();
 

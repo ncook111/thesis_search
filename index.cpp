@@ -13,7 +13,7 @@
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
-void create_index(const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type) {
+void create_index(std::vector<std::string> &fields, const std::string &index_dir_str, const std::string &data_dir_str, const uint8_t enc_type) {
     const std::filesystem::path index_dir = index_dir_str;
     const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
     const std::filesystem::path fst_dir = index_dir_str + "/fsts";
@@ -50,7 +50,7 @@ void create_index(const std::string &index_dir_str, const std::string &data_dir_
 
         const uint8_t type = get_file_type(f.extension());
 
-        Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type);
+        Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type, fields);
         tokenizer.printStatistics();
 
         const std::string file_id = std::to_string(i++);
@@ -284,8 +284,6 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t addr_offset, const size_t size_to_read) {
     // Read in universe and n first
-    std::cout << "read entrys offset: " << addr_offset << std::endl;
-    std::cout << "read total size: " << size_to_read << std::endl;
     const Pef_Header header = get_bv_header(file, addr_offset);
     const succinct::bit_vector bv = get_bv(file, header, addr_offset + sizeof(header), size_to_read - sizeof(header));
 

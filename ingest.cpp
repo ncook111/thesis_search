@@ -48,7 +48,7 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
     }
 
     try {
-        create_index(index_path, data_path, enc_type);
+        create_index(fields, index_path, data_path, enc_type);
     } catch (const std::exception &e) {
         std::cout << "Error when creating index: " << e.what() << std::endl;
         return 1;
@@ -71,7 +71,7 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
     }
 
     try {
-        create_index(index_path, data_path, enc_type);
+        create_index(fields, index_path, data_path, enc_type);
     } catch (const std::exception &e) {
         std::cout << "Error when recreating index: " << e.what() << std::endl;
         return 1;
