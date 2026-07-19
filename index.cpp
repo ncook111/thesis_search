@@ -55,6 +55,7 @@ void create_index(std::vector<std::string> &fields,
     Tokenizer tokenizer = Tokenizer::from_file(
         data_dir_str + '/' + f.filename().string(), type, fields);
     tokenizer.printStatistics();
+    tokenizer.printAlphaTokens();
 
     const std::string file_id = std::to_string(i++);
 

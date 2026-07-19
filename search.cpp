@@ -111,14 +111,15 @@ const EntryMap process_queries(const std::vector<std::string> &queries,
       case QueryMode::COMP:
           combined_queries = get_entries_offsets_union(
             combined_queries, search_index(query, index_path, enc_type));
+          break;
       default:
         throw std::invalid_argument("Query type not valid");
       }
     }
+  }
 
-    if (query_mode == QueryMode::COMP) {
-      combined_queries = get_entries_offsets_compliment(combined_queries, index_path, enc_type);
-    }
+  if (query_mode == QueryMode::COMP) {
+    combined_queries = get_entries_offsets_compliment(combined_queries, index_path, enc_type);
   }
 
   fst::StdConstFst *fst = nullptr;
@@ -242,11 +243,12 @@ const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std
   fst::StdConstFst *fst = nullptr;
   read_from_disk(fst, index_path + "/file_mappings.fst");
   const uint64_t num_files = get_vec_strings_from_fst(*fst).size();
+  std::cout << num_files;
 
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
     const std::vector<uint64_t> &entries_cmp = entries.at(file_id);
     const uint64_t total_num_entries = get_entry_offsets_from_file(index_path + "/offsets/" + std::to_string(file_id) + ".off", enc_type).size() - 1;
-
+    std::cout << "total entries: " << total_num_entries << std::endl;
     std::vector<uint64_t> all_entries;
     all_entries.reserve(total_num_entries);
 
