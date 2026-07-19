@@ -162,20 +162,15 @@ void Tokenizer::tokenize_csv() {
     format.variable_columns(csv::VariableColumnPolicy::THROW);
     csv::CSVReader reader(file_path, format);
 
+    if (fields.empty())
+        fields = reader.get_col_names();
+
     generate_entry_offsets_csv();
 
     uint64_t doc_id = 2; // Doc_ids 1-indexed, but also need to skip first "doc" containing csv field info
     for (const csv::CSVRow &row: reader) { // Input iterator
-        // If given specific fields to index
-        if (fields.size()) {
-            for (auto f : fields)
-                tokenize_field(row[f].get<std::string_view>(), doc_id);
-        // Otherwise index all fields
-        } else {
-            for (csv::CSVField &field: row)
-                tokenize_field(field.get<std::string_view>(), doc_id);
-        }
-
+        for (const std::string &f : fields)
+            tokenize_field(row[f].get<std::string_view>(), doc_id);
         if (doc_id % 10000 == 0)
             std::cout << "Processed: " << (float)(doc_id/(float)entry_offsets.size()) * 100 << "%" << std::endl;
        
@@ -239,26 +234,23 @@ void Tokenizer::tokenize_json() {
         auto doc = *j;
         ondemand::object obj;
 
-        auto error = doc.get_object().get(obj);
+        error = doc.get_object().get(obj);
         if (error)
             throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
 
-
-        // If given specific fields to index
-        if (fields.size()) {
-            for (auto f : fields) {
-                std::string_view text;
-                error = obj[f].value().get(text);
-
-                if (error)
-                    throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
-
-                tokenize_field(text, doc_id);
+        // If no fields add all fields
+        // This assumes fields for every json object will be the same
+        if (!fields.size()) {
+            for (auto field : obj) {
+                std::string_view f = field.escaped_key();
+                fields.push_back(std::string(f));
             }
-        // Otherwise index all fields
-        } else {
-            for (auto field : obj)
-                tokenize_field(field.value().raw_json_token(), doc_id);
+        }
+
+        for (const std::string &f : fields) {
+            std::string_view text;
+            if (obj[f].value().get(text) == 0) // Error returned when value is null or another json object, which is not supported
+                tokenize_field(text, doc_id);
         }
 
         entry_offsets.push_back(j.current_index() + 1);
