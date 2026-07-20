@@ -18,7 +18,7 @@ struct Pef_Header {
   uint64_t n;
 };
 
-const std::pair<uint64_t, uint64_t>
+const Pef_Header
 partitioned_ef_encode(succinct::bit_vector &bv,
                       const std::vector<uint64_t> &nums);
 const std::vector<uint64_t>

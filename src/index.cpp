@@ -48,42 +48,32 @@ void create_index(std::vector<std::string> &fields,
   size_t i = 0;
   for (const auto &f : files) {
     file_mappings_vec.push_back(f.filename().string());
-    std::cout << f.filename().string() << std::endl;
-
     const uint8_t type = get_file_type(f.extension());
-
-    Tokenizer tokenizer = Tokenizer::from_file(
-        data_dir_str + '/' + f.filename().string(), type, fields);
-    tokenizer.printStatistics();
-    tokenizer.printAlphaTokens();
-
+    Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type, fields);
     const std::string file_id = std::to_string(i++);
 
-    generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id,
-                          enc_type);
+    generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
+    generate_fst_files(tokenizer, fst_dir.string(), file_id);
+  }
 
+  create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+  check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+}
+
+void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id) {
     std::cout << "Creating Alpha FST" << std::endl;
-    create_fst<std::string>(tokenizer.getAlphaTokens(),
-                            fst_dir.string() + "/" + file_id + "_alpha.fst");
-    check_fst(tokenizer.getAlphaTokens(),
-              fst_dir.string() + "/" + file_id + "_alpha.fst");
+    create_fst<std::string>(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
+    check_fst(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
     tokenizer.alpha_tokens.clear();
     std::cout << "Finished" << std::endl;
 
     std::cout << "Creating Float FST" << std::endl;
-    create_fst<std::vector<uint8_t>>(
-        tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),
-        fst_dir.string() + "/" + file_id + "_float.fst");
-    check_fst(tokenizer.getFloatTokens(),
-              fst_dir.string() + "/" + file_id + "_float.fst");
+    create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),
+        fst_dir + "/" + file_id + "_float.fst");
+    check_fst(tokenizer.getFloatTokens(), fst_dir + "/" + file_id + "_float.fst");
     tokenizer.float_tokens.clear();
     std::cout << "Finished" << std::endl;
-  }
 
-  create_fst<std::string>(file_mappings_vec,
-                          index_dir.string() + "/" + "file_mappings.fst");
-  check_fst<std::string>(file_mappings_vec,
-                         index_dir.string() + "/" + "file_mappings.fst");
 }
 
 const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file,
@@ -627,4 +617,47 @@ void check_index_dir_valid(const std::string &index_path) {
   // Check file_mappings file exists
   if (!std::filesystem::exists(index_path + "/file_mappings.fst"))
     throw std::invalid_argument("file_mappings file does not exist");
+}
+
+const uint64_t write_tok_offsets_gvb(const std::vector<uint64_t> &offsets, std::ofstream &file) {
+  std::vector<uint8_t> enc_tok_offsets = gvb_encode_uint64_t(delta_encode(offsets));
+  const uint64_t enc_size = enc_tok_offsets.size();
+  file.write(reinterpret_cast<const char *>(enc_tok_offsets.data()), enc_size);
+  
+  return enc_size;
+}
+
+const uint64_t write_tok_offsets_pef(const std::vector<uint64_t> &offsets, std::ofstream &file) {
+  succinct::bit_vector enc_tok_offsets;
+  const Pef_Header header = partitioned_ef_encode(enc_tok_offsets, offsets);
+
+  // Write num_bits, universe and n
+  file.write(reinterpret_cast<const char *>(&header), sizeof(header));
+
+  // Write tok_offsets data
+  const uint64_t bv_size = enc_tok_offsets.data().size() * sizeof(uint64_t);
+  file.write(reinterpret_cast<const char *>(enc_tok_offsets.data().data()), bv_size);
+
+  return sizeof(header) + bv_size;
+}
+
+void write_offset_ids_gvb(const std::vector<uint64_t> &offsets, std::ofstream &file) {
+  const std::vector<uint8_t> enc_id_to_offset = gvb_encode_uint64_t(offsets);
+
+  // Write to file
+  const uint64_t id_to_offset_size = enc_id_to_offset.size();
+
+  file.write(reinterpret_cast<const char *>(enc_id_to_offset.data()), sizeof(uint8_t) * id_to_offset_size);
+}
+
+void write_offset_ids_pef(const std::vector<uint64_t> &offsets, std::ofstream &file) {
+  succinct::bit_vector enc_id_to_offset;
+  const Pef_Header header = partitioned_ef_encode(enc_id_to_offset, offsets);
+
+  // Write num_bits, universe and n
+  file.write(reinterpret_cast<const char *>(&header), sizeof(header));
+
+  // Write id_to_offsets data
+  uint64_t size = enc_id_to_offset.data().size() * sizeof(uint64_t);
+  file.write(reinterpret_cast<const char *>(enc_id_to_offset.data().data()), size);
 }

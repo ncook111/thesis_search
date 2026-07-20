@@ -6,7 +6,7 @@
 #include <utility>
 
 // Encoding a single vector with ef
-const std::pair<uint64_t, uint64_t>
+const Pef_Header
 partitioned_ef_encode(succinct::bit_vector &bv,
                       const std::vector<uint64_t> &nums) {
   const uint64_t universe = nums.back() + 1;
@@ -20,7 +20,9 @@ partitioned_ef_encode(succinct::bit_vector &bv,
   succinct::bit_vector tmp(&bvb);
   bv.swap(tmp);
 
-  return std::make_pair(universe, n);
+  const uint64_t num_bits = bv.size();
+
+  return Pef_Header(num_bits, universe, n);
 }
 
 const std::vector<uint64_t>

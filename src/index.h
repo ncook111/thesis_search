@@ -39,6 +39,7 @@ void generate_offsets_file(const Tokenizer &tokenizer,
                            const uint8_t enc_type);
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type);
+void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id);
 const uint64_t
 write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
                             std::ofstream &file, const uint8_t enc_type);
@@ -78,21 +79,31 @@ std::pair<uint64_t, uint64_t>
 get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
                                const uint8_t type);
 void check_index_dir_valid(const std::string &index_path);
+const uint64_t write_tok_offsets_gvb(const std::vector<uint64_t> &offsets, std::ofstream &file);
+const uint64_t write_tok_offsets_pef(const std::vector<uint64_t> &offsets, std::ofstream &file);
+void write_offset_ids_gvb(const std::vector<uint64_t> &offsets, std::ofstream &file);
+void write_offset_ids_pef(const std::vector<uint64_t> &offsets, std::ofstream &file);
 
 // Saved to the front of the file
 struct Offsets_header {
-  uint64_t alpha_id_map_header, alpha_offsets_header;
-  uint64_t num_id_map_header, num_offsets_header;
-  uint64_t float_id_map_header, float_offsets_header;
-  uint64_t date_id_map_header, date_offsets_header;
-  uint64_t time_id_map_header, time_offsets_header;
-  uint64_t ipv4_id_map_header, ipv4_offsets_header;
-  uint64_t entry_offsets_header;
-  uint64_t int_toks_header;
-  uint64_t date_toks_header;
-  uint64_t time_toks_header;
-  uint64_t ipv4_toks_header;
+  uint64_t alpha_offsets_header, alpha_id_map_header; // Docids
+  uint64_t num_offsets_header, num_id_map_header; // Docids
+  uint64_t float_offsets_header, float_id_map_header; // Docids
+  uint64_t date_offsets_header, date_id_map_header; // Docids
+  uint64_t time_offsets_header, time_id_map_header; // Docids
+  uint64_t ipv4_offsets_header, ipv4_id_map_header; // Docids
+  uint64_t entry_offsets_header; // File offsets for each document
+  uint64_t int_toks_header; // PEF encoded lexicon values
+  uint64_t date_toks_header; // PEF encoded lexicon values
+  uint64_t time_toks_header; // PEF encoded lexicon values
+  uint64_t ipv4_toks_header; // PEF encoded lexicon values
 };
+
+struct Fields_header {
+  uint64_t num_fields; // Number of fields that will contain docids
+  std::vector<uint64_t> field_ids; // ID of fields
+  std::vector<uint64_t> field_offsets; // File offset for which each fields docids will be stored
+}
 
 struct Write_pos {
   uint64_t id_map_pos;
@@ -136,9 +147,7 @@ const uint64_t create_pef_tokens(const std::vector<M> &tokens,
   }
 
   succinct::bit_vector pef_tokens;
-  const auto [universe, n] = partitioned_ef_encode(pef_tokens, tokens);
-  const uint64_t num_bits = pef_tokens.size();
-  const Pef_Header header = {num_bits, universe, n};
+  const Pef_Header header = partitioned_ef_encode(pef_tokens, tokens);
 
   const uint64_t pos = file.tellp();
 
@@ -178,133 +187,79 @@ bool check_pef_tokens(const std::vector<M> &tokens, const std::string file_path,
 
 template <MapType M>
 const Write_pos
-write_offsets_gvb(const std::map<M, std::vector<uint64_t>> &tokens_map,
-                  std::ofstream &file) {
-  std::vector<uint8_t> all_enc_tok_offsets;
-  std::vector<uint64_t> id_to_offset;
-
-  uint64_t offset =
-      1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding
-         // steps A value of 0 is used as a terminator when decoding in under
-         // special circumstances
-  for (const auto &[_, offsets] : tokens_map) {
-    // Duplicate docids may be present from tokenization stage, remove them
-    std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
-
-    assert(offsets_dedup.size() != 0);
-
-    std::vector<uint8_t> enc_tok_offsets =
-        gvb_encode_uint64_t(delta_encode(offsets_dedup));
-    std::move(enc_tok_offsets.begin(), enc_tok_offsets.end(),
-              back_inserter(all_enc_tok_offsets));
-    id_to_offset.push_back(offset);
-
-    offset += enc_tok_offsets.size();
-  }
-
-  const std::vector<uint8_t> enc_id_to_offset =
-      gvb_encode_uint64_t(id_to_offset);
-
-  // Write to file
-  const uint64_t id_to_offset_size = enc_id_to_offset.size();
-  const uint64_t tok_offsets_size = all_enc_tok_offsets.size();
-
-  const uint64_t first_write_pos = file.tellp();
-  file.write(reinterpret_cast<const char *>(enc_id_to_offset.data()),
-             sizeof(uint8_t) * id_to_offset_size);
-
-  const uint64_t second_write_pos = file.tellp();
-  file.write(reinterpret_cast<const char *>(all_enc_tok_offsets.data()),
-             sizeof(uint8_t) * tok_offsets_size);
-
-  return Write_pos{first_write_pos, second_write_pos};
-}
-
-template <MapType M>
-const Write_pos
-write_offsets_pef(const std::map<M, std::vector<uint64_t>> &tokens_map,
-                  std::ofstream &file) {
-  std::vector<std::pair<Pef_Header, std::unique_ptr<succinct::bit_vector>>>
-      all_enc_tok_offsets;
-  std::vector<uint64_t> id_to_offset;
-
-  uint64_t offset =
-      1; // Offsets begin at 1 as a requirement of the gvb encoding and decoding
-         // steps A value of 0 is used as terminator when decoding
-  for (const auto &[_, offsets] : tokens_map) {
-    // Duplicate docids may be present from tokenization stage, remove them
-    std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
-
-    std::__1::unique_ptr<succinct::bit_vector> owned_enc_tok_offsets =
-        std::make_unique<succinct::bit_vector>();
-    const auto [universe, n] =
-        partitioned_ef_encode(*owned_enc_tok_offsets, offsets_dedup);
-    const uint64_t num_bits = owned_enc_tok_offsets.get()->size();
-
-    const Pef_Header header = {num_bits, universe, n};
-
-    all_enc_tok_offsets.push_back(
-        std::make_pair(header, std::move(owned_enc_tok_offsets)));
-
-    id_to_offset.push_back(offset);
-
-    offset +=
-        sizeof(header) +
-        all_enc_tok_offsets.back().second->data().size() * sizeof(uint64_t);
-  }
-
-  succinct::bit_vector enc_id_to_offset;
-  const auto [universe, n] =
-      partitioned_ef_encode(enc_id_to_offset, id_to_offset);
-  const uint64_t num_bits = enc_id_to_offset.size();
-  const Pef_Header header = {num_bits, universe, n};
-
-  // Write to file
-  const uint64_t first_write_pos = file.tellp();
-
-  // Write num_bits, universe and n
-  file.write(reinterpret_cast<const char *>(&header), sizeof(header));
-
-  // Write id_to_offsets data
-  uint64_t size = enc_id_to_offset.data().size() * sizeof(uint64_t);
-  file.write(reinterpret_cast<const char *>(enc_id_to_offset.data().data()),
-             size);
-
-  const uint64_t second_write_pos = file.tellp();
-
-  for (auto &cur : all_enc_tok_offsets) {
-    const Pef_Header &cur_header = cur.first;
-    succinct::bit_vector &bv = *cur.second;
-    // Write num_bits, universe and n
-    file.write(reinterpret_cast<const char *>(&cur_header), sizeof(cur_header));
-
-    // Write tok_offsets data
-    size = bv.data().size() * sizeof(uint64_t);
-    file.write(reinterpret_cast<const char *>(bv.data().data()), size);
-  }
-
-  return Write_pos{first_write_pos, second_write_pos};
-}
-
-template <MapType M>
-const Write_pos
-write_offsets_to_file(const std::map<M, std::vector<uint64_t>> &tokens_map,
+write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
                       std::ofstream &file, const uint8_t enc_type) {
   if (tokens_map.size() == 0) {
     return Write_pos{static_cast<uint64_t>(file.tellp()),
                      static_cast<uint64_t>(file.tellp())};
   }
 
-  switch (enc_type) {
-  case EncType::GVB:
-    return write_offsets_gvb(tokens_map, file);
-    break;
-  case EncType::PEF:
-    return write_offsets_pef(tokens_map, file);
-    break;
-  default:
-    throw std::invalid_argument("Not a valid encoding type");
+  std::vector<uint64_t> id_to_offset;
+
+  const uint64_t first_write_pos = file.tellp();
+
+  // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
+  // A value of 0 is used as terminator when decoding
+  uint64_t offset = 1;
+  for (const auto &[_, fields] : tokens_map) {
+    id_to_offset.push_back(offset);
+    
+    const uint64_t num_fields = fields.size();
+    std::vector<uint64_t> field_ids;
+    for (const auto &[field_id, _] : fields)
+      field_ids.push_back(field_id);
+
+    std::vector<uint64_t> field_offsets;
+    sizes.reserve(num_fields);
+
+    // Write header with dummy value for field_offsets, will be overwritten later
+    const uint64_t header_write_pos = file.tellp();
+    Field_header f_header = {num_fields, field_ids, field_ids}
+    file.write(reinterpret_cast<const char *>(&f_header), sizeof(f_header));
+
+    uint64_t local_offset = offset + sizeof(f_header);
+    for (const auto &[field_id, offsets]) {
+      // Duplicate docids may be present from tokenization stage, remove them
+      const std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
+
+      field_offsets.push_back(local_offset);
+
+      switch (enc_type) {
+        case EncType::GVB:
+          local_offset += write_tok_offsets_gvb(offsets_dedup, file);
+          break;
+        case EncType::PEF:
+          local_offset += write_tok_offsets_pef(offsets_dedup, file);
+          break;
+        default:
+          throw std::invalid_argument("Not a valid encoding type");
+      }
+    }
+
+    // Replace dummy field_offsets with updated version
+    const uint64_t curr_offset = file.tellp();
+    file.seekp(header_write_pos + sizeof(fields) + sizeof(field_ids));
+    file.write(reinterpret_cast<const char*>(&field_offsets.data()), sizeof(field_offsets));
+    file.seekp(curr_offset)
+
+    offset = local_offset;
   }
+
+  // Write to file
+  const uint64_t second_write_pos = file.tellp();
+
+  switch (enc_type) {
+    case EncType::GVB:
+      write_offset_ids_gvb(tokens_map, file);
+      break;
+    case EncType::PEF:
+     write_offset_ids_pef(id_to_offset, file);
+      break;
+    default:
+      throw std::invalid_argument("Not a valid encoding type");
+  }
+
+  return Write_pos{first_write_pos, second_write_pos};
 }
 
 template <MapType M>
@@ -339,16 +294,11 @@ bool check_offsets_file_by_type(
       }
 
       succinct::bit_vector enc_tok_offsets;
-      const std::pair<uint64_t, uint64_t> res =
-          partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
-      const uint64_t num_bits = enc_tok_offsets.size();
-
-      const Pef_Header header = {num_bits, res.first, res.second};
+      const Pef_Header header = partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
 
       id_to_offset.push_back(offset);
 
-      offset +=
-          sizeof(header) + enc_tok_offsets.data().size() * sizeof(uint64_t);
+      offset += sizeof(header) + enc_tok_offsets.data().size() * sizeof(uint64_t);
     }
   } else {
     throw std::invalid_argument("Encoding type not supported");

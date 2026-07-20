@@ -28,26 +28,42 @@ enum Value : uint8_t {
 
 class Tokenizer {
 public:
-  static Tokenizer
-  from_file(const std::string &file_path, const uint8_t type,
-            const std::vector<std::string>
-                &fields); // Takes in path to file in which to tokenize
-  static Tokenizer
-  from_string(const std::string &input); // Takes in string in which to tokenize
+  static Tokenizer from_file(const std::string &file_path, 
+    const uint8_t type, const std::vector<std::string> &fields);
+  static Tokenizer from_string(const std::string &input);
   void close();
+  
+  // A map containing an entry for each token
+  // E.g. "Wooden Table" would have an entry for "wooden" and "table"
+  // Each entry contains a vector for each field tokenized, with each vector containing
+  // Another vector of docids in which that token is found
+  std::map<std::string, std::map<uint64_t, std::vector<uint64_t>>> alpha_tokens;
+  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> num_tokens;
+  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> neg_num_tokens;
+  std::map<float, std::map<uint64_t, std::vector<uint64_t>>> float_tokens;
+  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> d_tokens;
+  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> t_tokens;
+  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> ipv4_tokens;
+  std::map<uint64_t, std::map<uint64_t,std::vector<uint64_t>>> ipv6_tokens;
+  
+  // Map of boolean tokens for each field
+  std::map<uint64_t, std::vector<uint64_t>> t_bool_tokens;
+  std::map<uint64_t, std::vector<uint64_t>> f_bool_tokens;
+  
+  // Denotes the start point file offset for all entries in the file begin tokenized
+  std::vector<uint64_t> entry_offsets; 
 
-  std::map<std::string, std::vector<uint64_t>> alpha_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> num_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> neg_num_tokens;
-  std::map<float, std::vector<uint64_t>> float_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> d_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> t_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> ipv4_tokens;
-  std::map<uint64_t, std::vector<uint64_t>> ipv6_tokens;
-  std::vector<bool> boolean_tokens;
-  std::vector<uint64_t>
-      entry_offsets; // Denotes the start point for all entries in the file
-                     // (newline for csv and logfmt, {} for json)
+  // Used when tokenizing a query string
+  std::set<std::string> alpha_tokens_q;
+  std::set<uint64_t> num_tokens_q;
+  std::set<uint64_t> neg_num_tokens_q;
+  std::set<float> float_tokens_q;
+  std::set<uint64_t> d_tokens_q;
+  std::set<uint64_t> t_tokens_q;
+  std::set<uint64_t> ipv4_tokens_q;
+  std::set<uint64_t> ipv6_tokens_q;
+  bool t_bool_token_q = false;
+  bool f_bool_token_q = false;
 
   void printAlphaTokens() const;
   void printNumTokens() const;
@@ -68,11 +84,12 @@ private:
   Tokenizer() = default;
   void tokenize_file();
   void tokenize_string(const std::string &input);
-  void processToken(std::string &curr_token, const uint64_t offset);
+  void processToken(std::string &curr_token, const uint64_t doc_id, const uint64_t field_id);
+  void processToken(std::string &curr_token);
   void tokenize_csv();
   void tokenize_json();
   void tokenize_logfmt();
-  void tokenize_field(const std::string_view field_str, const uint64_t doc_id);
+  void tokenize_field(const std::string_view field_str, const uint64_t doc_id, const uint64_t field_id);
   inline const uint8_t numeric_type(const std::string &s) const;
   const bool is_ipv6(const std::string &s) const;
   const bool is_ipv4(const std::string &s) const;
