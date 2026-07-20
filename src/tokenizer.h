@@ -98,6 +98,13 @@ private:
   const bool is_float(const std::string &s) const;
   const bool is_int(const std::string &s) const;
   const bool is_bool(const std::string &s) const;
+  void handle_int(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_ipv6(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
 
   std::string file_path;
   std::vector<std::string> fields;

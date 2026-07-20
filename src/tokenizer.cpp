@@ -320,200 +320,205 @@ void Tokenizer::tokenize_string(const std::string &input) {
   }
 }
 
-void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
   const uint32_t token_length = curr_token.size();
-  if (token_length) {
-    bool unprocessed = false;
-    std::istringstream in(curr_token);
-    fast_float::parse_options options{
-        fast_float::chars_format::allow_leading_plus};
-    fast_float::from_chars_result res_err;
-    date::sys_time<std::chrono::seconds> dateTimePoint;
-    std::chrono::seconds timeTimePoint;
+  std::int64_t res_int;
+  fast_float::from_chars_result res_err;
+  fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
-    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-
-    // Deal with an alphabetical string and numeric string differently
-    switch (numeric_type(curr_token)) {
-    case TokenType::INT:
-      std::int64_t res_int;
-      res_err = fast_float::from_chars_advanced(
-          curr_token.data(), curr_token.data() + token_length, res_int,
-          options);
-      if (res_err.ec == std::errc()) {
-        if (res_int >= 0)
-          num_tokens[res_int][field_id].push_back(offset);
-        else {
-          num_tokens[res_int * -1][field_id].push_back(offset);
-        }
-      } else if (res_err.ec == std::errc::invalid_argument) {
-        std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
-      } else if (res_err.ec == std::errc::result_out_of_range) {
-        unprocessed = true;
+  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + token_length, res_int, options);
+  if (res_err.ec == std::errc()) {
+    // File tokenization
+    if (offset) {
+      if (res_int >= 0)
+        num_tokens[res_int][field_id].push_back(offset);
+      else {
+        num_tokens[res_int * -1][field_id].push_back(offset);
       }
-
-      break;
-
-    case TokenType::FLOAT:
-      float res_float;
-      res_err = fast_float::from_chars_advanced(
-          curr_token.data(), curr_token.data() + token_length, res_float,
-          options);
-      if (res_err.ec == std::errc()) {
-        float_tokens[std::move(res_float)][field_id].push_back(offset);
-      } else if (res_err.ec == std::errc::invalid_argument) {
-        std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
-      } else if (res_err.ec == std::errc::result_out_of_range) {
-        unprocessed = true;
+    // String tokenization
+    } else {
+      if (res_int >= 0)
+        num_tokens_q.insert(res_int);
+      else {
+        num_tokens_q.insert(res_int * -1);
       }
-
-      break;
-
-    case TokenType::DATE:
-      // Check "YY-MM-DD format"
-      in >> date::parse("%Y-%m-%d", dateTimePoint);
-      // Check if parsable
-      if (in.fail() || in.peek() != EOF) {
-        unprocessed = true;
-      } else {
-        d_tokens[static_cast<uint64_t>(
-                     dateTimePoint.time_since_epoch().count())][field_id]
-            .push_back(offset);
-      }
-      break;
-    case TokenType::TIME:
-      // Check "HH-MM-SS format"
-      in >> date::parse("%T", timeTimePoint);
-      // Check if parsable
-      if (in.fail() || in.peek() != EOF) {
-        unprocessed = true;
-      } else {
-        t_tokens[static_cast<uint64_t>(timeTimePoint.count())][field_id].push_back(
-            offset);
-      }
-      break;
-
-    case TokenType::IPV4:
-      ipv4_tokens[1][field_id].push_back(offset);
-      break;
-
-    case TokenType::IPV6:
-      ipv6_tokens[1][field_id].push_back(offset);
-      break;
-
-    case TokenType::BOOLEAN:
-      if (curr_token == "true")
-        t_bool_tokens[field_id].push_back(offset);
-      if (curr_token == "false")
-        f_bool_tokens[field_id].push_back(offset);
-      break;
-
-    default:
-      unprocessed = true;
-      break;
     }
+  } else if (res_err.ec == std::errc::invalid_argument) {
+    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+  } else if (res_err.ec == std::errc::result_out_of_range) {
+    return;
+  }
 
-    if (unprocessed) {
-      alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
-    }
+  curr_token.erase();
+}
 
+void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  const uint32_t token_length = curr_token.size();
+  float res_float;
+  fast_float::from_chars_result res_err;
+  fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
+  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + token_length, res_float, options);
+  if (res_err.ec == std::errc()) {
+    // File tokenization
+    if (offset)
+      float_tokens[std::move(res_float)][field_id].push_back(offset);
+    // String tokenization
+    else
+      float_tokens_q.insert(res_float);
+  } else if (res_err.ec == std::errc::invalid_argument) {
+    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+  } else if (res_err.ec == std::errc::result_out_of_range) {
+    return;
+  }
+
+  curr_token.erase();
+}
+
+void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  std::istringstream in(curr_token);
+  date::sys_time<std::chrono::seconds> dateTimePoint;
+
+  // Check "YY-MM-DD format"
+  in >> date::parse("%Y-%m-%d", dateTimePoint);
+  // Check if parsable
+  if (in.fail() || in.peek() != EOF) {
+    return;
+  } else {
+    // File tokenization
+    if (offset)
+      d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id].push_back(offset);
+    // String tokenization
+    else
+      d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
+  }
+
+  curr_token.erase();
+}
+void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  std::istringstream in(curr_token);
+  std::chrono::seconds timeTimePoint;
+
+  // Check "HH-MM-SS format"
+  in >> date::parse("%T", timeTimePoint);
+  // Check if parsable
+  if (in.fail() || in.peek() != EOF) {
+    return;
+  } else {
+    // File tokenization
+    if (offset)
+      t_tokens[static_cast<uint64_t>(timeTimePoint.count())][field_id].push_back(offset);
+    // String tokenization
+    else
+      t_tokens_q.insert(static_cast<uint64_t>(timeTimePoint.count()));
+  }
+
+  curr_token.erase();
+}
+void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  // File tokenization
+  if (offset)
+    ipv4_tokens[1][field_id].push_back(offset);
+  // String tokenization
+  else
+    ipv4_tokens_q.insert(1);
+  
+  curr_token.erase();
+}
+
+void Tokenizer::handle_ipv6(std::string  &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  // File tokenization
+  if (offset)
+    ipv6_tokens[1][field_id].push_back(offset);
+  // String tokenization
+  else
+    ipv6_tokens_q.insert(1);
+  
+  curr_token.erase();
+}
+
+void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+  // File tokenization
+  if (offset) {
+    if (curr_token == "true")
+      t_bool_tokens[field_id].push_back(offset);
+    if (curr_token == "false")
+      f_bool_tokens[field_id].push_back(offset);
+  // String tokenization
+  } else {
+    if (curr_token == "true")
+      t_bool_token_q = true;
+    if (curr_token == "false")
+      f_bool_token_q = true;
+  }
+
+  curr_token.erase();
+};
+
+
+void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  switch (numeric_type(curr_token)) {
+  case TokenType::INT:
+    handle_int(curr_token, offset, field_id);
+    break;
+  case TokenType::FLOAT:
+    handle_float(curr_token, offset, field_id);
+    break;
+  case TokenType::DATE:
+    handle_date(curr_token, offset, field_id);
+    break;
+  case TokenType::TIME:
+    handle_time(curr_token, offset, field_id);
+    break;
+  case TokenType::IPV4:
+    handle_ipv4(curr_token, offset, field_id);
+    break;
+  case TokenType::IPV6:
+    handle_ipv6(curr_token, offset, field_id);
+    break;
+  case TokenType::BOOLEAN:
+    handle_bool(curr_token, offset, field_id);
+    break;
+  default:
+    break;
+  }
+
+  if (curr_token.size()) {
+    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
+    alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
     curr_token.erase();
   }
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
-  const uint32_t token_length = curr_token.size();
-  if (token_length) {
-    bool unprocessed = false;
-    std::istringstream in(curr_token);
-    fast_float::parse_options options{
-        fast_float::chars_format::allow_leading_plus};
-    fast_float::from_chars_result res_err;
-    date::sys_time<std::chrono::seconds> dateTimePoint;
-    std::chrono::seconds timeTimePoint;
+  switch (numeric_type(curr_token)) {
+  case TokenType::INT:
+    handle_int(curr_token);
+    break;
+  case TokenType::FLOAT:
+    handle_float(curr_token);
+    break;
+  case TokenType::DATE:
+    handle_date(curr_token);
+    break;
+  case TokenType::TIME:
+    handle_time(curr_token);
+    break;
+  case TokenType::IPV4:
+    handle_ipv4(curr_token);
+    break;
+  case TokenType::IPV6:
+    handle_ipv6(curr_token);
+    break;
+  case TokenType::BOOLEAN:
+    handle_bool(curr_token);
+    break;
+  default:
+    break;
+  }
 
-    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-
-    // Deal with an alphabetical string and numeric string differently
-    switch (numeric_type(curr_token)) {
-    case TokenType::INT:
-      std::int64_t res_int;
-      res_err = fast_float::from_chars_advanced(
-          curr_token.data(), curr_token.data() + token_length, res_int,
-          options);
-      if (res_err.ec == std::errc()) {
-        if (res_int >= 0)
-          num_tokens_q.insert(res_int);
-        else {
-          num_tokens_q.insert(res_int * -1);
-        }
-      } else if (res_err.ec == std::errc::invalid_argument) {
-        std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
-      } else if (res_err.ec == std::errc::result_out_of_range) {
-        unprocessed = true;
-      }
-
-      break;
-
-    case TokenType::FLOAT:
-      float res_float;
-      res_err = fast_float::from_chars_advanced(
-          curr_token.data(), curr_token.data() + token_length, res_float,
-          options);
-      if (res_err.ec == std::errc()) {
-        float_tokens_q.insert(res_float);
-      } else if (res_err.ec == std::errc::invalid_argument) {
-        std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
-      } else if (res_err.ec == std::errc::result_out_of_range) {
-        unprocessed = true;
-      }
-
-      break;
-
-    case TokenType::DATE:
-      // Check "YY-MM-DD format"
-      in >> date::parse("%Y-%m-%d", dateTimePoint);
-      // Check if parsable
-      if (in.fail() || in.peek() != EOF) {
-        unprocessed = true;
-      } else {
-        d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
-      }
-      break;
-    case TokenType::TIME:
-      // Check "HH-MM-SS format"
-      in >> date::parse("%T", timeTimePoint);
-      // Check if parsable
-      if (in.fail() || in.peek() != EOF) {
-        unprocessed = true;
-      } else {
-        t_tokens_q.insert(static_cast<uint64_t>(timeTimePoint.count()));
-      }
-      break;
-    case TokenType::IPV4:
-      ipv4_tokens_q.insert(1);
-      break;
-    case TokenType::IPV6:
-      ipv4_tokens_q.insert(1);
-      break;
-    case TokenType::BOOLEAN:
-      if (curr_token == "true")
-        t_bool_token_q = true;
-      if (curr_token == "false")
-        f_bool_token_q = true;
-      break;
-
-    default:
-      unprocessed = true;
-      break;
-    }
-
-    if (unprocessed) {
-      alpha_tokens_q.insert(std::move(curr_token));
-    }
-
+  if (curr_token.size()) {
+    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
+    alpha_tokens_q.insert(std::move(curr_token));
     curr_token.erase();
   }
 }

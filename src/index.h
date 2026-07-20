@@ -103,7 +103,7 @@ struct Fields_header {
   uint64_t num_fields; // Number of fields that will contain docids
   std::vector<uint64_t> field_ids; // ID of fields
   std::vector<uint64_t> field_offsets; // File offset for which each fields docids will be stored
-}
+};
 
 struct Write_pos {
   uint64_t id_map_pos;
@@ -206,7 +206,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     
     const uint64_t num_fields = fields.size();
     std::vector<uint64_t> field_ids;
-    for (const auto &[field_id, _] : fields)
+    for (const auto [field_id, _] : fields)
       field_ids.push_back(field_id);
 
     std::vector<uint64_t> field_offsets;
@@ -218,7 +218,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     file.write(reinterpret_cast<const char *>(&f_header), sizeof(f_header));
 
     uint64_t local_offset = offset + sizeof(f_header);
-    for (const auto &[field_id, offsets]) {
+    for (const auto &[_, offsets]) {
       // Duplicate docids may be present from tokenization stage, remove them
       const std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
 
