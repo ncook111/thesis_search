@@ -227,8 +227,7 @@ void Tokenizer::tokenize_csv() {
 }
 
 void Tokenizer::tokenize_json() {
-  std::uint64_t file_size =
-      std::filesystem::file_size(std::filesystem::path(file_path));
+  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
 
   using namespace simdjson;
 
@@ -243,9 +242,7 @@ void Tokenizer::tokenize_json() {
     ondemand::object obj;
 
     error = doc.get_object().get(obj);
-    if (error)
-      throw std::invalid_argument("JSON deserialisation error: " +
-                                  std::to_string(error));
+    if (error) throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
 
     // If no fields add all fields
     // This assumes fields for every json object will be the same
@@ -284,40 +281,31 @@ void Tokenizer::tokenize_field(const std::string_view field_str,
                                const uint64_t doc_id, const uint64_t field_id) {
   std::string curr_token;
   for (const char c : field_str) {
-    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
+    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':')
       curr_token.push_back(c);
-    } else {
-      if (curr_token.size()) {
+    else if (curr_token.size())
         processToken(curr_token, doc_id, field_id);
-      }
-    }
   }
 
   // Process leftover token if present
-  if (curr_token.size()) {
-    // Offsets begin at 1 as a requirement of the gvb encoding and decoding
-    // steps
+  if (curr_token.size())
     processToken(curr_token, doc_id, field_id);
-  }
 }
 
 void Tokenizer::tokenize_string(const std::string &input) {
   std::string curr_token;
   const size_t input_size = input.size();
 
-  for (size_t i = 0; i < input_size; ++i) {
-    if (isalnum(input[i]) || input[i] == '+' || input[i] == '-' ||
-        input[i] == '.' || input[i] == ':') {
-      curr_token.push_back(input[i]);
-    } else if (curr_token.size()) {
+  for (const char c : input) {
+    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':')
+      curr_token.push_back(c);
+    else if (curr_token.size())
       processToken(curr_token);
-    }
   }
 
   // Process leftover token if required
-  if (curr_token.size()) {
+  if (curr_token.size())
     processToken(curr_token);
-  }
 }
 
 void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
@@ -332,16 +320,14 @@ void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset = 0, c
     if (offset) {
       if (res_int >= 0)
         num_tokens[res_int][field_id].push_back(offset);
-      else {
+      else
         num_tokens[res_int * -1][field_id].push_back(offset);
-      }
     // String tokenization
     } else {
       if (res_int >= 0)
         num_tokens_q.insert(res_int);
-      else {
+      else
         num_tokens_q.insert(res_int * -1);
-      }
     }
   } else if (res_err.ec == std::errc::invalid_argument) {
     std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
@@ -524,22 +510,18 @@ void Tokenizer::processToken(std::string &curr_token) {
 }
 
 void Tokenizer::printAlphaTokens() const {
-  for (const auto &[key, _] : alpha_tokens) {
+  for (const auto &[key, _] : alpha_tokens)
     std::cout << key << std::endl;
-    ;
-  }
 }
 
 void Tokenizer::printNumTokens() const {
-  for (const auto &[key, _] : num_tokens) {
+  for (const auto &[key, _] : num_tokens)
     std::cout << key << std::endl;
-  }
 }
 
 void Tokenizer::printFloatTokens() const {
-  for (const auto &[key, _] : float_tokens) {
+  for (const auto &[key, _] : float_tokens)
     std::cout << key << std::endl;
-  }
 }
 
 void Tokenizer::printDateTokens() const {
@@ -597,50 +579,44 @@ void Tokenizer::printStatistics() const {
 
 const std::vector<std::string> Tokenizer::getAlphaTokens() const {
   std::vector<std::string> tokens;
-  for (const auto &i : alpha_tokens) {
+  for (const auto &i : alpha_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
 
 const std::vector<uint64_t> Tokenizer::getNumTokens() const {
   std::vector<uint64_t> tokens;
-  for (const auto i : num_tokens) {
+  for (const auto i : num_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
 const std::vector<float> Tokenizer::getFloatTokens() const {
   std::vector<float> tokens;
-  for (const auto i : float_tokens) {
+  for (const auto i : float_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getDateTokens() const {
   std::vector<uint64_t> tokens;
-  for (const auto i : d_tokens) {
+  for (const auto i : d_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
   std::vector<uint64_t> tokens;
-  for (const auto i : t_tokens) {
+  for (const auto i : t_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getIPTokens() const {
   std::vector<uint64_t> tokens;
-  for (const auto i : ipv4_tokens) {
+  for (const auto i : ipv4_tokens)
     tokens.push_back(i.first);
-  }
 
   return tokens;
 }
