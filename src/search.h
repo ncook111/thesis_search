@@ -47,7 +47,6 @@ const std::optional<uint64_t> get_id_fst(const Q &query,
                                          const std::string &fst_file_name) {
   fst::StdConstFst *fst = nullptr;
   read_from_disk(fst, fst_file_name);
-
   int id = get_id_from_fst(*fst, query);
 
   return (id >= 0) ? std::make_optional(id) : std::nullopt;
@@ -60,12 +59,9 @@ const std::optional<uint64_t> get_id_pef(const Q &query,
   const MappedFile mf = open_mmap_r(offset_file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
-  const std::pair<uint64_t, uint64_t> tok_details =
-      get_pef_header_details_by_type(file, file_size,
-                                     type); // Offset, size_to_read
+  const auto [offset, size_to_read] = get_pef_header_details_by_type(file, file_size, type);
 
-  return find_pef_id(offset_file_name, tok_details.first, tok_details.second,
-                     query);
+  return find_pef_id(offset_file_name, offset, size_to_read, query);
 }
 
 template <QueryType Q>
@@ -78,7 +74,6 @@ get_id(const Q &query, const std::string &offset_file_name,
       std::cout << fst_file_name << std::endl;
       throw std::invalid_argument("Fst file does not exist");
     }
-
     return get_id_fst(query, fst_file_name);
   } else {
     return get_id_pef(query, offset_file_name, type);
@@ -97,20 +92,18 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
     const std::string offset_file_name =
         index_path + "/offsets/" + std::to_string(i) + ".off";
     if (!std::filesystem::exists(offset_file_name)) {
-      std::cout << offset_file_name << std::endl;
-      throw std::invalid_argument("Offset file does not exist");
+        std::cout << offset_file_name << std::endl;
+        throw std::invalid_argument("Offset file does not exist");
     }
 
     // Defer check for file existence until it will be used within get_id
-    const std::string fst_file_name =
-        index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
-    const std::optional<uint64_t> id =
-        get_id(token, offset_file_name, fst_file_name, type);
+    const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
+    const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
 
     // No token id found for current token, clear list of offsets and continue
     if (!id) {
-      offsets.erase(i);
-      continue;
+        offsets.erase(i);
+        continue;
     }
 
     const std::vector<uint64_t> id_offsets_map =

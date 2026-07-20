@@ -306,12 +306,9 @@ const std::optional<Range> get_range_id_pef(const Range &range,
   const MappedFile mf = open_mmap_r(offset_file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
-  const std::pair<uint64_t, uint64_t> tok_details =
-      get_pef_header_details_by_type(file, file_size,
-                                     type); // Offset, size_to_read
+  const auto [offset, size_to_read] = get_pef_header_details_by_type(file, file_size, type);
 
-  return find_range_pef_id(offset_file_name, tok_details.first,
-                           tok_details.second, range);
+  return find_range_pef_id(offset_file_name, offset, size_to_read, range);
 }
 
 const bool is_range_query(const std::string &query) {

@@ -86,6 +86,9 @@ int get_id_from_fst(const G &fst, const Q &query) {
   long state = fst.Start();
   long word_id = -1;
 
+  if (state == fst::kNoStateId)
+    return -1;
+
   for (uint8_t c : query) {
     const int64_t label = c + 1;
     bool found = false;
