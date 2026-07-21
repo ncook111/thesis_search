@@ -113,6 +113,8 @@ const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header,
   succinct::bit_vector_builder bvb2(header.num_bits);
   succinct::bit_vector_builder::bits_type &target = bvb2.move_bits();
 
+    if(num_words != target.size()) std::cout << "wrong" << std::endl;
+
   std::copy(raw_input, raw_input + num_words, target.begin());
 
   return succinct::bit_vector(&bvb2);

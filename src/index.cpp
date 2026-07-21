@@ -81,10 +81,8 @@ const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file,
                                                 const uint64_t size_to_read) {
   std::vector<uint8_t> enc_id_to_offset(size_to_read);
   std::memcpy(reinterpret_cast<char *>(enc_id_to_offset.data()),
-              &file[addr_offset], size_to_read);
-  std::cout << "here" << std::endl;                                                
-  const std::vector<uint64_t> id_to_offset = gvb_decode_uint64_t(enc_id_to_offset);
-
+              &file[addr_offset], size_to_read);                                             
+  const std::vector<uint64_t> id_to_offset = delta_decode(gvb_decode_uint64_t(enc_id_to_offset));
   return id_to_offset;
 }
 
@@ -650,7 +648,7 @@ const uint64_t write_tok_offsets_pef(const std::vector<uint64_t> &offsets, std::
 }
 
 void write_offset_ids_gvb(const std::vector<uint64_t> &offsets, std::ofstream &file) {
-  const std::vector<uint8_t> enc_id_to_offset = gvb_encode_uint64_t(offsets);
+  const std::vector<uint8_t> enc_id_to_offset = gvb_encode_uint64_t(delta_encode(offsets));
 
   // Write to file
   const uint64_t id_to_offset_size = enc_id_to_offset.size();

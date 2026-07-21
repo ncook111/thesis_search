@@ -106,8 +106,8 @@ struct Fields_header {
 };
 
 struct Write_pos {
-  uint64_t id_map_pos;
   uint64_t offsets_pos;
+  uint64_t id_map_pos;
 };
 
 template <MapType M>
