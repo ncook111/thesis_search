@@ -99,13 +99,14 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
     // Defer check for file existence until it will be used within get_id
     const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
     const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
-
+    
     // No token id found for current token, clear list of offsets and continue
     if (!id) {
         offsets.erase(i);
         continue;
     }
 
+    std::cout << "here" << std::endl;
     const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
     if (id_offsets_map.size()) {
       std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
@@ -120,6 +121,8 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         offsets[i] = std::move(offsets_cmp);
       }
     }
+
+    std::cout << offsets[i].size() << std::endl;
   }
 }
 

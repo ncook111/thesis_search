@@ -190,6 +190,7 @@ const Write_pos
 write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
                       std::ofstream &file, const uint8_t enc_type) {
   if (tokens_map.size() == 0) {
+    std::cout << "headers: " << file.tellp() << std::endl;
     return Write_pos{static_cast<uint64_t>(file.tellp()),
                      static_cast<uint64_t>(file.tellp())};
   }
@@ -213,6 +214,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     field_offsets.reserve(num_fields);
 
     // Write header with dummy value for field_offsets, will be overwritten later
+    std::cout << "field header write pos " << file.tellp() << std::endl;
     file.write(reinterpret_cast<const char*>(&num_fields), sizeof(uint64_t));
     file.write(reinterpret_cast<const char*>(field_ids.data()), num_fields * sizeof(uint64_t));
 
