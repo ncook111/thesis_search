@@ -43,41 +43,41 @@ const FieldMap search_index(const std::string &query,
     return offsets;
   }
 
-  for (const auto &t : tokens.getAlphaTokens()) {
+  for (const auto &t : tokens.alpha_tokens_q) {
     search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
 
-  for (const auto t : tokens.getNumTokens()) {
+  for (const auto t : tokens.num_tokens_q) {
     search_index_by_type(offsets, t, TokenType::INT, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
 
-  for (const auto t : tokens.getFloatTokens()) {
+  for (const auto t : tokens.float_tokens_q) {
     search_index_by_type(offsets, to_bytes(t), TokenType::FLOAT, names_size,
                          index_path, enc_type);
     if (offsets.empty())
       return offsets;
   }
 
-  for (const auto t : tokens.getDateTokens()) {
+  for (const auto t : tokens.d_tokens_q) {
     search_index_by_type(offsets, t, TokenType::DATE, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
 
-  for (const auto t : tokens.getTimeTokens()) {
+  for (const auto t : tokens.t_tokens_q) {
     search_index_by_type(offsets, t, TokenType::TIME, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
-  for (const auto t : tokens.getIPTokens()) {
+  for (const auto t : tokens.ipv4_tokens_q) {
     search_index_by_type(offsets, t, TokenType::IPV4, names_size, index_path,
                          enc_type);
     if (offsets.empty())

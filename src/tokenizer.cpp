@@ -48,7 +48,6 @@ const bool Tokenizer::is_float(const std::string &s) const {
 
     if (processed == s.size())
       return true;
-
   } catch (const std::invalid_argument) {
     return false;
   } catch (const std::out_of_range) {
@@ -197,8 +196,7 @@ void Tokenizer::tokenize_file() {
 }
 
 void Tokenizer::tokenize_csv() {
-  std::uint64_t file_size =
-      std::filesystem::file_size(std::filesystem::path(file_path));
+  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
 
   csv::CSVFormat format;
   format.variable_columns(csv::VariableColumnPolicy::THROW);
@@ -207,19 +205,16 @@ void Tokenizer::tokenize_csv() {
   if (fields.empty())
     fields = reader.get_col_names();
 
-  uint64_t i = 1;
   for (const csv::CSVRow &row : reader) { // Input iterator
     entry_offsets.push_back(row.byte_offset() + 1);
 
     for (uint64_t field_id = 0; field_id < fields.size(); ++field_id )
       tokenize_field(row[fields[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
 
-    if (i % 10000 == 0)
+    if (entry_offsets.size() % 10000 == 0)
       std::cout << "Processed: "
                 << (float)(row.byte_offset() / (float)file_size) * 100 << "%"
                 << std::endl;
-
-    ++i;
   }
 
   entry_offsets.push_back(file_size + 2);
@@ -308,13 +303,12 @@ void Tokenizer::tokenize_string(const std::string &input) {
     processToken(curr_token);
 }
 
-void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
-  const uint32_t token_length = curr_token.size();
+void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::int64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
-  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + token_length, res_int, options);
+  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_int, options);
   if (res_err.ec == std::errc()) {
     // File tokenization
     if (offset) {
@@ -338,12 +332,11 @@ void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset = 0, c
   curr_token.erase();
 }
 
-void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
-  const uint32_t token_length = curr_token.size();
+void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   float res_float;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
-  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + token_length, res_float, options);
+  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_float, options);
   if (res_err.ec == std::errc()) {
     // File tokenization
     if (offset)
@@ -360,7 +353,7 @@ void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset = 0,
   curr_token.erase();
 }
 
-void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::istringstream in(curr_token);
   date::sys_time<std::chrono::seconds> dateTimePoint;
 
@@ -380,7 +373,7 @@ void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset = 0, 
 
   curr_token.erase();
 }
-void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::istringstream in(curr_token);
   std::chrono::seconds timeTimePoint;
 
@@ -400,7 +393,7 @@ void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset = 0, 
 
   curr_token.erase();
 }
-void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
   if (offset)
     ipv4_tokens[1][field_id].push_back(offset);
@@ -411,7 +404,7 @@ void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset = 0, 
   curr_token.erase();
 }
 
-void Tokenizer::handle_ipv6(std::string  &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+void Tokenizer::handle_ipv6(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
   if (offset)
     ipv6_tokens[1][field_id].push_back(offset);
@@ -422,7 +415,7 @@ void Tokenizer::handle_ipv6(std::string  &curr_token, const uint64_t offset = 0,
   curr_token.erase();
 }
 
-void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0) {
+void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
   if (offset) {
     if (curr_token == "true")
@@ -443,67 +436,68 @@ void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset = 0,
 
 void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   switch (numeric_type(curr_token)) {
-  case TokenType::INT:
-    handle_int(curr_token, offset, field_id);
-    break;
-  case TokenType::FLOAT:
-    handle_float(curr_token, offset, field_id);
-    break;
-  case TokenType::DATE:
-    handle_date(curr_token, offset, field_id);
-    break;
-  case TokenType::TIME:
-    handle_time(curr_token, offset, field_id);
-    break;
-  case TokenType::IPV4:
-    handle_ipv4(curr_token, offset, field_id);
-    break;
-  case TokenType::IPV6:
-    handle_ipv6(curr_token, offset, field_id);
-    break;
-  case TokenType::BOOLEAN:
-    handle_bool(curr_token, offset, field_id);
-    break;
-  default:
-    break;
+    case TokenType::INT:
+      handle_int(curr_token, offset, field_id);
+      break;
+    case TokenType::FLOAT:
+      handle_float(curr_token, offset, field_id);
+      break;
+    case TokenType::DATE:
+      handle_date(curr_token, offset, field_id);
+      break;
+    case TokenType::TIME:
+      handle_time(curr_token, offset, field_id);
+      break;
+    case TokenType::IPV4:
+      handle_ipv4(curr_token, offset, field_id);
+      break;
+    case TokenType::IPV6:
+      handle_ipv6(curr_token, offset, field_id);
+      break;
+    case TokenType::BOOLEAN:
+      handle_bool(curr_token, offset, field_id);
+      break;
+    default:
+      break;
   }
 
   if (curr_token.size()) {
-    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
     alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
     curr_token.erase();
   }
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
+  std::cout << curr_token << std::endl;
   switch (numeric_type(curr_token)) {
-  case TokenType::INT:
-    handle_int(curr_token);
-    break;
-  case TokenType::FLOAT:
-    handle_float(curr_token);
-    break;
-  case TokenType::DATE:
-    handle_date(curr_token);
-    break;
-  case TokenType::TIME:
-    handle_time(curr_token);
-    break;
-  case TokenType::IPV4:
-    handle_ipv4(curr_token);
-    break;
-  case TokenType::IPV6:
-    handle_ipv6(curr_token);
-    break;
-  case TokenType::BOOLEAN:
-    handle_bool(curr_token);
-    break;
-  default:
-    break;
+    case TokenType::INT:
+      handle_int(curr_token);
+      break;
+    case TokenType::FLOAT:
+      handle_float(curr_token);
+      break;
+    case TokenType::DATE:
+      handle_date(curr_token);
+      break;
+    case TokenType::TIME:
+      handle_time(curr_token);
+      break;
+    case TokenType::IPV4:
+      handle_ipv4(curr_token);
+      break;
+    case TokenType::IPV6:
+      handle_ipv6(curr_token);
+      break;
+    case TokenType::BOOLEAN:
+      handle_bool(curr_token);
+      break;
+    default:
+      break;
   }
 
   if (curr_token.size()) {
-    std::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
     alpha_tokens_q.insert(std::move(curr_token));
     curr_token.erase();
   }
@@ -541,7 +535,6 @@ void Tokenizer::printTimeTokens() const {
     std::ostringstream oss;
     oss << std::put_time(tm_info, "%T");
     std::cout << oss.str() << std::endl;
-    ;
   }
 }
 

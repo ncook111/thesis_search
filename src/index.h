@@ -206,19 +206,24 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     
     const uint64_t num_fields = fields.size();
     std::vector<uint64_t> field_ids;
-    for (const auto [field_id, _] : fields)
+    for (const auto &[field_id, _] : fields)
       field_ids.push_back(field_id);
 
     std::vector<uint64_t> field_offsets;
-    sizes.reserve(num_fields);
+    field_offsets.reserve(num_fields);
 
     // Write header with dummy value for field_offsets, will be overwritten later
-    const uint64_t header_write_pos = file.tellp();
-    Field_header f_header = {num_fields, field_ids, field_ids}
-    file.write(reinterpret_cast<const char *>(&f_header), sizeof(f_header));
+    file.write(reinterpret_cast<const char*>(&num_fields), sizeof(uint64_t));
+    file.write(reinterpret_cast<const char*>(field_ids.data()), num_fields * sizeof(uint64_t));
 
-    uint64_t local_offset = offset + sizeof(f_header);
-    for (const auto &[_, offsets]) {
+    const uint64_t field_offsets_write_pos = file.tellp();
+    std::vector<uint64_t> dummy_offsets(num_fields, 0);
+    file.write(reinterpret_cast<const char*>(dummy_offsets.data()), num_fields * sizeof(uint64_t));
+
+    const uint64_t f_header_size = sizeof(uint64_t) * num_fields * 2 + sizeof(uint64_t);
+
+    uint64_t local_offset = offset + f_header_size;
+    for (const auto &[_, offsets] : fields) {
       // Duplicate docids may be present from tokenization stage, remove them
       const std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
 
@@ -237,10 +242,10 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     }
 
     // Replace dummy field_offsets with updated version
-    const uint64_t curr_offset = file.tellp();
-    file.seekp(header_write_pos + sizeof(fields) + sizeof(field_ids));
-    file.write(reinterpret_cast<const char*>(&field_offsets.data()), sizeof(field_offsets));
-    file.seekp(curr_offset)
+    std::streampos current_pos = file.tellp();
+    file.seekp(field_offsets_write_pos);
+    file.write(reinterpret_cast<const char*>(field_offsets.data()), num_fields * sizeof(uint64_t));
+    file.seekp(current_pos);
 
     offset = local_offset;
   }
@@ -250,7 +255,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
 
   switch (enc_type) {
     case EncType::GVB:
-      write_offset_ids_gvb(tokens_map, file);
+      write_offset_ids_gvb(id_to_offset, file);
       break;
     case EncType::PEF:
      write_offset_ids_pef(id_to_offset, file);
@@ -357,7 +362,6 @@ bool check_offsets_file_by_type(
       from_file = get_tok_offsets_from_file(id, id_to_offset, file_name, type,
                                             enc_type);
     } catch (const std::invalid_argument &e) {
-      std::cout << "here" << std::endl;
       except = true;
     }
 

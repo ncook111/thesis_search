@@ -106,8 +106,7 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         continue;
     }
 
-    const std::vector<uint64_t> id_offsets_map =
-        get_id_offsets_from_file(offset_file_name, type, enc_type);
+    const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
     if (id_offsets_map.size()) {
       std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(
           *std::move(id), id_offsets_map, offset_file_name, type, enc_type);
@@ -149,7 +148,6 @@ void search_index_by_range(FieldMap &offsets, const Q &range,
                 << std::endl;
       read_from_disk(fst,
                      index_path + "/fsts/" + std::to_string(i) + "_float.fst");
-      std::cout << "here11" << std::endl;
       ids = get_id_range_from_fst(*fst, range);
     }
 
