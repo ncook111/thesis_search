@@ -106,17 +106,14 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         continue;
     }
 
-    std::cout << "here" << std::endl;
     const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
     if (id_offsets_map.size()) {
       std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
-      // Get intersection if second token in string query, ie query such as "big
-      // mac"
-      if (offsets.contains(i)) {
+      // Get intersection if second token in string query, ie query such as "big mac"
+      if (offsets.contains(i))
         offsets[i] = get_docid_intersection(offsets[i], offsets_cmp);
-      } else {
+      else
         offsets[i] = std::move(offsets_cmp);
-      }
     }
   }
 }
