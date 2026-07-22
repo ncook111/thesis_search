@@ -9,7 +9,7 @@
 const Pef_Header
 partitioned_ef_encode(succinct::bit_vector &bv,
                       const std::vector<uint64_t> &nums) {
-  const uint64_t universe = nums.back() + 1;
+  const uint64_t universe = nums.back();
   const uint64_t n = nums.size();
   succinct::bit_vector_builder bvb;
 
