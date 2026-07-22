@@ -232,9 +232,7 @@ const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint6
   std::vector<uint8_t> enc_id_to_offset(size_to_read);
   std::memcpy(reinterpret_cast<char *>(enc_id_to_offset.data()), file, size_to_read);                                             
   const std::vector<uint64_t> id_to_offset = delta_decode(gvb_decode_uint64_t(enc_id_to_offset));
-  for (auto i : id_to_offset) {
-    std::cout << i << std::endl;
-  }
+  
   return id_to_offset;
 }
 
