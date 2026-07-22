@@ -110,9 +110,6 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
     const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
     if (id_offsets_map.size()) {
       std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
-      for (auto i : offsets_cmp) {
-        std::cout << i << std::endl;
-      }
       // Get intersection if second token in string query, ie query such as "big
       // mac"
       if (offsets.contains(i)) {
@@ -121,8 +118,6 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         offsets[i] = std::move(offsets_cmp);
       }
     }
-
-    std::cout << offsets[i].size() << std::endl;
   }
 }
 

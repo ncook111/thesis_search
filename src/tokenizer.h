@@ -80,6 +80,12 @@ public:
   const std::vector<uint64_t> getDateTokens() const;
   const std::vector<uint64_t> getTimeTokens() const;
   const std::vector<uint64_t> getIPTokens() const;
+  const std::vector<std::string> getAlphaTokensQ() const;
+  const std::vector<uint64_t> getNumTokensQ() const;
+  const std::vector<float> getFloatTokensQ() const;
+  const std::vector<uint64_t> getDateTokensQ() const;
+  const std::vector<uint64_t> getTimeTokensQ() const;
+  const std::vector<uint64_t> getIPTokensQ() const;
 
 private:
   Tokenizer() = default;

@@ -332,24 +332,24 @@ const bool is_range_query(const std::string &query) {
 const uint8_t get_range_query_type(const Tokenizer &tokens) {
   uint8_t type = TokenType::INVALID;
   // Alpha cannot be used in range query so throw error
-  if (tokens.getAlphaTokens().size()) {
+  if (tokens.getAlphaTokensQ().size()) {
     throw std::invalid_argument(
         "Range query cannot contain alphabetical or float tokens");
-  } else if (tokens.getNumTokens().size()) {
+  } else if (tokens.getNumTokensQ().size()) {
     if (type != TokenType::INVALID)
       throw std::invalid_argument("Range query must contain a single type");
     type = TokenType::INT;
-  } else if (tokens.getFloatTokens().size()) {
+  } else if (tokens.getFloatTokensQ().size()) {
     type = TokenType::FLOAT;
-  } else if (tokens.getDateTokens().size()) {
+  } else if (tokens.getDateTokensQ().size()) {
     if (type != TokenType::INVALID)
       throw std::invalid_argument("Range query must contain a single type");
     type = TokenType::DATE;
-  } else if (tokens.getTimeTokens().size()) {
+  } else if (tokens.getTimeTokensQ().size()) {
     if (type != TokenType::INVALID)
       throw std::invalid_argument("Range query must contain a single type");
     type = TokenType::TIME;
-  } else if (tokens.getIPTokens().size()) {
+  } else if (tokens.getIPTokensQ().size()) {
     if (type != TokenType::INVALID)
       throw std::invalid_argument("Range query must contain a single type");
     type = TokenType::IPV4;
@@ -366,16 +366,16 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
 
   switch (type) {
   case TokenType::INT:
-    range_tokens = tokens.getNumTokens();
+    range_tokens = tokens.getNumTokensQ();
     break;
   case TokenType::DATE:
-    range_tokens = tokens.getDateTokens();
+    range_tokens = tokens.getDateTokensQ();
     break;
   case TokenType::TIME:
-    range_tokens = tokens.getTimeTokens();
+    range_tokens = tokens.getTimeTokensQ();
     break;
   case TokenType::IPV4:
-    range_tokens = tokens.getIPTokens();
+    range_tokens = tokens.getIPTokensQ();
     break;
   default:
     throw std::invalid_argument("Invalid type");

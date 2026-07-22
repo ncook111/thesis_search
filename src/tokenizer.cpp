@@ -613,3 +613,47 @@ const std::vector<uint64_t> Tokenizer::getIPTokens() const {
 
   return tokens;
 }
+
+const std::vector<std::string> Tokenizer::getAlphaTokensQ() const {
+  std::vector<std::string> tokens;
+  for (const auto &i : alpha_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+
+const std::vector<uint64_t> Tokenizer::getNumTokensQ() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : num_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+const std::vector<float> Tokenizer::getFloatTokensQ() const {
+  std::vector<float> tokens;
+  for (const auto i : float_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+const std::vector<uint64_t> Tokenizer::getDateTokensQ() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : d_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+const std::vector<uint64_t> Tokenizer::getTimeTokensQ() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : t_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+const std::vector<uint64_t> Tokenizer::getIPTokensQ() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : ipv4_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}

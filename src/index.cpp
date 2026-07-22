@@ -430,13 +430,13 @@ get_tok_offsets(const uint64_t token_id,
 
   Fields_header f_header = {};
   // Get fields header
-  std::memcpy(&f_header.num_fields, file + addr_offset, sizeof(uint64_t));
-  size_t f_header_offset = addr_offset + sizeof(uint64_t);
+  std::memcpy(&f_header.num_fields, file + addr_offset, sizeof(uint16_t));
+  size_t f_header_offset = addr_offset + sizeof(uint16_t);
 
   // Read field_ids
   f_header.field_ids.resize(f_header.num_fields);
-  std::memcpy(f_header.field_ids.data(), file + f_header_offset, f_header.num_fields * sizeof(uint64_t));
-  f_header_offset += f_header.num_fields * sizeof(uint64_t);
+  std::memcpy(f_header.field_ids.data(), file + f_header_offset, f_header.num_fields * sizeof(uint16_t));
+  f_header_offset += f_header.num_fields * sizeof(uint16_t);
 
   // Read field_offsets
   f_header.field_offsets.resize(f_header.num_fields);

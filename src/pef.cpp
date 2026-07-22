@@ -92,8 +92,6 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
 
   const auto [pef_id, value] = e.next_geq(id);
 
-  std::cout << "id " << value << std::endl;
-
   return (value == id) ? std::make_optional(pef_id) : std::nullopt;
 }
 

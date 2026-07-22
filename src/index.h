@@ -29,17 +29,9 @@ struct Offsets_header {
   uint64_t ipv4_toks_header; // PEF encoded lexicon values
 };
 
-// struct Fields_header {
-//   uint64_t num_fields; // Number of fields that will contain docids
-//   uint64_t field_ids_size; // Size of gvb or pef encoded field_ids
-//   uint64_t field_offsets_size; // Size of gvb or pef encoded field_offsets
-//   std::vector<uint8_t> field_ids; // ID of fields
-//   std::vector<uint8_t> field_offsets; // File offset for which each fields docids will be stored
-// };
-
 struct Fields_header {
-  uint64_t num_fields; // Number of fields that will contain docids
-  std::vector<uint64_t> field_ids; // ID of fields
+  uint16_t num_fields; // Number of fields that will contain docids
+  std::vector<uint16_t> field_ids; // ID of fields
   std::vector<uint64_t> field_offsets; // File offset for which each fields docids will be stored
 };
 
@@ -176,7 +168,6 @@ const Write_pos
 write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
                       std::ofstream &file, const uint8_t enc_type) {
   if (tokens_map.size() == 0) {
-    std::cout << "headers: " << file.tellp() << std::endl;
     return Write_pos{static_cast<uint64_t>(file.tellp()),
                      static_cast<uint64_t>(file.tellp())};
   }
@@ -191,8 +182,10 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
   for (const auto &[_, fields] : tokens_map) {
     id_to_offset.push_back(offset);
     
-    const uint64_t num_fields = fields.size();
-    std::vector<uint64_t> field_ids;
+    const uint16_t num_fields = fields.size();
+
+    std::vector<uint16_t> field_ids;
+    field_ids.reserve(num_fields);
     for (const auto &[field_id, _] : fields)
       field_ids.push_back(field_id);
 
@@ -200,14 +193,14 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     field_offsets.reserve(num_fields);
 
     // Write header with dummy value for field_offsets, will be overwritten later
-    file.write(reinterpret_cast<const char*>(&num_fields), sizeof(uint64_t));
-    file.write(reinterpret_cast<const char*>(field_ids.data()), num_fields * sizeof(uint64_t));
+    file.write(reinterpret_cast<const char*>(&num_fields), sizeof(uint16_t));
+    file.write(reinterpret_cast<const char*>(field_ids.data()), num_fields * sizeof(uint16_t));
 
     const uint64_t field_offsets_write_pos = file.tellp();
     std::vector<uint64_t> dummy_offsets(num_fields, 0);
     file.write(reinterpret_cast<const char*>(dummy_offsets.data()), num_fields * sizeof(uint64_t));
 
-    const uint64_t f_header_size = sizeof(uint64_t) * num_fields * 2 + sizeof(uint64_t);
+    const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
     for (const auto &[_, offsets] : fields) {
