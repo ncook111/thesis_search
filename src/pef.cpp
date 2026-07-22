@@ -49,13 +49,12 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in header
-  Pef_Header header = get_bv_header(file, offset);
+  Pef_Header header = get_bv_header(file + offset);
 
   if (!header.n)
     return std::nullopt;
 
-  const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header),
-                                         size_to_read - sizeof(header));
+  const succinct::bit_vector bv = get_bv(file + offset + sizeof(header), header, size_to_read - sizeof(header));
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
@@ -81,13 +80,12 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in header
-  Pef_Header header = get_bv_header(file, offset);
+  Pef_Header header = get_bv_header(file + offset);
 
   if (!header.n)
     return std::nullopt;
 
-  const succinct::bit_vector bv = get_bv(file, header, offset + sizeof(header),
-                                         size_to_read - sizeof(header));
+  const succinct::bit_vector bv = get_bv(file + offset + sizeof(header), header, size_to_read - sizeof(header));
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
@@ -99,23 +97,19 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
   return (value == id) ? std::make_optional(pef_id) : std::nullopt;
 }
 
-const Pef_Header get_bv_header(const uint8_t *file, const uint64_t offset) {
+const Pef_Header get_bv_header(const uint8_t *file) {
   Pef_Header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), &file[offset], sizeof(header));
+  std::memcpy(reinterpret_cast<char *>(&header), file, sizeof(header));
 
   return header;
 }
 
-const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header,
-                                  const uint64_t offset,
-                                  const uint64_t size_to_read) {
-  const uint64_t *raw_input = reinterpret_cast<const uint64_t *>(&file[offset]);
+const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t size_to_read) {
+  const uint64_t *raw_input = reinterpret_cast<const uint64_t *>(file);
   const uint64_t num_words = size_to_read / 8;
 
   succinct::bit_vector_builder bvb2(header.num_bits);
   succinct::bit_vector_builder::bits_type &target = bvb2.move_bits();
-
-    if(num_words != target.size()) std::cout << "wrong" << std::endl;
 
   std::copy(raw_input, raw_input + num_words, target.begin());
 
