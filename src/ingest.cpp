@@ -6,8 +6,8 @@
 #include <cstdio>
 #include <iostream>
 
-constexpr uint8_t ARG_MIN =
-    5; // Minimum arguments required for normal operation
+// Minimum arguments required for normal operation
+constexpr uint8_t ARG_MIN = 5;
 
 int main(int argc, char *argv[]) {
   if (argc == 2 && std::string(argv[1]) == "help") {
@@ -101,7 +101,8 @@ int search_mode(const std::string &index_path, const std::string &data_path,
   try {
     const EntryMap results =
     process_queries(queries, data_path, index_path, enc_type, query_mode);
-    print_entries(results, index_path, data_path);
+    //print_entries(results, index_path, data_path);
+    std::cout << results.at(0).size() << std::endl;
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << std::endl;
     return 1;

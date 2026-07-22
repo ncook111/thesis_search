@@ -46,8 +46,11 @@ const FieldMap search_index(const std::string &query,
   for (const auto &t : tokens.alpha_tokens_q) {
     search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path,
                          enc_type);
-    if (offsets.empty())
+    std::cout << offsets.at(0).size() << std::endl;
+    if (offsets.empty()) {
+      std::cout << "here" << std::endl;
       return offsets;
+    }
   }
 
   for (const auto t : tokens.num_tokens_q) {
@@ -83,7 +86,6 @@ const FieldMap search_index(const std::string &query,
     if (offsets.empty())
       return offsets;
   }
-
   return offsets;
 }
 

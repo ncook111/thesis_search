@@ -248,9 +248,8 @@ void Tokenizer::tokenize_json() {
       }
     }
 
-    for (uint64_t field_id; field_id < fields.size(); ++field_id) {
+    for (uint64_t field_id = 0; field_id < fields.size(); ++field_id) {
       std::string_view text;
-      // Error returned when value is null or another json object, which is not supported
       if (obj[fields[field_id]].value().get(text) == 0) 
         tokenize_field(text, doc_id, field_id);
     }
