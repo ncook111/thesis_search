@@ -7,9 +7,8 @@
 
 const FieldMap search_index(const std::string &query,
                             const std::string &index_path,
-                            const uint8_t enc_type) {
-  const Tokenizer tokens = Tokenizer::from_string(query);
-
+                            const uint8_t enc_type) {                              
+  const Tokenizer tokens = Tokenizer::from_string(query);                         
   // If a range query, create a range
   Range range; // Construct dummy range
   std::pair<float, float> range_float;
@@ -44,11 +43,10 @@ const FieldMap search_index(const std::string &query,
   }
 
   for (const auto &t : tokens.alpha_tokens_q) {
+    std::cout << t << std::endl;
     search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path,
                          enc_type);
-    std::cout << offsets.at(0).size() << std::endl;
     if (offsets.empty()) {
-      std::cout << "here" << std::endl;
       return offsets;
     }
   }
@@ -94,8 +92,6 @@ const EntryMap process_queries(const std::vector<std::string> &queries,
                                const std::string &index_path,
                                const uint8_t enc_type,
                                const uint8_t query_mode) {
-  assert(queries.size() != 0);
-
   FieldMap combined_queries;
   for (const auto &query : queries) {
     if (combined_queries.empty()) {

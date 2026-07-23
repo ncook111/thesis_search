@@ -102,7 +102,7 @@ int search_mode(const std::string &index_path, const std::string &data_path,
     const EntryMap results =
     process_queries(queries, data_path, index_path, enc_type, query_mode);
     //print_entries(results, index_path, data_path);
-    std::cout << results.at(0).size() << std::endl;
+    std::cout << results.at(0).size() / 2 << std::endl;
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << std::endl;
     return 1;

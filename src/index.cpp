@@ -53,6 +53,10 @@ void create_index(std::vector<std::string> &fields,
     tokenizer.printStatistics();
     const std::string file_id = std::to_string(i++);
 
+    for (auto i : tokenizer.alpha_tokens["high"][8]) {
+      std::cout << i << std::endl;
+    }
+
     generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
     generate_fst_files(tokenizer, fst_dir.string(), file_id);
   }
