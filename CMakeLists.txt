@@ -13,7 +13,7 @@ endif()
 list(PREPEND CMAKE_PREFIX_PATH /opt/homebrew)
 
 # dependencies
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
 find_path(OPENFST_INCLUDE_DIR fst/fstlib.h)
 find_library(OPENFST_LIBRARY fst)
@@ -48,6 +48,6 @@ target_include_directories(ingest PRIVATE
 target_link_libraries(ingest PRIVATE
     succinct
     csv       
-    Boost::boost
+    Boost::program_options
     ${OPENFST_LIBRARY}
 )

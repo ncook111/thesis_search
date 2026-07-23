@@ -5,48 +5,114 @@
 #include "tokenizer.h"
 #include <cstdio>
 #include <iostream>
+#include <boost/program_options.hpp>
 
-// Minimum arguments required for normal operation
-constexpr uint8_t ARG_MIN = 5;
+namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
-  if (argc == 2 && std::string(argv[1]) == "help") {
-    std::cout << "Usage: ./ingest [mode]" << std::endl;
-    return 0;
+  // Declare the supported options.
+  po::options_description desc("Allowed options");
+  desc.add_options()
+      ("help", "produce help message")
+      ("mode", po::value<std::string>(), "set operation mode [create/recreate/search] or [c/r/s]")
+      ("encoding", po::value<std::string>(), "set encoding variant [gvb/pef]")
+      ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/recreate, or if original output desired when mode=search")
+      ("index-path,i", po::value<std::string>(), "index path")
+      ("fields,f", po::value<std::vector<std::string>>(), "fields to index from the input data, optional")
+      ("output-file,o", po::value<std::string>(), "output file, optional")
+      ("query-mode", po::value<std::string>(), "query mode, only required if mode=search")
+      ("queries,q", po::value<std::vector<std::string>>(), "queries, only required if mode=search")
+  ;
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);  
+
+  if (vm.count("help")) {
+    std::cout << desc << "\n";
+    return 1;
   }
 
-  if (argc < ARG_MIN) {
-    std::cout << "Usage: ./ingest help" << std::endl;
-    return 0;
-  }
 
-  const std::string act_mode = argv[1];
-  const uint8_t enc_type = get_enc_type(argv[2]);
-  const std::string data_path = argv[3];
-  const std::string index_path = argv[4];
-
-  if (act_mode == "-c") { // Create index mode
-    return create_mode(index_path, data_path, enc_type, argc, argv);
-  } else if (act_mode == "-r") { // Recreate index mode
-    return recreate_mode(index_path, data_path, enc_type, argc, argv);
-  } else if (act_mode == "-s") { // Index search mode
-    return search_mode(index_path, data_path, enc_type, argc, argv);
+  std::string act_mode;
+  if (vm.count("mode")) {
+    act_mode = vm["mode"].as<std::string>();
   } else {
-    std::cout << "Invalid mode. Help: ingest help" << std::endl;
+    std::cout << "Mode argument missing. Usage: ./ingest --help" << std::endl;
+    return 1;
+  }
+
+  uint8_t enc_type = EncType::INVALID;
+  if (vm.count("encoding")) {
+    try {
+      enc_type = get_enc_type(vm["encoding"].as<std::string>());
+    } catch (std::exception& e) {
+      std::cout << "Encoding argument invalid. Usage: ./ingest --help" << std::endl;
+      return 1;
+    }
+  } else {
+    std::cout << "Encoding argument missing. Usage: ./ingest --help" << std::endl;
+    return 1;
+  }
+
+  std::string data_path;
+  if (vm.count("data-path"))
+    data_path = vm["data-path"].as<std::string>();
+
+  std::string index_path;
+  if (vm.count("index-path")) {
+    index_path = vm["index-path"].as<std::string>();
+  } else {
+    std::cout << "Index path missing. Usage: ./ingest --help" << std::endl;
+    return 1;
+  }
+
+  std::vector<std::string> fields;
+  if (vm.count("fields"))
+    fields = vm["fields"].as<std::vector<std::string>>();
+
+
+  std::string output_path;
+  if (vm.count("output-path"))
+    output_path = vm["output-path"].as<std::string>();
+
+
+  uint8_t query_mode = QueryMode::INVALID;
+  if (vm.count("query-mode")) {
+    try {
+      query_mode = get_query_mode(vm["query-mode"].as<std::string>());
+    } catch (std::exception& e) {
+      std::cout << "Query mode invalid. Usage: ./ingest --help" << std::endl;
+      return 1;
+    }
+  }
+
+  std::vector<std::string> queries;
+  if (vm.count("queries"))
+    queries = vm["queries"].as<std::vector<std::string>>();
+
+  if (act_mode == "c" || act_mode == "create") { // Create index mode
+    return create_mode(index_path, data_path, fields, enc_type);
+  } else if (act_mode == "r" || act_mode ==  "recreate") { // Recreate index mode
+    return recreate_mode(index_path, data_path, fields, enc_type);
+  } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
+    
+    return search_mode(index_path, data_path, queries, query_mode, enc_type);
+  } else {
+    std::cout << "Invalid mode. Usage: ./ingest --help" << std::endl;
     return 1;
   }
 }
 
-int create_mode(const std::string &index_path, const std::string &data_path,
-                const uint8_t enc_type, const int argc, char *argv[]) {
+int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
   if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
     std::cout << "Index already exists" << std::endl;
     return 1;
   }
 
-  std::vector<std::string> fields;
-  for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
-    fields.push_back(argv[i]);
+  if (data_path.empty()) {
+    std::cout << "Data path missing, required when creating or recreating an index. Usage: ./ingest --help" << std::endl;
+    return 1;
   }
 
   try {
@@ -59,19 +125,18 @@ int create_mode(const std::string &index_path, const std::string &data_path,
   return 0;
 }
 
-int recreate_mode(const std::string &index_path, const std::string &data_path,
-                  const uint8_t enc_type, const int argc, char *argv[]) {
+int recreate_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
   if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
     std::cout << "Not a valid existing index folder" << std::endl;
     return 1;
   }
 
-  std::filesystem::remove_all(index_path);
-
-  std::vector<std::string> fields;
-  for (size_t i = ARG_MIN; i < static_cast<uint64_t>(argc); i++) {
-    fields.push_back(argv[i]);
+  if (data_path.empty()) {
+    std::cout << "Data path missing, required when creating or recreating an index. Usage: ./ingest --help" << std::endl;
+    return 1;
   }
+
+  std::filesystem::remove_all(index_path);
 
   try {
     create_index(fields, index_path, data_path, enc_type);
@@ -83,26 +148,25 @@ int recreate_mode(const std::string &index_path, const std::string &data_path,
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path,
-                const uint8_t enc_type, const int argc, char *argv[]) {
-  if (argc == ARG_MIN + 1) {
-    std::cout << "Help: ingest help" << std::endl;
+int search_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &queries, const uint8_t query_mode, const uint8_t enc_type) {
+  if (query_mode == QueryMode::INVALID) {
+    std::cout << "Query mode invalid. Usage: ./ingest --help" << std::endl;
     return 1;
   }
 
-  uint8_t query_mode = get_query_mode(argv[ARG_MIN]);
-  std::cout << argv[ARG_MIN] << std::endl;
-
-  std::vector<std::string> queries;
-  for (size_t i = ARG_MIN + 1; i < static_cast<uint64_t>(argc); i++) {
-    queries.push_back(argv[i]);
+  if (queries.empty()) {
+    std::cout << "No query values. Usage: ./ingest --help" << std::endl;
+    return 1;
   }
 
   try {
-    const EntryMap results =
-    process_queries(queries, data_path, index_path, enc_type, query_mode);
-    //print_entries(results, index_path, data_path);
-    std::cout << results.at(0).size() / 2 << std::endl;
+    const FieldMap matches = process_queries(queries, index_path, enc_type, query_mode);
+    
+    if (data_path.size()) {
+      print_entries(matches, index_path, data_path, enc_type);
+    } else {
+      print_counts(matches, index_path);
+    }
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << std::endl;
     return 1;

@@ -40,7 +40,7 @@ struct Write_pos {
   uint64_t id_map_pos;
 };
 
-void create_index(std::vector<std::string> &fields,
+void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, const uint8_t enc_type);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);

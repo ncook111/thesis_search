@@ -13,7 +13,7 @@
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
-void create_index(std::vector<std::string> &fields,
+void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, const uint8_t enc_type) {
   const std::filesystem::path index_dir = index_dir_str;

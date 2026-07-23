@@ -21,7 +21,7 @@ const uint8_t get_file_type(const std::string &type) {
 }
 
 const uint8_t get_enc_type(const std::string &type) {
-  if (type == "-gvb")
+  if (type == "gvb")
     return EncType::GVB;
   if (type == "-pef")
     return EncType::PEF;
@@ -30,11 +30,11 @@ const uint8_t get_enc_type(const std::string &type) {
 }
 
 const uint8_t get_query_mode(const std::string &mode) {
-  if (mode == "-u")
+  if (mode == "u" || mode == "union")
     return QueryMode::UNION;
-  if (mode == "-i")
+  if (mode == "i" || mode == "intersection")
     return QueryMode::INTER;
-  if (mode == "-n")
+  if (mode == "c" || mode == "compliment")
     return QueryMode::COMP;
 
   throw std::invalid_argument("Query type not supported");
