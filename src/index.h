@@ -203,9 +203,9 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
-    for (const auto &[_, offsets] : fields) {
+    for (const auto &[id, offsets] : fields) {
       // Duplicate docids may be present from tokenization stage, remove them
-      const std::vector<uint64_t> offsets_dedup = remove_dups(offsets);
+      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(offsets);
 
       field_offsets.push_back(local_offset);
 

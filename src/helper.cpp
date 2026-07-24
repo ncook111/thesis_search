@@ -23,7 +23,7 @@ const uint8_t get_file_type(const std::string &type) {
 const uint8_t get_enc_type(const std::string &type) {
   if (type == "gvb")
     return EncType::GVB;
-  if (type == "-pef")
+  if (type == "pef")
     return EncType::PEF;
 
   throw std::invalid_argument("Encoding type not supported");
@@ -90,7 +90,7 @@ const uint8_t str_to_token_type(const std::string &type_str) {
   return TokenType::INVALID;
 }
 
-const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec) {
+const std::vector<uint64_t> remove_dups_sorted(const std::vector<uint64_t> &vec) {
   std::vector<uint64_t> dedup;
   for (const auto &v : vec) {
     if (dedup.size() && dedup.back() == v)
@@ -99,4 +99,10 @@ const std::vector<uint64_t> remove_dups(const std::vector<uint64_t> &vec) {
   }
 
   return dedup;
+}
+
+const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec) {
+  // Sort before removing dups
+  std::sort(vec.begin(), vec.end());
+  return remove_dups_sorted(vec);
 }

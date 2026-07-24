@@ -462,17 +462,12 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
 
   if (curr_token.size()) {
     std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
-    // if (curr_token == "high" || curr_token == "school") {
-    //   std::cout << curr_token;
-    //   std::cout << " field id: " << field_id << " docid: " << offset << std::endl;
-    // }
     alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
     curr_token.erase();
   }
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
-  std::cout << curr_token << std::endl;
   switch (numeric_type(curr_token)) {
     case TokenType::INT:
       handle_int(curr_token);

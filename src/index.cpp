@@ -53,10 +53,6 @@ void create_index(const std::vector<std::string> &fields,
     tokenizer.printStatistics();
     const std::string file_id = std::to_string(i++);
 
-    for (auto i : tokenizer.alpha_tokens["high"][8]) {
-      std::cout << i << std::endl;
-    }
-
     generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
     generate_fst_files(tokenizer, fst_dir.string(), file_id);
   }
@@ -467,6 +463,7 @@ get_tok_offsets(const uint64_t token_id,
         throw std::invalid_argument("Not a valid encoding type");
     }
 
+    // TODO: Do binary merge to preserve sorted order here
     all_docids.insert(all_docids.end(), docids.begin(), docids.end());
   }
 
@@ -474,7 +471,9 @@ get_tok_offsets(const uint64_t token_id,
   for (auto &o : all_docids)
     --o;
 
-  return remove_dups(all_docids);
+  std::vector<uint64_t> dedup = remove_dups_unsorted(all_docids);
+
+  return dedup;
 }
 
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read) {

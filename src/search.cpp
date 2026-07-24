@@ -43,7 +43,6 @@ const FieldMap search_index(const std::string &query,
   }
 
   for (const auto &t : tokens.alpha_tokens_q) {
-    std::cout << t << std::endl;
     search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path,
                          enc_type);
     if (offsets.empty()) {
@@ -238,7 +237,6 @@ const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
     const std::vector<uint64_t> &entries_cmp = entries.at(file_id);
     const uint64_t total_num_entries = get_entry_offsets_from_file(index_path + "/offsets/" + std::to_string(file_id) + ".off", enc_type).size() - 1;
-    std::cout << "total entries: " << total_num_entries << std::endl;
     std::vector<uint64_t> all_entries;
     all_entries.reserve(total_num_entries);
 
@@ -258,7 +256,6 @@ const std::vector<uint64_t>
 get_docid_intersection(const std::vector<uint64_t> &docids,
                        const std::vector<uint64_t> &docids_cmp) {
   std::vector<uint64_t> intersection;
-
   intersection.reserve(std::min(docids.size(), docids_cmp.size()));
   std::set_intersection(docids.begin(), docids.end(), docids_cmp.begin(),
                         docids_cmp.end(), std::back_inserter(intersection));
@@ -300,7 +297,7 @@ void print_counts(const FieldMap &matches, const std::string &index_path) {
   for (const auto &[file_id, docids] : matches) {
     const std::string file_name = id_to_string(*fst, file_id);
     std::cout << "File: " << file_name << std::endl;
-    std::cout << "  Matching Documents: " << docids.size() << std::endl;
+    std::cout << "  Matching Documents: " << docids.size() << "\n";
   }
 }
 
