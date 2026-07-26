@@ -29,9 +29,6 @@ const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std
 const std::vector<uint64_t>
 get_docid_intersection(const std::vector<uint64_t> &docids,
                        const std::vector<uint64_t> &docids_cmp);
-void print_entries(const FieldMap &matches, const std::string &index_path,
-                   const std::string &data_path, const uint8_t enc_type);
-void print_counts(const FieldMap &matches, const std::string &index_path);
 const std::optional<Range> get_range_id_pef(const Range &range,
                                             const std::string &offset_file_name,
                                             const uint8_t type);

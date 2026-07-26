@@ -263,44 +263,6 @@ get_docid_intersection(const std::vector<uint64_t> &docids,
   return intersection;
 }
 
-void print_entries(const FieldMap &matches, const std::string &index_path,
-                   const std::string &data_path, const uint8_t enc_type) {
-  fst::StdConstFst *fst = nullptr;
-  read_from_disk(fst, index_path + "/file_mappings.fst");
-  const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
-
-  const EntryMap result = get_entries_offsets(matches, names, data_path, index_path, enc_type);
-
-  for (const auto &[file_id, entries] : result) {
-    const std::string file_name = id_to_string(*fst, file_id);
-    std::cout << "File: " << file_name << std::endl;
-    const std::string file_path = data_path + '/' + file_name;
-
-    const MappedFile mf = open_mmap_r(file_path);
-    const char *file = static_cast<char *>(mf.addr());
-
-    if (!entries.empty()) {
-      for (auto it = entries.begin(); it < entries.end() - 1; it += 2) {
-        uint64_t size = *(it + 1) - *it;
-        std::cout << "Line: ";
-        std::cout.write(&file[*it], size);
-        std::cout << "\n";
-      }
-    }
-  }
-}
-
-void print_counts(const FieldMap &matches, const std::string &index_path) {
-  fst::StdConstFst *fst = nullptr;
-  read_from_disk(fst, index_path + "/file_mappings.fst");
-
-  for (const auto &[file_id, docids] : matches) {
-    const std::string file_name = id_to_string(*fst, file_id);
-    std::cout << "File: " << file_name << std::endl;
-    std::cout << "  Matching Documents: " << docids.size() << "\n";
-  }
-}
-
 const std::optional<Range> get_range_id_pef(const Range &range,
                                             const std::string &offset_file_name,
                                             const uint8_t type) {

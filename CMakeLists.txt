@@ -35,6 +35,7 @@ add_executable(ingest
     src/helper.cpp
     src/pef.cpp
     src/search.cpp
+    src/output.cpp
     third_party/simdjson/simdjson.cpp
 )
 

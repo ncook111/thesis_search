@@ -3,6 +3,7 @@
 #include "index.h"
 #include "search.h"
 #include "tokenizer.h"
+#include "output.h"
 #include <cstdio>
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
     ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/recreate, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")
     ("fields,f", po::value<std::vector<std::string>>(), "fields to index from the input data, optional")
-    ("output-file,o", po::value<std::string>(), "output file, optional")
+    ("output-path,o", po::value<std::string>(), "output file, optional")
     ("query-mode", po::value<std::string>(), "query mode, only required if mode=search")
     ("queries,q", po::value<std::vector<std::string>>(), "queries, only required if mode=search")
     ;
@@ -31,10 +32,12 @@ int main(int argc, char *argv[]) {
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);  
   } catch (std::exception& e) {
-    std::cerr << "Unrecognised argument: Usage: ./ingest --help\n";
+    std::cerr << e.what() << ": Usage: ./ingest --help\n";
+    return 1;
 
   } catch(...) {
-    std::cerr << "Exception of unknown type!\n";
+    std::cerr << "Exception of unknown type\n";
+    return 1;
   }
 
 
@@ -108,7 +111,7 @@ int main(int argc, char *argv[]) {
     return recreate_mode(index_path, data_path, fields, enc_type);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
     
-    return search_mode(index_path, data_path, queries, query_mode, enc_type);
+    return search_mode(index_path, data_path, output_path, queries, query_mode, enc_type);
   } else {
     std::cout << "Invalid mode. Usage: ./ingest --help\n";
     return 1;
@@ -159,7 +162,7 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &queries, const uint8_t query_mode, const uint8_t enc_type) {
+int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::vector<std::string> &queries, const uint8_t query_mode, const uint8_t enc_type) {
   if (query_mode == QueryMode::INVALID) {
     std::cout << "Query mode invalid. Usage: ./ingest --help\n";
     return 1;
@@ -174,9 +177,9 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
     const FieldMap matches = process_queries(queries, index_path, enc_type, query_mode);
     
     if (data_path.size()) {
-      print_entries(matches, index_path, data_path, enc_type);
+      output_entries(matches, index_path, data_path, output_path, enc_type);
     } else {
-      print_counts(matches, index_path);
+      output_counts(matches, index_path, output_path);
     }
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << "\n";
