@@ -74,6 +74,11 @@ void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const 
     check_fst(tokenizer.getFloatTokens(), fst_dir + "/" + file_id + "_float.fst");
     tokenizer.float_tokens.clear();
     std::cout << "Finished" << std::endl;
+    
+    create_fst<std::string>(tokenizer.fields, fst_dir + "/" + file_id + "_fields.fst");
+    check_fst(tokenizer.fields, fst_dir + "/" + file_id + "_fields.fst");
+    tokenizer.fields.clear();
+    std::cout << "Finished" << std::endl;
 }
 
 void generate_offsets_file(const Tokenizer &tokenizer,
@@ -323,7 +328,7 @@ const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const uint64_t token_id, const std::vector<uint64_t> &id_to_offset,
+    const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
@@ -331,11 +336,11 @@ const std::vector<uint64_t> get_tok_offsets_from_file(
 
   const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
 
-  return get_tok_offsets(token_id, id_to_offset, length, file + offset, enc_type);
+  return get_tok_offsets(token_id, id_to_offset, field_ids, length, file + offset, enc_type);
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const Range token_ids, const std::vector<uint64_t> &id_to_offset,
+    const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
@@ -348,7 +353,7 @@ const std::vector<uint64_t> get_tok_offsets_from_file(
   const auto [min, max] = token_ids;
   for (size_t id = min; id <= max; ++id) {
     std::vector<uint64_t> cur_offsets =
-        get_tok_offsets(id, id_to_offset, length, file + offset, enc_type);
+        get_tok_offsets(id, id_to_offset, field_ids, length, file + offset, enc_type);
     offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()),
                    std::make_move_iterator(cur_offsets.end()));
   }
@@ -415,6 +420,7 @@ get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset,
 const std::vector<uint64_t>
 get_tok_offsets(const uint64_t token_id,
                 const std::vector<uint64_t> &id_to_offset,
+                const std::vector<uint64_t> &req_field_ids,
                 const uint64_t tok_offsets_length,
                 const uint8_t *file, const uint8_t enc_type) {
   uint64_t size_to_read;
@@ -446,9 +452,16 @@ get_tok_offsets(const uint64_t token_id,
   }
 
   field_sizes.push_back(size_to_read - (f_header.field_offsets[f_header.num_fields - 1] - id_to_offset[token_id]));
-  
+
   std::vector<uint64_t> all_docids;
   for (uint64_t i = 0; i < f_header.field_ids.size(); ++i) {
+
+    // Continue if requesting specific field_ids but not found in postings list
+    if (!req_field_ids.empty()) {
+      if (!std::binary_search(req_field_ids.begin(), req_field_ids.end(), f_header.field_ids[i]))
+        continue;
+    }
+
     addr_offset = f_header.field_offsets[i] - 1;
 
     std::vector<uint64_t> docids;

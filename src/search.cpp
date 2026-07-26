@@ -5,7 +5,8 @@
 #include <regex>
 #include <string>
 
-const FieldMap search_index(const std::string &query,
+const FieldMap search_index(const std::vector<std::string> &fields,
+                            const std::string &query,
                             const std::string &index_path,
                             const uint8_t enc_type) {                              
   const Tokenizer tokens = Tokenizer::from_string(query);                         
@@ -34,16 +35,16 @@ const FieldMap search_index(const std::string &query,
   // If range only need to process this, then return
   if (range_type != TokenType::INVALID) {
     if (range_type == TokenType::FLOAT)
-      search_index_by_range(offsets, range_float, range_type, names_size,
+      search_index_by_range(offsets, fields, range_float, range_type, names_size,
                             index_path, enc_type);
     else
-      search_index_by_range(offsets, range, range_type, names_size, index_path,
+      search_index_by_range(offsets, fields, range, range_type, names_size, index_path,
                             enc_type);
     return offsets;
   }
 
   for (const auto &t : tokens.alpha_tokens_q) {
-    search_index_by_type(offsets, t, TokenType::ALPHA, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::ALPHA, names_size, index_path,
                          enc_type);
     if (offsets.empty()) {
       return offsets;
@@ -51,34 +52,34 @@ const FieldMap search_index(const std::string &query,
   }
 
   for (const auto t : tokens.num_tokens_q) {
-    search_index_by_type(offsets, t, TokenType::INT, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::INT, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
 
   for (const auto t : tokens.float_tokens_q) {
-    search_index_by_type(offsets, to_bytes(t), TokenType::FLOAT, names_size,
+    search_index_by_type(offsets, fields, to_bytes(t), TokenType::FLOAT, names_size,
                          index_path, enc_type);
     if (offsets.empty())
       return offsets;
   }
 
   for (const auto t : tokens.d_tokens_q) {
-    search_index_by_type(offsets, t, TokenType::DATE, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::DATE, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
 
   for (const auto t : tokens.t_tokens_q) {
-    search_index_by_type(offsets, t, TokenType::TIME, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::TIME, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
   }
   for (const auto t : tokens.ipv4_tokens_q) {
-    search_index_by_type(offsets, t, TokenType::IPV4, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::IPV4, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
@@ -86,27 +87,28 @@ const FieldMap search_index(const std::string &query,
   return offsets;
 }
 
-const FieldMap process_queries(const std::vector<std::string> &queries,
+const FieldMap process_queries(const std::vector<std::string> &fields,
+                               const std::vector<std::string> &queries,
                                const std::string &index_path,
                                const uint8_t enc_type,
                                const uint8_t query_mode) {
   FieldMap combined_queries;
   for (const auto &query : queries) {
     if (combined_queries.empty()) {
-      combined_queries = search_index(query, index_path, enc_type);
+      combined_queries = search_index(fields, query, index_path, enc_type);
     } else {
       switch (query_mode) {
       case QueryMode::UNION:
         combined_queries = get_entries_offsets_union(
-            combined_queries, search_index(query, index_path, enc_type));
+            combined_queries, search_index(fields, query, index_path, enc_type));
         break;
       case QueryMode::INTER:
         combined_queries = get_entries_offsets_intersection(
-            combined_queries, search_index(query, index_path, enc_type));
+            combined_queries, search_index(fields, query, index_path, enc_type));
         break;
       case QueryMode::COMP:
           combined_queries = get_entries_offsets_union(
-            combined_queries, search_index(query, index_path, enc_type));
+            combined_queries, search_index(fields, query, index_path, enc_type));
           break;
       default:
         throw std::invalid_argument("Query type not valid");
@@ -410,4 +412,22 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
   }
 
   return std::make_pair(min, max);
+}
+
+std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::__1::vector<std::__1::string> &fields) {
+  fst::StdConstFst *fst = nullptr;
+  read_from_disk(fst, field_path);
+  
+  std::vector<uint64_t> field_ids;
+  
+  if (!fields.empty())
+  for (const auto &field : fields) {
+    uint64_t field_id = get_id_from_fst(*fst, field);
+    if (field_id != -1)
+      field_ids.push_back(field_id);
+    else
+      throw std::runtime_error(field + " is not a valid field");
+  }
+
+  return field_ids;
 }

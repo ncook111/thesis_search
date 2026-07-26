@@ -66,6 +66,8 @@ public:
   bool t_bool_token_q = false;
   bool f_bool_token_q = false;
 
+  std::vector<std::string> fields;
+
   void printAlphaTokens() const;
   void printNumTokens() const;
   void printFloatTokens() const;
@@ -114,7 +116,6 @@ private:
   void handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
 
   std::string file_path;
-  std::vector<std::string> fields;
   uint8_t type;
 };
 

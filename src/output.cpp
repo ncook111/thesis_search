@@ -51,8 +51,6 @@ void entries_to_cout(const std::string &file_name, const std::__1::vector<uint64
       std::cout << '\n';
     }
   }
-
-  std::cout << '\n';
 }
 
 void entries_to_file(const std::string &output_path, const std::string &file_name, const std::__1::vector<uint64_t> &entries, const char *data_file) {
@@ -83,7 +81,7 @@ void counts_to_file(const std::string &output_path, const std::string &file_name
   output_file.open(output_path);
 
   output_file << "File: " << file_name << '\n'
-           << "Matching Documents: " << count << "\n\n";
+           << "Matching Documents: " << count << '\n';
   
   output_file.close();
 }

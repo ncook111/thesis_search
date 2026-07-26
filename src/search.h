@@ -7,10 +7,12 @@
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
-const FieldMap search_index(const std::string &query,
+const FieldMap search_index(const std::vector<std::string> &fields,
+                            const std::string &query,
                             const std::string &index_path,
                             const uint8_t enc_type);
-const FieldMap process_queries(const std::vector<std::string> &queries,
+const FieldMap process_queries(const std::vector<std::string> &fields,
+                               const std::vector<std::string> &queries,
                                const std::string &index_path,
                                const uint8_t enc_type,
                                const uint8_t query_mode);
@@ -38,6 +40,7 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
 const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
                                                     const std::string &query);
 const uint8_t get_range_query_type(const Tokenizer &tokens);
+std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::__1::vector<std::__1::string> &fields);
 
 template <QueryType Q>
 const std::optional<uint64_t> get_id_fst(const Q &query,
@@ -78,7 +81,7 @@ get_id(const Q &query, const std::string &offset_file_name,
 }
 
 template <QueryType Q>
-void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
+void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fields, const Q &token, const uint8_t type,
                           const size_t files_indexed,
                           const std::string &index_path,
                           const uint8_t enc_type) {
@@ -103,9 +106,12 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
         continue;
     }
 
+    // Read in field ids from fst
+    const std::vector<uint64_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + "_fields.fst", fields);
+
     const std::vector<uint64_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
     if (id_offsets_map.size()) {
-      std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, offset_file_name, type, enc_type);
+      std::vector<uint64_t> offsets_cmp = get_tok_offsets_from_file(*std::move(id), id_offsets_map, field_ids, offset_file_name, type, enc_type);
       // Get intersection if second token in string query, ie query such as "big mac"
       if (offsets.contains(i)) {
         offsets[i] = get_docid_intersection(offsets[i], offsets_cmp);
@@ -118,7 +124,7 @@ void search_index_by_type(FieldMap &offsets, const Q &token, const uint8_t type,
 }
 
 template <class Q>
-void search_index_by_range(FieldMap &offsets, const Q &range,
+void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fields, const Q &range,
                            const uint8_t type, const size_t files_indexed,
                            const std::string &index_path,
                            const uint8_t enc_type) {
@@ -150,9 +156,12 @@ void search_index_by_range(FieldMap &offsets, const Q &range,
     if (!ids)
       continue; // No token id found for current query
 
+    // Read in field ids from fst
+    const std::vector<uint64_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + "_fields.fst", fields);
+
     const std::vector<uint64_t> id_offsets_map =
         get_id_offsets_from_file(offset_file_name, type, enc_type);
-    offsets[i] = get_tok_offsets_from_file(*std::move(ids), id_offsets_map,
+    offsets[i] = get_tok_offsets_from_file(*std::move(ids), id_offsets_map, field_ids,
                                            offset_file_name, type, enc_type);
   }
 }

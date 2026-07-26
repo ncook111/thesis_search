@@ -46,10 +46,10 @@ void create_index(const std::vector<std::string> &fields,
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type);
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const uint64_t token_id, const std::vector<uint64_t> &id_to_offset,
+    const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const Range token_ids, const std::vector<uint64_t> &id_to_offset,
+    const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t>
 get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset,
@@ -57,6 +57,7 @@ get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset,
 const std::vector<uint64_t>
 get_tok_offsets(const uint64_t token_id,
                 const std::vector<uint64_t> &id_to_offset,
+                const std::vector<uint64_t> &req_field_ids,
                 const uint64_t tok_offsets_length,
                 const uint8_t *file, const uint8_t enc_type);
 void generate_offsets_file(const Tokenizer &tokenizer,
@@ -339,7 +340,7 @@ bool check_offsets_file_by_type(
 
     std::vector<uint64_t> from_file;
     try {
-      from_file = get_tok_offsets_from_file(id, id_to_offset, file_name, type,
+      from_file = get_tok_offsets_from_file(id, id_to_offset, std::vector<uint64_t>(), file_name, type,
                                             enc_type);
     } catch (const std::invalid_argument &e) {
       except = true;
