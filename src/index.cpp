@@ -145,7 +145,7 @@ void generate_offsets_file(const Tokenizer &tokenizer,
   file.close();
 
   check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  // check_all_pef_tokens(tokenizer, file_name + ".off");
+  check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
@@ -186,17 +186,17 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type) {
   bool check = true;
-  // check = check && check_offsets_file_by_type(tokenizer.alpha_tokens,
-  // file_name, TokenType::ALPHA, enc_type); check = check &&
-  // check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT
-  // ,enc_type); check = check &&
-  // check_offsets_file_by_type(tokenizer.float_tokens, file_name,
-  // TokenType::FLOAT, enc_type); check = check &&
-  // check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE,
-  // enc_type); check = check && check_offsets_file_by_type(tokenizer.t_tokens,
-  // file_name, TokenType::TIME, enc_type); check = check &&
-  // check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name,
-  // TokenType::IPV4, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.alpha_tokens,
+  file_name, TokenType::ALPHA, enc_type); check = check &&
+  check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT
+  ,enc_type); check = check &&
+  check_offsets_file_by_type(tokenizer.float_tokens, file_name,
+  TokenType::FLOAT, enc_type); check = check &&
+  check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE,
+  enc_type); check = check && check_offsets_file_by_type(tokenizer.t_tokens,
+  file_name, TokenType::TIME, enc_type); check = check &&
+  check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name,
+  TokenType::IPV4, enc_type);
   check = check &&
           check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
 

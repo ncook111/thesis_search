@@ -251,7 +251,11 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
     out.push_back(i);
   }
 
-  if (out == tokens) {
+  std::vector<M> tokens_sorted = tokens;
+
+  std::sort(tokens_sorted.begin(), tokens_sorted.end());
+
+  if (out == tokens_sorted) {
     std::cout << "correct" << std::endl;
   } else {
     std::cout << "incorrect" << std::endl;

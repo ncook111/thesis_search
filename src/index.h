@@ -156,10 +156,10 @@ bool check_pef_tokens(const std::vector<M> &tokens, const std::string file_path,
       read_pef_tokens<M>(file_path, tok_details.first, tok_details.second);
 
   if (out == tokens) {
-    std::cout << "correct" << std::endl;
+    std::cout << "Type " << +type << " correct" << std::endl;
     return true;
   } else {
-    std::cout << "incorrect" << std::endl;
+    std::cout << "Type: " << +type << " incorrect" << std::endl;
     return false;
   }
 }
@@ -204,7 +204,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
-    for (const auto &[id, offsets] : fields) {
+    for (const auto &[_, offsets] : fields) {
       // Duplicate docids may be present from tokenization stage, remove them
       const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(offsets);
 
@@ -250,132 +250,79 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
 
 template <MapType M>
 bool check_offsets_file_by_type(
-    const std::map<M, std::vector<uint64_t>> &tokens_map,
+    const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   std::vector<uint64_t> id_to_offset;
+
   uint64_t offset = 1;
+  for (const auto &[_, fields] : tokens_map) {
+    id_to_offset.push_back(offset);
+    
+    const uint16_t num_fields = fields.size();
 
-  if (enc_type == EncType::GVB) {
-    for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
-      std::vector<uint64_t> offsets;
-      for (auto &i : it->second) {
-        if (offsets.size() && offsets.back() == i)
-          continue;
-        offsets.push_back(i);
-      }
-      const std::vector<uint8_t> enc_tok_offsets =
-          gvb_encode_uint64_t(delta_encode(offsets));
-      id_to_offset.push_back(offset);
-      offset += enc_tok_offsets.size();
-    }
-  } else if (enc_type == EncType::PEF) {
-    for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
+    std::vector<uint16_t> field_ids;
+    field_ids.reserve(num_fields);
+    for (const auto &[field_id, _] : fields)
+      field_ids.push_back(field_id);
+
+    std::vector<uint64_t> field_offsets;
+    field_offsets.reserve(num_fields);
+
+    const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
+
+    uint64_t local_offset = offset + f_header_size;
+    for (const auto &[id, offsets] : fields) {
       // Duplicate docids may be present from tokenization stage, remove them
-      const std::vector<uint64_t> &offsets = it->second;
-      std::vector<uint64_t> offsets_dedup;
-      for (auto &off : offsets) {
-        if (offsets_dedup.size() && offsets_dedup.back() == off)
-          continue;
-        offsets_dedup.push_back(off);
+      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(offsets);
+
+      field_offsets.push_back(local_offset);
+
+      switch (enc_type) {
+        case EncType::GVB:
+        {
+          const std::vector<uint8_t> enc = gvb_encode_uint64_t(delta_encode(offsets_dedup));
+          const uint64_t enc_size = enc.size();
+          local_offset += enc.size();
+          break;
+        }
+        case EncType::PEF:
+        {
+          succinct::bit_vector enc;
+          const Pef_Header header = partitioned_ef_encode(enc, offsets_dedup);
+          uint64_t enc_size = enc.data().size() * sizeof(uint64_t);
+
+          local_offset += enc_size + sizeof(header);
+          break;
+        }
+        default:
+          throw std::invalid_argument("Not a valid encoding type");
       }
-
-      succinct::bit_vector enc_tok_offsets;
-      const Pef_Header header = partitioned_ef_encode(enc_tok_offsets, offsets_dedup);
-
-      id_to_offset.push_back(offset);
-
-      offset += sizeof(header) + enc_tok_offsets.data().size() * sizeof(uint64_t);
     }
-  } else {
-    throw std::invalid_argument("Encoding type not supported");
+
+    offset = local_offset;
   }
 
-  bool empty = id_to_offset.size() == 0;
-  bool except = false;
+  // Check id_to_offsets
+  std::vector<uint64_t> id_to_offset_from_file = get_id_offsets_from_file(file_name, type, enc_type);
 
-  std::vector<uint64_t> input;
-
-  try {
-    input = get_id_offsets_from_file(file_name, type, enc_type);
-  } catch (const std::invalid_argument &e) {
-    except = true;
-  }
-
-  const std::string type_string = token_type_to_str(type);
-
-  bool ret;
-  if (input == id_to_offset || (empty && except)) {
-    ret = true;
-    std::cout << type_string << " ID offsets correct: " << file_name
-              << std::endl;
-  } else {
-    ret = false;
-    std::cout << type_string << " ID offsets incorrect: " << file_name
-              << std::endl;
-    std::cout << "Offsets OG:" << std::endl;
-    for (auto i : id_to_offset) {
-      std::cout << i << std::endl;
-    }
-
-    std::cout << "from file:" << std::endl;
-    for (auto i : input) {
-      std::cout << i << std::endl;
-    }
-  }
-
-  offset = 1;
-  uint64_t id = 0;
-  empty = false;
-  except = false;
-  bool correct = true;
-  for (auto it = tokens_map.begin(); it != tokens_map.end(); ++it) {
-    std::vector<uint64_t> offsets;
-
-    // Convert offsets to 0 indexing and remove duplicates
-    for (auto &i : it->second) {
-      if (offsets.size() && offsets.back() == i - 1)
-        continue;
-      offsets.push_back(i - 1);
-    }
-
-    std::vector<uint64_t> from_file;
-    try {
-      from_file = get_tok_offsets_from_file(id, id_to_offset, std::vector<uint64_t>(), file_name, type,
-                                            enc_type);
-    } catch (const std::invalid_argument &e) {
-      except = true;
-    }
-
-    correct = correct && (from_file == offsets);
-
-    if (from_file != offsets) {
-      std::cout << "Offsets OG Size:" << offsets.size() << std::endl;
-      std::cout << "from file Size:" << from_file.size() << std::endl;
-      std::cout << "Offsets OG:" << std::endl;
-      for (auto i : offsets) {
-        std::cout << i << std::endl;
-      }
-
-      std::cout << "from file:" << std::endl;
-      for (auto i : from_file) {
-        std::cout << i << std::endl;
-      }
-
-      return false;
-    }
-
-    ++id;
-  }
-
-  if (correct || (empty && except)) {
-    std::cout << type_string << " Token offsets correct: " << file_name
-              << std::endl;
-    return ret && true;
-  } else {
-    std::cout << type_string << " Token offsets incorrect: " << file_name
-              << std::endl;
+  if (id_to_offset_from_file != id_to_offset) {
+    std::cout << "id offsets incorrect\n";
     return false;
   }
+
+  uint64_t token_id = 0;
+  for (const auto &[_, fields] : tokens_map) {
+    for (const auto &[field_id, docids] : fields) {
+      std::vector<uint64_t> from_file = get_tok_offsets_from_file(token_id, id_to_offset, std::vector<uint64_t>() = {field_id}, file_name, type, enc_type);
+      for (auto &i : from_file) ++i; // Normalise
+      if (from_file != docids) {
+        return false;
+      }
+    }
+    ++token_id;
+  }
+
+  return true;
 }
 
 #endif
