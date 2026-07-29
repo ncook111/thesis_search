@@ -27,6 +27,8 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1,
                                                 const FieldMap &entries_2);
 const FieldMap get_entries_offsets_union(const FieldMap &entries_1,
                                          const FieldMap &entries_2);
+const FieldMap get_entries_offsets_difference(const FieldMap &entries_1, const FieldMap &entries_2);
+const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, const FieldMap &entries_2);
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std::string &index_path, const uint8_t enc_type);
 const std::vector<uint64_t>
 get_docid_intersection(const std::vector<uint64_t> &docids,

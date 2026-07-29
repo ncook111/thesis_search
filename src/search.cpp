@@ -8,7 +8,7 @@
 const FieldMap search_index(const std::vector<std::string> &fields,
                             const std::string &query,
                             const std::string &index_path,
-                            const uint8_t enc_type) {                              
+                            const uint8_t enc_type) {                         
   const Tokenizer tokens = Tokenizer::from_string(query);                         
   // If a range query, create a range
   Range range; // Construct dummy range
@@ -174,9 +174,7 @@ const FieldMap get_entries_offsets_intersection(const FieldMap &entries_1,
   const std::vector<size_t> file_ids = get_file_ids_union(entries_1, entries_2);
 
   for (const auto file_id : file_ids) {
-    if (!entries_1.contains(file_id))
-      continue;
-    if (!entries_2.contains(file_id))
+    if (!entries_1.contains(file_id) || !entries_2.contains(file_id))
       continue;
 
     const std::vector<uint64_t> &docids = entries_1.at(file_id);
@@ -226,6 +224,73 @@ const FieldMap get_entries_offsets_union(const FieldMap &entries_1,
   }
 
   return union_offsets;
+}
+
+const FieldMap get_entries_offsets_difference(const FieldMap &entries_1, const FieldMap &entries_2) {
+  FieldMap difference_offsets;
+  // Get vector of union of file_id's for both entries_1 and entries_2
+  const std::vector<size_t> file_ids = get_file_ids_union(entries_1, entries_2);
+
+  // Offsets is a map of file_id's to offsets
+  for (const auto &[file_id, docids] : entries_1) {
+    if (!entries_1.contains(file_id) && !entries_2.contains(file_id)) {
+      continue;
+    } else if (!entries_1.contains(file_id)) {
+      std::vector<uint64_t> &difference_vec = difference_offsets[file_id];
+      const std::vector<uint64_t> &entries_vec = entries_2.at(file_id);
+      difference_vec.insert(difference_vec.end(), entries_vec.begin(), entries_vec.end());
+      continue;
+    } else if (!entries_2.contains(file_id)) {
+      std::vector<uint64_t> &difference_vec = difference_offsets[file_id];
+      const std::vector<uint64_t> &entries_vec = entries_1.at(file_id);
+      difference_vec.insert(difference_vec.end(), entries_vec.begin(), entries_vec.end());
+      continue;
+    }
+    const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
+
+    difference_offsets[file_id].reserve(docids.size() + docids_cmp.size());
+    std::cout << "a: " << docids.size();
+    std::cout << "b: " << docids_cmp.size();
+    std::set_difference(docids.begin(), docids.end(), docids_cmp.begin(),
+                   docids_cmp.end(),
+                   std::back_inserter(difference_offsets[file_id]));
+  }
+
+  return difference_offsets;
+}
+
+const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, const FieldMap &entries_2) {
+  FieldMap difference_offsets;
+
+  // Get vector of union of file_id's for both entries_1 and entries_2
+  const std::vector<size_t> file_ids = get_file_ids_union(entries_1, entries_2);
+
+  // Offsets is a map of file_id's to offsets
+  for (const auto &[file_id, docids] : entries_1) {
+    if (!entries_1.contains(file_id) && !entries_2.contains(file_id)) {
+      continue;
+    } else if (!entries_1.contains(file_id)) {
+      std::vector<uint64_t> &difference_vec = difference_offsets[file_id];
+      const std::vector<uint64_t> &entries_vec = entries_2.at(file_id);
+      difference_vec.insert(difference_vec.end(), entries_vec.begin(), entries_vec.end());
+      continue;
+    } else if (!entries_2.contains(file_id)) {
+      std::vector<uint64_t> &difference_vec = difference_offsets[file_id] = entries_1.at(file_id);
+      const std::vector<uint64_t> &entries_vec = entries_1.at(file_id);
+      difference_vec.insert(difference_vec.end(), entries_vec.begin(), entries_vec.end());
+      continue;
+    }
+
+    const std::vector<uint64_t> &docids_cmp = entries_2.at(file_id);
+
+    difference_offsets[file_id].reserve(docids.size() + docids_cmp.size());
+
+    std::set_symmetric_difference(docids.begin(), docids.end(), docids_cmp.begin(),
+                   docids_cmp.end(),
+                   std::back_inserter(difference_offsets[file_id]));
+  }
+
+  return difference_offsets;
 }
 
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std::string &index_path, const uint8_t enc_type) {
@@ -428,6 +493,8 @@ std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::__
     else
       throw std::runtime_error(field + " is not a valid field");
   }
+
+  std::sort(field_ids.begin(), field_ids.end());
 
   return field_ids;
 }

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE MinSizeRel)
 endif()
@@ -25,8 +26,7 @@ endif()
 add_subdirectory(third_party/csv-parser)
 add_subdirectory(third_party/ds2i/succinct)
 
-# target
-add_executable(ingest
+set(INGEST_SRC_FILES
     src/ingest.cpp
     src/coder.cpp
     src/tokenizer.cpp
@@ -36,6 +36,17 @@ add_executable(ingest
     src/pef.cpp
     src/search.cpp
     src/output.cpp
+    src/query/parser.cpp
+    src/query/ast.cpp
+)
+
+# set_source_files_properties(${INGEST_SRC_FILES}
+#     PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Werror"
+# )
+
+# target
+add_executable(ingest
+     ${INGEST_SRC_FILES}
     third_party/simdjson/simdjson.cpp
 )
 

@@ -4,6 +4,7 @@
 #include "search.h"
 #include "tokenizer.h"
 #include "output.h"
+#include "query/parser.h"
 #include <cstdio>
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -171,8 +172,8 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
   }
 
   try {
-    const FieldMap matches = process_queries(fields, queries, index_path, enc_type, query_mode);
-    
+    const FieldMap matches = parse_queries(queries.back(), index_path, enc_type);
+    std::cout << matches.size() << std::endl;
     if (data_path.size()) {
       output_entries(matches, index_path, data_path, output_path, enc_type);
     } else {
