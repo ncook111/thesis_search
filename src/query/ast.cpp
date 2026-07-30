@@ -27,7 +27,7 @@ std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> 
                 ast = build_binary_op(std::move(ast), tokens, index_path, enc_type);
                 break;
             default:
-                throw std::invalid_argument("BA: Unknown type. Value: " + peak_next_token(tokens).second);
+                throw std::invalid_argument("Unknown type. Value: " + peak_next_token(tokens).second);
         }
     }
 

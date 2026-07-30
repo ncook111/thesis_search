@@ -166,25 +166,25 @@ void check_next_expected(const std::pair<uint8_t, std::string> &curr, const std:
     switch (curr_type) {
         case (QueryTokType::LPAREN):
             if (next_type != QueryTokType::FIELD)
-                throw std::runtime_error("Expected field after opening parenthesis. Received: " + next_value);
+                throw std::runtime_error("Expected a field declaratiin after opening parenthesis. Received: " + next_value);
             break;
         case (QueryTokType::RPAREN):
             if (!is_binary_op(next_type))
-                throw std::runtime_error("Expected field after opening parenthesis. Received: " + next_value);
+                throw std::runtime_error("Expected a binary operator after closing parenthesis. Received: " + next_value);
             break;
         case (QueryTokType::FIELD):
             if (next_type != QueryTokType::EQ)
-                throw std::runtime_error("Expected field after opening parenthesis. Received: " + next_value);
+                throw std::runtime_error("Expected an equals sign after a field declaration. Received: " + next_value);
             break;
         // Treated the same
         case (QueryTokType::STDQUERY): [[fallthrough]];
         case (QueryTokType::RNGQUERY):
             if (!is_binary_op(next_type) && next_type != QueryTokType::RPAREN)
-                throw std::runtime_error("Expected a binary operator or right parenthesis. Received: " + next_value);
+                throw std::runtime_error("Expected a binary operator or right parenthesis after query declaration. Received: " + next_value);
             break;
         case (QueryTokType::EQ):
             if (next_type != QueryTokType::STDQUERY && next_type != QueryTokType::RNGQUERY)
-                throw std::runtime_error("Expected a standard or range query. Received: " + next_value);
+                throw std::runtime_error("Expected a standard or range query declaration after an equals sign. Received: " + next_value);
             break;
         case (QueryTokType::INTER): [[fallthrough]];
         case (QueryTokType::UNION): [[fallthrough]];
