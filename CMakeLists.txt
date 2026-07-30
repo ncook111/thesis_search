@@ -26,7 +26,7 @@ endif()
 add_subdirectory(third_party/csv-parser)
 add_subdirectory(third_party/ds2i/succinct)
 
-set(INGEST_SRC_FILES
+add_library(indexer_lib
     src/ingest.cpp
     src/coder.cpp
     src/tokenizer.cpp
@@ -38,28 +38,38 @@ set(INGEST_SRC_FILES
     src/output.cpp
     src/query/parser.cpp
     src/query/ast.cpp
-)
-
-# set_source_files_properties(${INGEST_SRC_FILES}
-#     PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Werror"
-# )
-
-# target
-add_executable(ingest
-     ${INGEST_SRC_FILES}
     third_party/simdjson/simdjson.cpp
 )
 
-target_include_directories(ingest PRIVATE
+target_include_directories(indexer_lib PUBLIC
     include
     ${OPENFST_INCLUDE_DIR}
     third_party/ds2i
     third_party/simdjson
 )
 
-target_link_libraries(ingest PRIVATE
+target_link_libraries(indexer_lib PUBLIC
     succinct
-    csv       
+    csv
     Boost::program_options
     ${OPENFST_LIBRARY}
 )
+
+add_executable(indexer src/indexer.cpp)
+target_link_libraries(indexer PRIVATE indexer_lib)
+
+include(CTest)   # instead of enable_testing() alone — also gives you BUILD_TESTING option
+
+if(BUILD_TESTING)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        v1.15.2
+    )
+    # Needed on some platforms to match runtime library settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    add_subdirectory(tests)
+endif()

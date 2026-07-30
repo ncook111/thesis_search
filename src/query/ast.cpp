@@ -84,6 +84,7 @@ std::vector<std::string> get_fields(const std::string& s) {
     std::stringstream ss(s);
     std::string item;
     while (std::getline(ss, item, ',')) {
+        if (item.empty()) continue;
         result.push_back(item);
     }
 
