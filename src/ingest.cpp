@@ -7,6 +7,7 @@
 #include "query/parser.h"
 #include <cstdio>
 #include <iostream>
+#include <boost/program_options.hpp>
 
 int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
   if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
@@ -52,20 +53,16 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::vector<std::string> &fields, const std::vector<std::string> &queries, const uint8_t query_mode, const uint8_t enc_type) {
-  if (query_mode == QueryMode::INVALID) {
-    std::cout << "Query mode invalid. Usage: ./ingest --help\n";
-    return 1;
-  }
+int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::vector<std::string> &fields, const std::string &query, const uint8_t enc_type) {
 
-  if (queries.empty()) {
+  if (query.empty()) {
     std::cout << "No query values. Usage: ./ingest --help\n";
     return 1;
   }
 
   try {
-    const FieldMap matches = parse_queries(queries.back(), index_path, enc_type);
-    std::cout << matches.size() << std::endl;
+    const FieldMap matches = parse_queries(query, index_path, enc_type);
+    std::cout << "here1" << std::endl;
     if (data_path.size()) {
       output_entries(matches, index_path, data_path, output_path, enc_type);
     } else {
@@ -73,6 +70,32 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
     }
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << "\n";
+    return 1;
+  }
+
+  return 0;
+}
+
+int parse_options(po::options_description &desc, po::variables_map &vm, const int argc, const char *argv[]) {
+  try {
+    desc.add_options()
+    ("help", "produce help message")
+    ("mode,m", po::value<std::string>(), "set operation mode [create/recreate/search] or [c/r/s]")
+    ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
+    ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/recreate, or if original output desired when mode=search")
+    ("index-path,i", po::value<std::string>(), "index path")
+    ("fields,f", po::value<std::vector<std::string>>()->multitoken(), "fields to index from the input data, optional")
+    ("output-path,o", po::value<std::string>(), "output file, optional")
+    ("query,q", po::value<std::string>(), "queries, only required if mode=search");
+
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);  
+  } catch (std::exception& e) {
+    std::cerr << e.what() << ": Usage: ./ingest --help\n";
+    return 1;
+
+  } catch(...) {
+    std::cerr << "Exception of unknown type\n";
     return 1;
   }
 

@@ -40,6 +40,7 @@ const uint8_t str_to_token_type(const std::string &type_str);
 const std::vector<uint64_t> remove_dups_sorted(const std::vector<uint64_t> &vec);
 const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec);
 const uint8_t get_query_mode(const std::string &mode);
+const std::string trim(const std::string& str);
 
 template <class F> const std::vector<uint8_t> to_bytes(const F &input) {
   std::vector<uint8_t> bytes(sizeof(input));

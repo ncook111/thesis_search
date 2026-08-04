@@ -29,10 +29,10 @@ namespace QueryTokType {
         RBRACK = 13,
         LCURL = 14,
         RCURL = 15,
+        INVALID = 16,
     };
 }
 
-int main(int argc, char *argv[]);
 const FieldMap parse_queries(const std::string &queries, const std::string &index_path, const uint8_t enc_type);
 const std::vector<std::pair<uint8_t, std::string>> tokenize(const std::string &queries);
 void tokenize_std_query(bool &in_std_query, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);
@@ -41,8 +41,10 @@ void tokenize_field(bool &in_field, const char c, std::vector<std::pair<uint8_t,
 void tokenize_else(bool &in_std_query, bool &in_rng_query, bool &in_field, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);
 void validate_tokens(std::vector<std::pair<uint8_t, std::string>> tokens);
 void check_next_expected(const std::pair<uint8_t, std::string> &curr, const std::pair<uint8_t, std::string> &next);
-bool is_binary_op(const uint8_t type);
+const bool is_range_query(const std::string &query);
+const bool is_binary_op(const uint8_t type);
 const std::pair<uint8_t, std::string> get_next_token(std::vector<std::pair<uint8_t, std::string>> &tokens);
 const std::pair<uint8_t, std::string> peak_next_token(const std::vector<std::pair<uint8_t, std::string>> &tokens);
+void check_fields(const std::string& s);
 
 #endif

@@ -7,16 +7,16 @@ void output_entries(const FieldMap &matches, const std::string &index_path,
   fst::StdConstFst *fst = nullptr;
   read_from_disk(fst, index_path + "/file_mappings.fst");
   const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
-
   const EntryMap result = get_entries_offsets(matches, names, data_path, index_path, enc_type);
 
   for (const auto &[file_id, entries] : result) {
+    std::cout << "here2" << std::endl;
     const std::string file_name = id_to_string(*fst, file_id);
     const std::string file_path = data_path + '/' + file_name;
-
+     std::cout << "cwd: " << std::filesystem::current_path() << "\n";
+            std::cout << file_path << std::endl;
     const MappedFile mf = open_mmap_r(file_path);
     const char *data_file = static_cast<char *>(mf.addr());
-
     if (output_path.size()) {
       entries_to_file(output_path, file_name, entries, data_file);
     } else {

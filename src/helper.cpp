@@ -106,3 +106,16 @@ const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec) {
   std::sort(vec.begin(), vec.end());
   return remove_dups_sorted(vec);
 }
+
+const std::string trim(const std::string& str) {
+    const std::string whitespace = " \t\n\r\f\v";
+    
+    size_t start = str.find_first_not_of(whitespace);
+    if (start == std::string::npos) {
+        return ""; // The entire string is whitespace
+    }
+
+    size_t end = str.find_last_not_of(whitespace);
+    
+    return str.substr(start, end - start + 1);
+}

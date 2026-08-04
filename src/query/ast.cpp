@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "parser.h"
+#include "../helper.h"
 #include <ranges>
 #include <memory>
 
@@ -10,9 +11,9 @@ std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> 
         switch (next_type) {
             case (QueryTokType::LPAREN):
                 tokens.pop_back();
-                ast = build_ast(tokens, index_path, enc_type);
                 break;
             case (QueryTokType::RPAREN):
+                tokens.pop_back();
                 return ast;
             case (QueryTokType::FIELD):
                 ast = build_query(tokens, index_path, enc_type);
@@ -65,15 +66,17 @@ std::unique_ptr<ASTNode> build_binary_op(std::unique_ptr<ASTNode> left, std::vec
 
 std::unique_ptr<ASTNode> build_unary_op(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type) {
     std::unique_ptr<ASTNode> ast = NULL;
-    while (!tokens.empty()) {
-        const auto &[op, value] = get_next_token(tokens);
-        switch (op) {
-            case (QueryTokType::COMPL):
-                return std::make_unique<ComplimentNode>(std::move(build_ast(tokens, index_path, enc_type)), index_path, enc_type);
-                break;
-            default:
-                throw std::invalid_argument("Unknown unary operator. Value: " + value);
-        }
+    const auto &[op, value] = get_next_token(tokens);
+    switch (op) {
+        case (QueryTokType::COMPL):
+            if (peak_next_token(tokens).first == QueryTokType::LPAREN) {
+                ast = std::make_unique<ComplimentNode>(std::move(build_ast(tokens, index_path, enc_type)), index_path, enc_type);
+            } else if (peak_next_token(tokens).first == QueryTokType::FIELD) {
+                ast = std::make_unique<ComplimentNode>(std::move(build_query(tokens, index_path, enc_type)), index_path, enc_type);
+            }
+            break;
+        default:
+            throw std::invalid_argument("Unknown unary operator. Value: " + value);
     }
 
     return ast;
@@ -84,9 +87,14 @@ std::vector<std::string> get_fields(const std::string& s) {
     std::stringstream ss(s);
     std::string item;
     while (std::getline(ss, item, ',')) {
+        item = trim(item);
         if (item.empty()) continue;
         result.push_back(item);
     }
+
+    // If wildcard, make fields empty, easier to process going forward
+    if (result.size() == 1 && result.front() == "*")
+        result.pop_back();
 
     return result;
 }

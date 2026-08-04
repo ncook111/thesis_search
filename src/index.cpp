@@ -584,15 +584,15 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
 void check_index_dir_valid(const std::string &index_path) {
   // Check valid fst directory
   if (!std::filesystem::exists(index_path + "/fsts"))
-    throw std::invalid_argument("Fst's directory does not exist");
+    throw std::invalid_argument("Fst's directory does not exist: " + index_path + "/fsts");
 
   // Check valid offsets directory
   if (!std::filesystem::exists(index_path + "/offsets"))
-    throw std::invalid_argument("Offset's directory does not exist");
+    throw std::invalid_argument("Offset's directory does not exist: " + index_path + "/offsets");
 
   // Check file_mappings file exists
   if (!std::filesystem::exists(index_path + "/file_mappings.fst"))
-    throw std::invalid_argument("file_mappings file does not exist");
+    throw std::invalid_argument("file_mappings file does not exist: " + index_path + "/file_mappings.fst");
 }
 
 const uint64_t write_vec_gvb(const std::vector<uint64_t> &vec, std::ofstream &file) {

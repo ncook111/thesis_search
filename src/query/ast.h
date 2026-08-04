@@ -28,6 +28,22 @@ class QueryNode : public ASTNode {
       std::cout << "QueryNode\n";
     }
 
+    const std::vector<std::string> get_fields() const {
+      return fields;
+    }
+
+    const std::string get_query() const {
+      return query;
+    }
+
+    const std::string get_index_path() const {
+      return index_path;
+    }
+
+    const uint8_t get_enc_type() const {
+      return enc_type;
+    }
+
   protected:
     const std::vector<std::string> fields;
     const std::string query;
@@ -40,6 +56,13 @@ class BinaryOpNode : public ASTNode {
     BinaryOpNode(std::unique_ptr<ASTNode> l, std::unique_ptr<ASTNode> r)
           : left(std::move(l)), right(std::move(r)) {}
 
+    const ASTNode* get_left() const {
+      return left.get();
+    }
+
+    const ASTNode* get_right() const {
+      return right.get();
+    }
   protected:
     const std::unique_ptr<ASTNode> left;
     const std::unique_ptr<ASTNode> right;
@@ -49,7 +72,10 @@ class UnaryOpNode : public ASTNode {
   public:
     UnaryOpNode(std::unique_ptr<ASTNode> n, std::string i, uint8_t e)
           : node(std::move(n)), index_path(i), enc_type(e) {}
-
+  
+  const ASTNode* get_node() const {
+      return node.get();
+    }
   protected:
     const std::unique_ptr<ASTNode> node;
     const std::string index_path;
