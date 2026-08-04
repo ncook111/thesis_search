@@ -58,7 +58,9 @@ target_link_libraries(indexer_lib PUBLIC
 add_executable(indexer src/indexer.cpp)
 target_link_libraries(indexer PRIVATE indexer_lib)
 
-include(CTest)   # instead of enable_testing() alone — also gives you BUILD_TESTING option
+include(CTest)
+
+option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTING)
     include(FetchContent)
@@ -67,9 +69,26 @@ if(BUILD_TESTING)
         GIT_REPOSITORY https://github.com/google/googletest.git
         GIT_TAG        v1.15.2
     )
-    # Needed on some platforms to match runtime library settings
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 
     add_subdirectory(tests)
+endif()
+
+option(BUILD_BENCHMARKS "Build performance benchmarks" ON)
+
+if(BUILD_BENCHMARKS)
+    include(FetchContent)
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.1
+    )
+    FetchContent_MakeAvailable(googlebenchmark)
+
+    add_subdirectory(benchmarks)
 endif()
