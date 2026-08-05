@@ -10,6 +10,7 @@ add_executable(indexer_tests
     test_pef.cpp
     test_search.cpp
     test_tokenizer.cpp
+    test_program.cpp
 )
 
 target_link_libraries(indexer_tests PRIVATE

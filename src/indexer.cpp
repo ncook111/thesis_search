@@ -67,8 +67,8 @@ int main(int argc, const char *argv[]) {
     output_path = vm["output-path"].as<std::string>();
 
   std::string queries;
-  if (vm.count("queries"))
-    queries = vm["queries"].as<std::string>();
+  if (vm.count("query"))
+    queries = vm["query"].as<std::string>();
 
   if (act_mode == "c" || act_mode == "create") { // Create index mode
     return create_mode(index_path, data_path, fields, enc_type);
@@ -76,7 +76,7 @@ int main(int argc, const char *argv[]) {
     return recreate_mode(index_path, data_path, fields, enc_type);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
     
-    return search_mode(index_path, data_path, output_path, fields, queries, enc_type);
+    return search_mode(index_path, data_path, output_path, queries, enc_type);
   } else {
     std::cout << "Invalid mode. Usage: ./ingest --help\n";
     return 1;

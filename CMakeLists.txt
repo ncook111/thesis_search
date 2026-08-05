@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ingest CXX)
+project(indexer CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,7 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE MinSizeRel)
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 list(PREPEND CMAKE_PREFIX_PATH /opt/homebrew)

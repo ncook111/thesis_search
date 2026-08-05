@@ -53,7 +53,7 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::vector<std::string> &fields, const std::string &query, const uint8_t enc_type) {
+int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query, const uint8_t enc_type) {
 
   if (query.empty()) {
     std::cout << "No query values. Usage: ./ingest --help\n";

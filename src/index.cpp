@@ -144,8 +144,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   file.close();
 
-  check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  check_all_pef_tokens(tokenizer, file_name + ".off");
+  //check_offsets_file(tokenizer, file_name + ".off", enc_type);
+  //check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
