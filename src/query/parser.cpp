@@ -223,12 +223,6 @@ const bool is_range_query(const std::string &query) {
   const std::string a = match[1].str();
   const std::string b = match[2].str();
 
-  std::cout << "a:" << std::endl;
-  std::cout << a.size() << std::endl;
-
-  std::cout << "b:" << std::endl;
-  std::cout << b.size() << std::endl;
-
   if (a == b)
     return false;
 

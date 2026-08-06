@@ -4,17 +4,13 @@
 
 void output_entries(const FieldMap &matches, const std::string &index_path,
                    const std::string &data_path, const std::string &output_path, const uint8_t enc_type) {
-  fst::StdConstFst *fst = nullptr;
-  read_from_disk(fst, index_path + "/file_mappings.fst");
+  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(index_path + "/file_mappings.fst");
   const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
   const EntryMap result = get_entries_offsets(matches, names, data_path, index_path, enc_type);
 
   for (const auto &[file_id, entries] : result) {
-    std::cout << "here2" << std::endl;
     const std::string file_name = id_to_string(*fst, file_id);
     const std::string file_path = data_path + '/' + file_name;
-     std::cout << "cwd: " << std::filesystem::current_path() << "\n";
-            std::cout << file_path << std::endl;
     const MappedFile mf = open_mmap_r(file_path);
     const char *data_file = static_cast<char *>(mf.addr());
     if (output_path.size()) {
@@ -27,8 +23,7 @@ void output_entries(const FieldMap &matches, const std::string &index_path,
 }
 
 void output_counts(const FieldMap &matches, const std::string &index_path, const std::string &output_path) {
-  fst::StdConstFst *fst = nullptr;
-  read_from_disk(fst, index_path + "/file_mappings.fst");
+  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(index_path + "/file_mappings.fst");
   
   for (const auto &[file_id, docids] : matches) {
     const std::string file_name = id_to_string(*fst, file_id);

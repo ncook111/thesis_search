@@ -1,8 +1,8 @@
-#include "partitioned_sequence.hpp"
-#include <succinct/bit_vector.hpp>
-
 #ifndef CODER_H
 #define CODER_H
+
+#include "partitioned_sequence.hpp"
+#include <succinct/bit_vector.hpp>
 
 const int8_t vb_encode_num(std::array<uint8_t, 5> &bytes, uint32_t num);
 const std::vector<uint8_t> vb_encode(const std::vector<uint32_t> &nums);

@@ -226,9 +226,6 @@ const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets,
     std::cout << "Entry offsets incorrect: " << std::endl;
     std::cout << "read in size: " << input.size() << std::endl;
     std::cout << "og size: " << entry_offsets_0.size() << std::endl;
-    for (auto i : entry_offsets_0) {
-      // std::cout << i << std::endl;
-    }
     return false;
   }
 }

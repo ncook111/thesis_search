@@ -29,6 +29,15 @@ const uint8_t get_enc_type(const std::string &type) {
   throw std::invalid_argument("Encoding type not supported");
 }
 
+const std::string enc_type_to_str(const uint8_t &type) {
+  if (type == EncType::GVB)
+    return "gvb";
+  if (type == EncType::PEF)
+    return "pef";
+
+  throw std::invalid_argument("Encoding type not supported");
+}
+
 const uint8_t get_query_mode(const std::string &mode) {
   if (mode == "u" || mode == "union")
     return QueryMode::UNION;

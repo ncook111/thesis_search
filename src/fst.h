@@ -7,7 +7,7 @@
 #include <fst/fstlib.h>
 #include <optional>
 
-void read_from_disk(fst::StdConstFst *&fst, const std::string &file_name);
+std::unique_ptr<fst::StdConstFst> read_from_disk(const std::string &file_name);
 
 template <FstQueryType Q>
 fst::StdVectorFst create_trie(const std::vector<Q> &sequences) {
@@ -228,9 +228,8 @@ void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
 
 template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
-  fst::StdConstFst *fst = nullptr;
   std::cout << "read in filename: " << file_name << std::endl;
-  read_from_disk(fst, file_name);
+  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(file_name);
 
   std::set<M> set;
 
