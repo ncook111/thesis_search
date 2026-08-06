@@ -92,45 +92,45 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     Arg3: file type
     Arg4: encoding
 */
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::JSON, EncType::GVB})
-    ->Args({0, 1, FileType::JSON, EncType::PEF})
-    ->Args({1, 1, FileType::JSON, EncType::GVB})
-    ->Args({1, 1, FileType::JSON, EncType::PEF})
-    ->Args({2, 1, FileType::JSON, EncType::GVB})
-    ->Args({2, 1, FileType::JSON, EncType::PEF})
-    ->Iterations(1);
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)
+//     ->Args({0, 0, FileType::CSV, EncType::GVB})
+//     ->Args({0, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({2, 0, FileType::CSV, EncType::GVB})
+//     ->Args({2, 0, FileType::CSV, EncType::PEF})
+//     ->Args({0, 1, FileType::JSON, EncType::GVB})
+//     ->Args({0, 1, FileType::JSON, EncType::PEF})
+//     ->Args({1, 1, FileType::JSON, EncType::GVB})
+//     ->Args({1, 1, FileType::JSON, EncType::PEF})
+//     ->Args({2, 1, FileType::JSON, EncType::GVB})
+//     ->Args({2, 1, FileType::JSON, EncType::PEF})
+//     ->Iterations(1);
 
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
     ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
+    // ->Args({1, 0, FileType::CSV, EncType::GVB})
+    // ->Args({1, 0, FileType::CSV, EncType::PEF})
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(IndexSearch, union_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
     ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
+    // ->Args({1, 0, FileType::CSV, EncType::GVB})
+    // ->Args({1, 0, FileType::CSV, EncType::PEF})
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
     ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
+    // ->Args({1, 0, FileType::CSV, EncType::GVB})
+    // ->Args({1, 0, FileType::CSV, EncType::PEF})
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
     ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
+    // ->Args({1, 0, FileType::CSV, EncType::GVB})
+    // ->Args({1, 0, FileType::CSV, EncType::PEF})
     ->Iterations(50);
