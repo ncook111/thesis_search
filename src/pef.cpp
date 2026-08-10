@@ -1,5 +1,6 @@
 #include "pef.h"
 #include "helper.h"
+#include "coder.h"
 #include "partitioned_sequence.hpp"
 #include <optional>
 #include <succinct/bit_vector.hpp>
@@ -53,8 +54,9 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path,
 
   if (!header.n)
     return std::nullopt;
-
-  const succinct::bit_vector bv = get_bv(file + offset + sizeof(header), header, size_to_read - sizeof(header));
+  
+  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
+  const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
@@ -84,8 +86,9 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
 
   if (!header.n)
     return std::nullopt;
-
-  const succinct::bit_vector bv = get_bv(file + offset + sizeof(header), header, size_to_read - sizeof(header));
+  
+  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
+  const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
@@ -96,8 +99,18 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
 }
 
 const Pef_Header get_bv_header(const uint8_t *file) {
-  Pef_Header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), file, sizeof(header));
+  // Get size of encoded header
+  uint8_t size;
+  std::memcpy(reinterpret_cast<uint8_t *>(&size), file, sizeof(uint8_t));
+
+  std::vector<uint8_t> encoded;
+  encoded.resize(size);
+
+  std::memcpy(encoded.data(), file + sizeof(uint8_t), size);
+
+  std::vector<uint64_t> decoded = gvb_decode_uint64_t(encoded);
+  
+  Pef_Header header = {decoded[0]-1, decoded[1]-1, decoded[2]-1};
 
   return header;
 }
