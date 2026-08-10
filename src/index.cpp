@@ -240,8 +240,7 @@ const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint6
 
 const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t size_to_read) {
   // Read in universe and n first
-  const Pef_Header header = get_bv_header(file);
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
+  const auto  &[header, size] = get_bv_header(file);
   const succinct::bit_vector bv =
       get_bv(file + size, header, size_to_read - size);
 
@@ -319,14 +318,10 @@ const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint
 
 const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t size_to_read) {
   // Read in universe and n first
-  std::cout << "herehead" << std::endl;
-  const Pef_Header header = get_bv_header(file);
-  std::cout << "herehead2" << std::endl;
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
+  const auto  &[header, size] = get_bv_header(file);
   const succinct::bit_vector bv = get_bv(file + size, header, size_to_read - size);
-  std::vector<uint64_t> temp = partitioned_ef_decode(bv, header.universe, header.n);
-    std::cout << "herehead3" << std::endl;
-  return temp;
+  
+  return partitioned_ef_decode(bv, header.universe, header.n);
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
@@ -337,7 +332,6 @@ const std::vector<uint64_t> get_tok_offsets_from_file(
   const size_t file_size = mf.size();
     
   const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
-  std::cout << "here3" << std::endl;
   return get_tok_offsets(token_id, id_to_offset, field_ids, length, file + offset, enc_type);
 }
 
@@ -474,9 +468,7 @@ get_tok_offsets(const uint64_t token_id,
         docids = read_tok_offsets_gvb(file + addr_offset, field_sizes[i]);
         break;
       case EncType::PEF:
-        std::cout << "heref" << std::endl;
         docids = read_tok_offsets_pef(file + addr_offset, field_sizes[i]);
-        std::cout << "hereff" << std::endl;
         break;
       default:
         throw std::invalid_argument("Not a valid encoding type");
@@ -510,9 +502,8 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
   // Read in universe and n first
-  const Pef_Header header = get_bv_header(file);
+  const auto  &[header, size] = get_bv_header(file);
   // TODO: FIX THIS
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
   const succinct::bit_vector bv =
       get_bv(file + size, header, size_to_read - size);
 

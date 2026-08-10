@@ -104,13 +104,12 @@ std::vector<M> read_pef_tokens(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in universe and n first
-  const Pef_Header header = get_bv_header(file + offset);
+  const auto  &[header, size] = get_bv_header(file + offset);
 
   // If null return empty vec
   if (!header.n)
     return std::vector<M>();
   
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   const std::vector<uint64_t> offsets = partitioned_ef_decode(bv, header.universe, header.n);

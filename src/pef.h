@@ -28,7 +28,7 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
                                           const uint64_t offset,
                                           const uint64_t size_to_read,
                                           const uint64_t id);
-const Pef_Header get_bv_header(const uint8_t *file);
+const std::pair<Pef_Header, uint8_t> get_bv_header(const uint8_t *file);
 const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t size_to_read);
 const std::optional<Range> find_range_pef_id(const std::string &file_path,
                                              const uint64_t offset,

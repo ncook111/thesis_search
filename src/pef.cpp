@@ -50,12 +50,11 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in header
-  Pef_Header header = get_bv_header(file + offset);
+  const auto  &[header, size] = get_bv_header(file + offset);
 
   if (!header.n)
     return std::nullopt;
   
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
@@ -82,12 +81,11 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in header
-  Pef_Header header = get_bv_header(file + offset);
+  const auto  &[header, size] = get_bv_header(file + offset);
 
   if (!header.n)
     return std::nullopt;
   
-  const uint8_t size = gvb_encode_uint64_t({header.num_bits, header.n, header.universe}).size() + 1;
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
@@ -98,7 +96,7 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
   return (value == id && value != header.universe) ? std::make_optional(pef_id) : std::nullopt;
 }
 
-const Pef_Header get_bv_header(const uint8_t *file) {
+const std::pair<Pef_Header,uint8_t> get_bv_header(const uint8_t *file) {
   // Get size of encoded header
   uint8_t size;
   std::memcpy(reinterpret_cast<uint8_t *>(&size), file, sizeof(uint8_t));
@@ -112,7 +110,7 @@ const Pef_Header get_bv_header(const uint8_t *file) {
   
   Pef_Header header = {decoded[0]-1, decoded[1]-1, decoded[2]-1};
 
-  return header;
+  return std::make_pair(header, size + 1);
 }
 
 const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t size_to_read) {
