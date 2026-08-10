@@ -22,6 +22,8 @@ protected:
     static void TearDownTestSuite() {
         std::filesystem::remove_all(index_path+"_pef");
         std::filesystem::remove_all(index_path+"_gvb");
+        std::filesystem::remove_all(index_path+"_pef1");
+        std::filesystem::remove_all(index_path+"_gvb1");
     }
 };
 

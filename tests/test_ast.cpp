@@ -320,7 +320,7 @@ TEST(build_ast_test, test1) {
     std::string index_path = "/test_index_path";
     uint8_t enc_type = EncType::PEF;
 
-    std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::STDQUERY, query3}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields3}, {QueryTokType::UNION, "|"}, {QueryTokType::STDQUERY, query2}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields2}, {QueryTokType::INTER, "&"}, {QueryTokType::STDQUERY, query1}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields1}, {QueryTokType::COMPL, "!"}};
+    std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::RPAREN, ""}, {QueryTokType::STDQUERY, query3}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields3}, {QueryTokType::UNION, "|"}, {QueryTokType::STDQUERY, query2}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields2}, {QueryTokType::LPAREN, ""}, {QueryTokType::INTER, "&"}, {QueryTokType::STDQUERY, query1}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields1}, {QueryTokType::COMPL, "!"}};
     std::unique_ptr<ASTNode> ast = build_ast(in_tokens, index_path, enc_type);
 
     ASSERT_TRUE(in_tokens.empty());
@@ -370,7 +370,7 @@ TEST(build_ast_test, test2) {
     std::string index_path = "/test_index_path";
     uint8_t enc_type = EncType::PEF;
 
-    std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::STDQUERY, query3}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields3}, {QueryTokType::UNION, "|"}, {QueryTokType::STDQUERY, query2}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields2}, {QueryTokType::INTER, "&"}, {QueryTokType::RPAREN, ")"}, {QueryTokType::STDQUERY, query1}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields1}, {QueryTokType::LPAREN, "("}, {QueryTokType::COMPL, "!"}};
+    std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::RPAREN, ""}, {QueryTokType::STDQUERY, query3}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields3}, {QueryTokType::UNION, "|"}, {QueryTokType::STDQUERY, query2}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields2}, {QueryTokType::LPAREN, ""}, {QueryTokType::INTER, "&"}, {QueryTokType::STDQUERY, query1}, {QueryTokType::EQ, "="}, {QueryTokType::FIELD, fields1}, {QueryTokType::COMPL, "!"}};
     std::unique_ptr<ASTNode> ast = build_ast(in_tokens, index_path, enc_type);
 
     ASSERT_TRUE(in_tokens.empty());

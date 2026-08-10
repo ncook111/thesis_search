@@ -354,6 +354,8 @@ const std::vector<uint64_t> get_tok_offsets_from_file(
     offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()),
                    std::make_move_iterator(cur_offsets.end()));
   }
+  
+  std::sort(offsets.begin(), offsets.end());
 
   return offsets;
 }

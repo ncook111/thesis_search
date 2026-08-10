@@ -54,7 +54,7 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
 }
 
 int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query, const uint8_t enc_type) {
-
+  std::cout << index_path << std::endl;
   if (query.empty()) {
     std::cout << "No query values. Usage: ./ingest --help\n";
     return 1;
@@ -62,7 +62,6 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
 
   try {
     const FieldMap matches = parse_queries(query, index_path, enc_type);
-    std::cout << "here1" << std::endl;
     if (data_path.size()) {
       output_entries(matches, index_path, data_path, output_path, enc_type);
     } else {

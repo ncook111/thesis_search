@@ -151,7 +151,10 @@ class IntersectionNode : public BinaryOpNode {
       }
 };
 
-std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
+std::unique_ptr<ASTNode> build_operand(std::vector<std::pair<uint8_t, std::string>> &tokens,
+                                        const std::string &index_path, const uint8_t enc_type);
+std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> &tokens,
+                                    const std::string &index_path, const uint8_t enc_type);
 std::unique_ptr<ASTNode> build_query(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
 std::unique_ptr<ASTNode> build_binary_op(std::unique_ptr<ASTNode> left, std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
 std::unique_ptr<ASTNode> build_unary_op(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);

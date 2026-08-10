@@ -121,7 +121,7 @@ BENCHMARK_DEFINE_F(U64Vec, gvb_u64_t_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["CompressionRatio"] = input_bytes / encoded_bytes;
+    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -160,7 +160,7 @@ BENCHMARK_DEFINE_F(U64Vec, gvb_delta_u64_t_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["CompressionRatio"] = input_bytes / encoded_bytes;
+    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -184,7 +184,7 @@ BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["CompressionRatio"] = input_bytes / encoded_bytes;
+    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -264,7 +264,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
 //     ->Arg(1000) // 1k
@@ -272,7 +272,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
 //     ->Arg(1000) // 1k
@@ -280,7 +280,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
 //     ->Arg(1000) // 1k
@@ -288,7 +288,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
 //     ->Arg(1000) // 1k
@@ -296,7 +296,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
 //     ->Arg(1000) // 1k
@@ -304,7 +304,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64Vec, delta_u64_t_encode)
 //     ->Arg(1000) // 1k
@@ -312,7 +312,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);
 
 // BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
 //     ->Arg(1000) // 1k
@@ -320,4 +320,4 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 //     ->Arg(100000) // 100k
 //     ->Arg(1000000) // 1m
 //     ->Arg(10000000) // 10m
-//     ->Iterations(1);
+//     ->Iterations(50);

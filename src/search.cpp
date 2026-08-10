@@ -8,7 +8,7 @@
 const FieldMap search_index(const std::vector<std::string> &fields,
                             const std::string &query,
                             const std::string &index_path,
-                            const uint8_t enc_type) {                         
+                            const uint8_t enc_type) { 
   const Tokenizer tokens = Tokenizer::from_string(query);                         
   // If a range query, create a range
   Range range; // Construct dummy range
@@ -345,6 +345,7 @@ const uint8_t get_range_query_type(const Tokenizer &tokens) {
   uint8_t type = TokenType::INVALID;
   // Alpha cannot be used in range query so throw error
   if (tokens.getAlphaTokensQ().size()) {
+    std::cout <<tokens.getAlphaTokensQ().back()<<std::endl;
     throw std::invalid_argument(
         "Range query cannot contain alphabetical or float tokens");
   } else if (tokens.getNumTokensQ().size()) {
@@ -397,17 +398,17 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
     throw std::invalid_argument("Range query invalid");
 
   // Use previous regex in is_range_query, but with 2 capture groups
-  const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])");
+  const std::regex pattern(R"(\{([0-9+\-.:]*),([0-9+\-.:]*)\})");
   std::smatch match;
 
   std::regex_match(query, match, pattern);
 
   const std::string a = match[1].str();
   const std::string b = match[2].str();
-
+  
   // Form [a,b]
   Range range = {};
-  if (a.size() != 0 && b.size()) {
+  if (a.size() && b.size()) {
     assert(range_tokens.size() == 2);
     range = {static_cast<int64_t>(range_tokens[0]),
              static_cast<int64_t>(range_tokens[1])};
@@ -426,26 +427,25 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
 
 const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
                                                     const std::string &query) {
-  std::vector<float> range_tokens = tokens.getFloatTokens();
+  std::vector<float> range_tokens = tokens.getFloatTokensQ();
 
   if (range_tokens.size() > 2)
     throw std::invalid_argument("Range query invalid");
 
   // Use previous regex in is_range_query, but with 2 capture groups
-  const std::regex pattern(R"(\[([0-9+\-.:]*),([0-9+\-.:]*)\])");
+  const std::regex pattern(R"(\{([0-9+\-.:]*),([0-9+\-.:]*)\})");
   std::smatch match;
 
   std::regex_match(query, match, pattern);
 
   const std::string a = match[1].str();
-  const std::string b = match[2].str();
-
+  const std::string b = match[2].str();                                                 
   // Form [a,b]
   float min, max;
-  if (a.size() != 0 && b.size()) {
-    assert(range_tokens.size() == 2);
+  if (a.size() && b.size()) { 
+        std::cout << range_tokens.size() << std::endl; 
     min = range_tokens[0];
-    max = range_tokens[1];
+    max = range_tokens[1]; 
     // Form [a,]
   } else if (a.size()) {
     assert(range_tokens.size() == 1);
@@ -457,7 +457,7 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
     min = -std::numeric_limits<float>::infinity();
     max = range_tokens[0];
   }
-
+  
   return std::make_pair(min, max);
 }
 

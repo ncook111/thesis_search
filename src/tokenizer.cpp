@@ -291,10 +291,11 @@ void Tokenizer::tokenize_string(const std::string &input) {
   const size_t input_size = input.size();
 
   for (const char c : input) {
-    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':')
+    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
       curr_token.push_back(c);
-    else if (curr_token.size())
+    } else if (curr_token.size()) {
       processToken(curr_token);
+    }
   }
 
   // Process leftover token if required
