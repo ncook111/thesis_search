@@ -101,9 +101,9 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
     const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
     const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
     
-    // No token id found for current token, clear list of offsets and continue
+    // // No token id found for current token, clear list of offsets and continue
     if (!id) {
-        offsets.erase(i);
+        offsets[i].clear();
         continue;
     }
 

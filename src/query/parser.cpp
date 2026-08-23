@@ -9,7 +9,6 @@ using FieldMap = std::unordered_map<size_t, std::__1::vector<uint64_t>>;
 const FieldMap parse_queries(const std::string &queries, const std::string &index_path, const uint8_t enc_type) {
     std::vector<std::pair<uint8_t, std::string>> tokens = tokenize(queries);
     std::unique_ptr<ASTNode> ast = build_ast(tokens, index_path, enc_type);
-    ast->print_type();
     return ast->evaluate();
 }
 

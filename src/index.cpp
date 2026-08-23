@@ -144,8 +144,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   file.close();
 
-  check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  check_all_pef_tokens(tokenizer, file_name + ".off");
+  //check_offsets_file(tokenizer, file_name + ".off", enc_type);
+  //check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
@@ -442,7 +442,7 @@ get_tok_offsets(const uint64_t token_id,
 
   // Read field_offsets
   f_header.field_offsets.resize(f_header.num_fields);
-  std::memcpy(f_header.field_offsets.data(), file + f_header_offset, f_header.num_fields * sizeof(uint64_t));
+  std::memcpy(f_header.field_offsets.data(), file + f_header_offset, f_header.num_fields * sizeof(uint32_t));
 
   std::vector<uint64_t> field_sizes;
   for (uint64_t i = 0; i < f_header.num_fields - 1; ++i) {
