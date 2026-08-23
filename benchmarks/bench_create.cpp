@@ -30,10 +30,31 @@ public:
     }
 };
 
+uint64_t get_folder_size(std::string path) {
+    uint64_t total_size = 0;
+
+    const std::filesystem::path folder_path(path);
+
+    if (std::filesystem::exists(folder_path) && std::filesystem::is_directory(folder_path)) {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(folder_path)) {
+            if (entry.is_regular_file() && !entry.is_symlink()) {
+                total_size += entry.file_size();
+            }
+        }
+    }
+
+    return total_size;
+}
+
 BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
     for (auto _ : state) {
         create_mode(index_path, data_path + bench_path, {}, enc_type);
         state.PauseTiming();
+        const uint64_t data_size = get_folder_size(data_path + bench_path);
+        const uint64_t index_size = get_folder_size(index_path);
+        state.counters["IndexSize"]   = index_size;
+        state.counters["DataSize"]   = data_size;
+        state.counters["Compression(%)"] = (float)index_size / (float)data_size;
         std::filesystem::remove_all(index_path);
         state.ResumeTiming();
     }
@@ -47,60 +68,60 @@ BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
 */
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)
 //     ->Args({0, 0, FileType::CSV, EncType::GVB})
-//     ->Args({0, 0, FileType::CSV, EncType::PEF})
-//     ->Args({1, 0, FileType::CSV, EncType::GVB})
-//     ->Args({1, 0, FileType::CSV, EncType::PEF})
-//     ->Args({2, 0, FileType::CSV, EncType::GVB})
-//     ->Args({2, 0, FileType::CSV, EncType::PEF})
-//     ->Args({0, 0, FileType::JSON, EncType::GVB})
-//     ->Args({0, 0, FileType::JSON, EncType::PEF})
-//     ->Args({1, 0, FileType::JSON, EncType::GVB})
-//     ->Args({1, 0, FileType::JSON, EncType::PEF})
-//     ->Args({2, 0, FileType::JSON, EncType::GVB})
-//     ->Args({2, 0, FileType::JSON, EncType::PEF})
-//     ->Iterations(1);
-
-// BENCHMARK_REGISTER_F(IndexCreate, index_create)
 //     ->Args({0, 1, FileType::CSV, EncType::GVB})
-//     ->Args({0, 1, FileType::CSV, EncType::PEF})
-//     ->Args({1, 1, FileType::CSV, EncType::GVB})
-//     ->Args({1, 1, FileType::CSV, EncType::PEF})
-//     ->Args({2, 1, FileType::CSV, EncType::GVB})
-//     ->Args({2, 1, FileType::CSV, EncType::PEF})
-//     ->Args({0, 1, FileType::JSON, EncType::GVB})
-//     ->Args({0, 1, FileType::JSON, EncType::PEF})
-//     ->Args({1, 1, FileType::JSON, EncType::GVB})
-//     ->Args({1, 1, FileType::JSON, EncType::PEF})
-//     ->Args({2, 1, FileType::JSON, EncType::GVB})
-//     ->Args({2, 1, FileType::JSON, EncType::PEF})
-//     ->Iterations(1);
-
-// BENCHMARK_REGISTER_F(IndexCreate, index_create)
 //     ->Args({0, 2, FileType::CSV, EncType::GVB})
+//     ->Args({0, 3, FileType::CSV, EncType::GVB})
+//     ->Args({0, 0, FileType::CSV, EncType::PEF})
+//     ->Args({0, 1, FileType::CSV, EncType::PEF})
 //     ->Args({0, 2, FileType::CSV, EncType::PEF})
-//     ->Args({1, 2, FileType::CSV, EncType::GVB})
-//     ->Args({1, 2, FileType::CSV, EncType::PEF})
-//     ->Args({2, 2, FileType::CSV, EncType::GVB})
-//     ->Args({2, 2, FileType::CSV, EncType::PEF})
-//     ->Args({0, 2, FileType::JSON, EncType::GVB})
-//     ->Args({0, 2, FileType::JSON, EncType::PEF})
-//     ->Args({1, 2, FileType::JSON, EncType::GVB})
-//     ->Args({1, 2, FileType::JSON, EncType::PEF})
-//     ->Args({2, 2, FileType::JSON, EncType::GVB})
-//     ->Args({2, 2, FileType::JSON, EncType::PEF})
+//     ->Args({0, 3, FileType::CSV, EncType::PEF})
 //     ->Iterations(1);
 
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)
-//     ->Args({0, 3, FileType::CSV, EncType::GVB})
-//     ->Args({0, 3, FileType::CSV, EncType::PEF})
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 1, FileType::CSV, EncType::GVB})
+//     ->Args({1, 2, FileType::CSV, EncType::GVB})
 //     ->Args({1, 3, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 1, FileType::CSV, EncType::PEF})
+//     ->Args({1, 2, FileType::CSV, EncType::PEF})
 //     ->Args({1, 3, FileType::CSV, EncType::PEF})
-//     ->Args({2, 3, FileType::CSV, EncType::GVB})
-//     ->Args({2, 3, FileType::CSV, EncType::PEF})
-//     ->Args({0, 3, FileType::JSON, EncType::GVB})
-//     ->Args({0, 3, FileType::JSON, EncType::PEF})
-//     ->Args({1, 3, FileType::JSON, EncType::GVB})
-//     ->Args({1, 3, FileType::JSON, EncType::PEF})
-//     ->Args({2, 3, FileType::JSON, EncType::GVB})
-//     ->Args({2, 3, FileType::JSON, EncType::PEF})
 //     ->Iterations(1);
+
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)
+//     ->Args({2, 0, FileType::CSV, EncType::GVB})
+//     ->Args({2, 1, FileType::CSV, EncType::GVB})
+//     ->Args({2, 2, FileType::CSV, EncType::GVB})
+//     ->Args({2, 3, FileType::CSV, EncType::GVB})
+//     ->Args({2, 0, FileType::CSV, EncType::PEF})
+//     ->Args({2, 1, FileType::CSV, EncType::PEF})
+//     ->Args({2, 2, FileType::CSV, EncType::PEF})
+//     ->Args({2, 3, FileType::CSV, EncType::PEF})
+//     ->Iterations(1);
+
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)
+//     ->Args({0, 0, FileType::JSON, EncType::GVB})
+//     ->Args({0, 1, FileType::JSON, EncType::GVB})
+//     ->Args({0, 2, FileType::JSON, EncType::GVB})
+//     ->Args({0, 3, FileType::JSON, EncType::GVB})
+//     ->Args({0, 0, FileType::JSON, EncType::PEF})
+//     ->Args({0, 1, FileType::JSON, EncType::PEF})
+//     ->Args({0, 2, FileType::JSON, EncType::PEF})
+//     ->Args({0, 3, FileType::JSON, EncType::PEF})
+//     ->Iterations(1);
+
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)
+//     ->Args({1, 0, FileType::JSON, EncType::GVB})
+//     ->Args({1, 1, FileType::JSON, EncType::GVB})
+//     ->Args({1, 2, FileType::JSON, EncType::GVB})
+//     ->Args({1, 3, FileType::JSON, EncType::GVB})
+//     ->Args({1, 0, FileType::JSON, EncType::PEF})
+//     ->Args({1, 1, FileType::JSON, EncType::PEF})
+//     ->Args({1, 2, FileType::JSON, EncType::PEF})
+//     ->Args({1, 3, FileType::JSON, EncType::PEF})
+//     ->Iterations(1);
+
+BENCHMARK_REGISTER_F(IndexCreate, index_create)
+    ->Args({2, 3, FileType::JSON, EncType::GVB})
+    ->Args({2, 3, FileType::JSON, EncType::PEF})
+    ->Iterations(1);

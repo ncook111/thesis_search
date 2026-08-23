@@ -32,7 +32,7 @@ struct Offsets_header {
 struct Fields_header {
   uint16_t num_fields; // Number of fields that will contain docids
   std::vector<uint16_t> field_ids; // ID of fields
-  std::vector<uint64_t> field_offsets; // File offset for which each fields docids will be stored
+  std::vector<uint32_t> field_offsets; // File offset for which each fields docids will be stored
 };
 
 struct Write_pos {
@@ -197,7 +197,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     for (const auto &[field_id, _] : fields)
       field_ids.push_back(field_id);
 
-    std::vector<uint64_t> field_offsets;
+    std::vector<uint32_t> field_offsets;
     field_offsets.reserve(num_fields);
 
     // Write header with dummy value for field_offsets, will be overwritten later
@@ -205,10 +205,10 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     file.write(reinterpret_cast<const char*>(field_ids.data()), num_fields * sizeof(uint16_t));
 
     const uint64_t field_offsets_write_pos = file.tellp();
-    std::vector<uint64_t> dummy_offsets(num_fields, 0);
-    file.write(reinterpret_cast<const char*>(dummy_offsets.data()), num_fields * sizeof(uint64_t));
+    std::vector<uint32_t> dummy_offsets(num_fields, 0);
+    file.write(reinterpret_cast<const char*>(dummy_offsets.data()), num_fields * sizeof(uint32_t));
 
-    const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
+    const uint64_t f_header_size = sizeof(uint32_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
     for (const auto &[_, offsets] : fields) {
@@ -232,7 +232,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     // Replace dummy field_offsets with updated version
     std::streampos current_pos = file.tellp();
     file.seekp(field_offsets_write_pos);
-    file.write(reinterpret_cast<const char*>(field_offsets.data()), num_fields * sizeof(uint64_t));
+    file.write(reinterpret_cast<const char*>(field_offsets.data()), num_fields * sizeof(uint32_t));
     file.seekp(current_pos);
 
     offset = local_offset;
