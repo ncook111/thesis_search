@@ -474,15 +474,17 @@ get_tok_offsets(const uint64_t token_id,
         throw std::invalid_argument("Not a valid encoding type");
     }
 
-    // TODO: Do binary merge to preserve sorted order here
-    all_docids.insert(all_docids.end(), docids.begin(), docids.end());
+    std::vector<uint64_t> merged;
+    merged.reserve(docids.size() + all_docids.size());
+    std::merge(docids.begin(), docids.end(), all_docids.begin(), all_docids.end(), std::back_inserter(merged));
+    all_docids = merged;
   }
 
   // Convert back to 0 indexing
   for (auto &o : all_docids)
     --o;
 
-  std::vector<uint64_t> dedup = remove_dups_unsorted(all_docids);
+  std::vector<uint64_t> dedup = remove_dups_sorted(all_docids);
 
   return dedup;
 }
@@ -503,7 +505,7 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
   // Read in universe and n first
   const auto  &[header, size] = get_bv_header(file);
-  // TODO: FIX THIS
+  
   const succinct::bit_vector bv =
       get_bv(file + size, header, size_to_read - size);
 
