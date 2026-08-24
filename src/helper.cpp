@@ -2,6 +2,7 @@
 #include "tokenizer.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <arpa/inet.h>
 
 using namespace boost::interprocess;
 
@@ -127,4 +128,20 @@ const std::string trim(const std::string& str) {
     size_t end = str.find_last_not_of(whitespace);
     
     return str.substr(start, end - start + 1);
+}
+
+const uint32_t ip_str_to_int(const int domain, const std::string ip_addr) {
+  struct in_addr addr;
+  int s;
+
+  s = inet_pton(domain, ip_addr.data(), &addr);
+
+  if (s <= 0) {
+      if (s == 0)
+        throw std::invalid_argument("IP not in presentation format");
+      else
+        throw std::invalid_argument("IP domain family not valid");
+  }
+
+  return ntohl(addr.s_addr);
 }

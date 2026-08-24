@@ -51,7 +51,7 @@ public:
   std::map<uint64_t, std::vector<uint64_t>> t_bool_tokens;
   std::map<uint64_t, std::vector<uint64_t>> f_bool_tokens;
   
-  // Denotes the start point file offset for all entries in the file begin tokenized
+  // Denotes the start point file offset for all entries in the file being tokenized
   std::vector<uint64_t> entry_offsets; 
 
   // Used when tokenizing a query string
@@ -100,7 +100,6 @@ private:
   void tokenize_logfmt();
   void tokenize_field(const std::string_view field_str, const uint64_t doc_id, const uint64_t field_id);
   inline const uint8_t numeric_type(const std::string &s) const;
-  const bool is_ipv6(const std::string &s) const;
   const bool is_ipv4(const std::string &s) const;
   const bool is_time(const std::string &s) const;
   const bool is_date(const std::string &s) const;
@@ -112,7 +111,6 @@ private:
   void handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_ipv6(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
 
   std::string file_path;

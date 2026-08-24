@@ -151,8 +151,6 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
   return true;
 }
 
-const bool Tokenizer::is_ipv6(const std::string &s) const { return false; }
-
 const bool Tokenizer::is_bool(const std::string &s) const {
   return (s == "true" || s == "false");
 }
@@ -395,22 +393,12 @@ void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
 }
 void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
+  uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token);
   if (offset)
-    ipv4_tokens[1][field_id].push_back(offset);
+    ipv4_tokens[ip_addr][field_id].push_back(offset);
   // String tokenization
   else
-    ipv4_tokens_q.insert(1);
-  
-  curr_token.erase();
-}
-
-void Tokenizer::handle_ipv6(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
-  // File tokenization
-  if (offset)
-    ipv6_tokens[1][field_id].push_back(offset);
-  // String tokenization
-  else
-    ipv6_tokens_q.insert(1);
+    ipv4_tokens_q.insert(ip_addr);
   
   curr_token.erase();
 }
@@ -433,7 +421,6 @@ void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, con
   curr_token.erase();
 };
 
-
 void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   switch (numeric_type(curr_token)) {
     case TokenType::INT:
@@ -450,9 +437,6 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
       break;
     case TokenType::IPV4:
       handle_ipv4(curr_token, offset, field_id);
-      break;
-    case TokenType::IPV6:
-      handle_ipv6(curr_token, offset, field_id);
       break;
     case TokenType::BOOLEAN:
       handle_bool(curr_token, offset, field_id);
@@ -484,9 +468,6 @@ void Tokenizer::processToken(std::string &curr_token) {
       break;
     case TokenType::IPV4:
       handle_ipv4(curr_token);
-      break;
-    case TokenType::IPV6:
-      handle_ipv6(curr_token);
       break;
     case TokenType::BOOLEAN:
       handle_bool(curr_token);
