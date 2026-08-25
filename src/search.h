@@ -61,8 +61,11 @@ const std::optional<uint64_t> get_id_pef(const Q &query,
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
   const auto [offset, size_to_read] = get_pef_header_details_by_type(file, file_size, type);
-
-  return find_pef_id(offset_file_name, offset, size_to_read, query);
+  
+  if (size_to_read)
+    return find_pef_id(offset_file_name, offset, size_to_read, query);
+  else
+    return std::nullopt;
 }
 
 template <QueryType Q>
@@ -100,7 +103,6 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
     // Defer check for file existence until it will be used within get_id
     const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
     const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
-    
     // // No token id found for current token, clear list of offsets and continue
     if (!id) {
         offsets[i].clear();

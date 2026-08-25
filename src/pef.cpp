@@ -87,12 +87,11 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
     return std::nullopt;
   
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
-
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
 
   const auto [pef_id, value] = e.next_geq(id);
-  
+
   return (value == id && value != header.universe) ? std::make_optional(pef_id) : std::nullopt;
 }
 
