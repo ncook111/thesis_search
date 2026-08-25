@@ -99,6 +99,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
       write_offsets_to_file(tokenizer.alpha_tokens, file, enc_type);
   const Write_pos num_pos =
       write_offsets_to_file(tokenizer.num_tokens, file, enc_type);
+  const Write_pos neg_num_pos =
+      write_offsets_to_file(tokenizer.neg_num_tokens, file, enc_type);
   const Write_pos float_pos =
       write_offsets_to_file(tokenizer.float_tokens, file, enc_type);
   const Write_pos date_pos =
@@ -112,6 +114,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   const uint64_t num_tok_off =
       create_pef_tokens<uint64_t>(tokenizer.getNumTokens(), file);
+  const uint64_t neg_num_tok_off =
+      create_pef_tokens<uint64_t>(tokenizer.getNegNumTokens(), file);
   const uint64_t date_tok_off =
       create_pef_tokens<uint64_t>(tokenizer.getDateTokens(), file);
   const uint64_t time_tok_off =
@@ -124,6 +128,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
             alpha_pos.id_map_pos,
             num_pos.offsets_pos,
             num_pos.id_map_pos,
+            neg_num_pos.offsets_pos,
+            neg_num_pos.id_map_pos,
             float_pos.offsets_pos,
             float_pos.id_map_pos,
             date_pos.offsets_pos,
@@ -134,6 +140,7 @@ void generate_offsets_file(const Tokenizer &tokenizer,
             ipv4_pos.id_map_pos,
             entry_offsets_pos,
             num_tok_off,
+            neg_num_tok_off,
             date_tok_off,
             time_tok_off,
             ip_tok_off};
@@ -151,7 +158,9 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 void check_all_pef_tokens(const Tokenizer &tokenizer,
                           const std::string &file_path) {
   check_pef_tokens<uint64_t>(tokenizer.getNumTokens(), file_path,
-                             TokenType::INT);
+                             TokenType::PINT);
+  check_pef_tokens<uint64_t>(tokenizer.getNegNumTokens(), file_path,
+                             TokenType::NINT);
   check_pef_tokens<uint64_t>(tokenizer.getDateTokens(), file_path,
                              TokenType::DATE);
   check_pef_tokens<uint64_t>(tokenizer.getTimeTokens(), file_path,
@@ -186,19 +195,14 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type) {
   bool check = true;
-  check = check && check_offsets_file_by_type(tokenizer.alpha_tokens,
-  file_name, TokenType::ALPHA, enc_type); check = check &&
-  check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::INT
-  ,enc_type); check = check &&
-  check_offsets_file_by_type(tokenizer.float_tokens, file_name,
-  TokenType::FLOAT, enc_type); check = check &&
-  check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE,
-  enc_type); check = check && check_offsets_file_by_type(tokenizer.t_tokens,
-  file_name, TokenType::TIME, enc_type); check = check &&
-  check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name,
-  TokenType::IPV4, enc_type);
-  check = check &&
-          check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::PINT ,enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.neg_num_tokens, file_name, TokenType::NINT ,enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME, enc_type);
+  check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4, enc_type);
+  check = check && check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
 
   if (check) {
     std::cout << file_name << ": Offsets file correct" << std::endl;
@@ -256,9 +260,13 @@ const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &h
     size_to_read = header.num_offsets_header - header.alpha_id_map_header;
     addr_offset = header.alpha_id_map_header;
     break;
-  case TokenType::INT:
-    size_to_read = header.float_offsets_header - header.num_id_map_header;
+  case TokenType::PINT:
+    size_to_read = header.alpha_offsets_header - header.num_id_map_header;
     addr_offset = header.num_id_map_header;
+    break;
+  case TokenType::NINT:
+    size_to_read = header.float_offsets_header - header.neg_num_id_map_header;
+    addr_offset = header.neg_num_id_map_header;
     break;
   case TokenType::FLOAT:
     size_to_read = header.date_offsets_header - header.float_id_map_header;
@@ -377,11 +385,17 @@ get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset,
         throw std::invalid_argument("No alpha offsets present in file");
       offset = header.alpha_offsets_header;
       break;
-    case TokenType::INT:
+    case TokenType::PINT:
       tok_offsets_length = header.num_id_map_header - header.num_offsets_header;
       if (tok_offsets_length == 0)
         throw std::invalid_argument("No int offsets present in file");
       offset = header.num_offsets_header;
+      break;
+    case TokenType::NINT:
+      tok_offsets_length = header.neg_num_id_map_header - header.neg_num_offsets_header;
+      if (tok_offsets_length == 0)
+        throw std::invalid_argument("No int offsets present in file");
+      offset = header.neg_num_offsets_header;
       break;
     case TokenType::FLOAT:
       tok_offsets_length = header.float_id_map_header - header.float_offsets_header;
@@ -505,7 +519,6 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
   // Read in universe and n first
   const auto  &[header, size] = get_bv_header(file);
-  
   const succinct::bit_vector bv =
       get_bv(file + size, header, size_to_read - size);
 
@@ -559,9 +572,13 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
   uint64_t offset = 0;
   uint64_t size_to_read = 0;
   switch (type) {
-  case TokenType::INT:
+  case TokenType::PINT:
     offset = header.int_toks_header;
-    size_to_read = header.date_toks_header - header.int_toks_header;
+    size_to_read = header.neg_int_toks_header - header.int_toks_header;
+    break;
+  case TokenType::NINT:
+    offset = header.neg_int_toks_header;
+    size_to_read = header.date_toks_header - header.neg_int_toks_header;
     break;
   case TokenType::DATE:
     offset = header.date_toks_header;

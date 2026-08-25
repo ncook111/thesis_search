@@ -68,8 +68,10 @@ const std::string token_type_to_str(const uint8_t &type) {
   switch (type) {
   case TokenType::ALPHA:
     return "alpha";
-  case TokenType::INT:
+  case TokenType::PINT:
     return "int";
+  case TokenType::NINT:
+    return "neg_int";
   case TokenType::FLOAT:
     return "float";
   case TokenType::DATE:
@@ -87,7 +89,9 @@ const uint8_t str_to_token_type(const std::string &type_str) {
   if (type_str == "alpha")
     return TokenType::ALPHA;
   if (type_str == "int")
-    return TokenType::INT;
+    return TokenType::PINT;
+  if (type_str == "neg_int")
+    return TokenType::NINT;
   if (type_str == "float")
     return TokenType::FLOAT;
   if (type_str == "date")

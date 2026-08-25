@@ -18,8 +18,22 @@
 #include <sys/stat.h>
 #include <time.h>
 
-const bool Tokenizer::is_int(const std::string &s) const {
-  size_t i = s.front() == '+' || s.front() == '-' ? 1 : 0;
+const bool Tokenizer::is_pint(const std::string &s) const {
+  size_t i = s.front() == '+' ? 1 : 0;
+
+  if (i == s.size())
+    return false;
+
+  for (; i < s.size(); ++i) {
+    if (!std::isdigit(s[i]))
+      return false;
+  }
+
+  return true;
+}
+
+const bool Tokenizer::is_nint(const std::string &s) const {
+  size_t i = s.front() == '-' ? 1 : 0;
 
   if (i == s.size())
     return false;
@@ -156,9 +170,14 @@ const bool Tokenizer::is_bool(const std::string &s) const {
 }
 
 inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
-  if (is_int(s)) {
-    return TokenType::INT;
+  if (is_pint(s)) {
+    return TokenType::PINT;
   }
+
+  if (is_nint(s)) {
+    return TokenType::NINT;
+  }
+
   if (is_float(s)) {
     return TokenType::FLOAT;
   }
@@ -301,7 +320,7 @@ void Tokenizer::tokenize_string(const std::string &input) {
     processToken(curr_token);
 }
 
-void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::int64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
@@ -310,16 +329,33 @@ void Tokenizer::handle_int(std::string &curr_token, const uint64_t offset, const
   if (res_err.ec == std::errc()) {
     // File tokenization
     if (offset) {
-      if (res_int >= 0)
         num_tokens[res_int][field_id].push_back(offset);
-      else
-        num_tokens[res_int * -1][field_id].push_back(offset);
     // String tokenization
     } else {
-      if (res_int >= 0)
         num_tokens_q.insert(res_int);
-      else
-        num_tokens_q.insert(res_int * -1);
+    }
+  } else if (res_err.ec == std::errc::invalid_argument) {
+    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+  } else if (res_err.ec == std::errc::result_out_of_range) {
+    return;
+  }
+
+  curr_token.erase();
+}
+
+void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  std::int64_t res_int;
+  fast_float::from_chars_result res_err;
+  fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
+
+  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_int, options);
+  if (res_err.ec == std::errc()) {
+    // File tokenization
+    if (offset) {
+        neg_num_tokens[res_int * -1][field_id].push_back(offset);
+    // String tokenization
+    } else {
+        neg_num_tokens_q.insert(res_int * -1);
     }
   } else if (res_err.ec == std::errc::invalid_argument) {
     std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
@@ -423,8 +459,11 @@ void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, con
 
 void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   switch (numeric_type(curr_token)) {
-    case TokenType::INT:
-      handle_int(curr_token, offset, field_id);
+    case TokenType::PINT:
+      handle_pint(curr_token, offset, field_id);
+      break;
+    case TokenType::NINT:
+      handle_nint(curr_token, offset, field_id);
       break;
     case TokenType::FLOAT:
       handle_float(curr_token, offset, field_id);
@@ -454,8 +493,11 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
 
 void Tokenizer::processToken(std::string &curr_token) {
   switch (numeric_type(curr_token)) {
-    case TokenType::INT:
-      handle_int(curr_token);
+    case TokenType::PINT:
+      handle_pint(curr_token);
+      break;
+    case TokenType::NINT:
+      handle_nint(curr_token);
       break;
     case TokenType::FLOAT:
       handle_float(curr_token);
@@ -490,6 +532,11 @@ void Tokenizer::printAlphaTokens() const {
 
 void Tokenizer::printNumTokens() const {
   for (const auto &[key, _] : num_tokens)
+    std::cout << key << std::endl;
+}
+
+void Tokenizer::printNegNumTokens() const {
+  for (const auto &[key, _] : neg_num_tokens)
     std::cout << key << std::endl;
 }
 
@@ -540,7 +587,8 @@ Tokenizer Tokenizer::from_string(const std::string &file_path) {
 
 void Tokenizer::printStatistics() const {
   std::cout << "Total Alpha Tokens: " << alpha_tokens.size() << std::endl;
-  std::cout << "Total Integer Tokens: " << num_tokens.size() << std::endl;
+  std::cout << "Total Positive Integer Tokens: " << num_tokens.size() << std::endl;
+  std::cout << "Total Negative Integer Tokens: " << neg_num_tokens.size() << std::endl;
   std::cout << "Total Float Tokens: " << float_tokens.size() << std::endl;
   std::cout << "Total Date Tokens: " << d_tokens.size() << std::endl;
   std::cout << "Total Time Tokens: " << t_tokens.size() << std::endl;
@@ -565,6 +613,15 @@ const std::vector<uint64_t> Tokenizer::getNumTokens() const {
 
   return tokens;
 }
+
+const std::vector<uint64_t> Tokenizer::getNegNumTokens() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : neg_num_tokens)
+    tokens.push_back(i.first);
+
+  return tokens;
+}
+
 const std::vector<float> Tokenizer::getFloatTokens() const {
   std::vector<float> tokens;
   for (const auto i : float_tokens)
@@ -572,6 +629,7 @@ const std::vector<float> Tokenizer::getFloatTokens() const {
 
   return tokens;
 }
+
 const std::vector<uint64_t> Tokenizer::getDateTokens() const {
   std::vector<uint64_t> tokens;
   for (const auto i : d_tokens)
@@ -609,6 +667,15 @@ const std::vector<uint64_t> Tokenizer::getNumTokensQ() const {
 
   return tokens;
 }
+
+const std::vector<uint64_t> Tokenizer::getNegNumTokensQ() const {
+  std::vector<uint64_t> tokens;
+  for (const auto i : neg_num_tokens_q)
+    tokens.push_back(i);
+
+  return tokens;
+}
+
 const std::vector<float> Tokenizer::getFloatTokensQ() const {
   std::vector<float> tokens;
   for (const auto i : float_tokens_q)

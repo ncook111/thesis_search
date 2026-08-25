@@ -50,7 +50,14 @@ const FieldMap search_index(const std::vector<std::string> &fields,
   }
 
   for (const auto t : tokens.num_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::INT, names_size, index_path,
+    search_index_by_type(offsets, fields, t, TokenType::PINT, names_size, index_path,
+                         enc_type);
+    if (offsets.empty())
+      return offsets;
+  }
+
+  for (const auto t : tokens.neg_num_tokens_q) {
+    search_index_by_type(offsets, fields, t, TokenType::NINT, names_size, index_path,
                          enc_type);
     if (offsets.empty())
       return offsets;
@@ -351,7 +358,11 @@ const uint8_t get_range_query_type(const Tokenizer &tokens) {
   } else if (tokens.getNumTokensQ().size()) {
     if (type != TokenType::INVALID)
       throw std::invalid_argument("Range query must contain a single type");
-    type = TokenType::INT;
+    type = TokenType::PINT;
+  } else if (tokens.getNegNumTokensQ().size()) {
+    if (type != TokenType::INVALID)
+      throw std::invalid_argument("Range query must contain a single type");
+    type = TokenType::NINT;
   } else if (tokens.getFloatTokensQ().size()) {
     type = TokenType::FLOAT;
   } else if (tokens.getDateTokensQ().size()) {
@@ -378,8 +389,11 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
   std::vector<uint64_t> range_tokens;
 
   switch (type) {
-  case TokenType::INT:
+  case TokenType::PINT:
     range_tokens = tokens.getNumTokensQ();
+    break;
+  case TokenType::NINT:
+    range_tokens = tokens.getNegNumTokensQ();
     break;
   case TokenType::DATE:
     range_tokens = tokens.getDateTokensQ();

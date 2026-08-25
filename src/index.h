@@ -18,12 +18,14 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 struct Offsets_header {
   uint64_t alpha_offsets_header, alpha_id_map_header; // Docids
   uint64_t num_offsets_header, num_id_map_header; // Docids
+  uint64_t neg_num_offsets_header, neg_num_id_map_header; // Docids
   uint64_t float_offsets_header, float_id_map_header; // Docids
   uint64_t date_offsets_header, date_id_map_header; // Docids
   uint64_t time_offsets_header, time_id_map_header; // Docids
   uint64_t ipv4_offsets_header, ipv4_id_map_header; // Docids
   uint64_t entry_offsets_header; // File offsets for each document
   uint64_t int_toks_header; // PEF encoded lexicon values
+  uint64_t neg_int_toks_header; // PEF encoded lexicon values
   uint64_t date_toks_header; // PEF encoded lexicon values
   uint64_t time_toks_header; // PEF encoded lexicon values
   uint64_t ipv4_toks_header; // PEF encoded lexicon values

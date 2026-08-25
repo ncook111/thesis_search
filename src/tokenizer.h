@@ -16,14 +16,15 @@
 namespace TokenType {
 enum Value : uint8_t {
   ALPHA = 0,
-  INT = 1,
-  FLOAT = 2,
-  DATE = 3,
-  TIME = 4,
-  IPV4 = 5,
-  IPV6 = 6,
-  BOOLEAN = 7,
-  INVALID = 8,
+  PINT = 1,
+  NINT = 2,
+  FLOAT = 3,
+  DATE = 4,
+  TIME = 5,
+  IPV4 = 6,
+  IPV6 = 7,
+  BOOLEAN = 8,
+  INVALID = 9,
 };
 }
 
@@ -70,6 +71,7 @@ public:
 
   void printAlphaTokens() const;
   void printNumTokens() const;
+  void printNegNumTokens() const;
   void printFloatTokens() const;
   void printDateTokens() const;
   void printTimeTokens() const;
@@ -78,12 +80,14 @@ public:
 
   const std::vector<std::string> getAlphaTokens() const;
   const std::vector<uint64_t> getNumTokens() const;
+  const std::vector<uint64_t> getNegNumTokens() const;
   const std::vector<float> getFloatTokens() const;
   const std::vector<uint64_t> getDateTokens() const;
   const std::vector<uint64_t> getTimeTokens() const;
   const std::vector<uint64_t> getIPTokens() const;
   const std::vector<std::string> getAlphaTokensQ() const;
   const std::vector<uint64_t> getNumTokensQ() const;
+  const std::vector<uint64_t> getNegNumTokensQ() const;
   const std::vector<float> getFloatTokensQ() const;
   const std::vector<uint64_t> getDateTokensQ() const;
   const std::vector<uint64_t> getTimeTokensQ() const;
@@ -104,9 +108,11 @@ private:
   const bool is_time(const std::string &s) const;
   const bool is_date(const std::string &s) const;
   const bool is_float(const std::string &s) const;
-  const bool is_int(const std::string &s) const;
+  const bool is_pint(const std::string &s) const;
+  const bool is_nint(const std::string &s) const;
   const bool is_bool(const std::string &s) const;
-  void handle_int(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_pint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_nint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);

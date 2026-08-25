@@ -3,12 +3,13 @@
 #include <gmock/gmock.h>
 #include "testing_setup.h"
 
-TEST(alpha_test, test1) {
+TEST(alpha_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/alpha_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 6);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -16,12 +17,13 @@ TEST(alpha_test, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-TEST(alpha_test, test2) {
+TEST(alpha_test_file, test2) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/alpha_test_2.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 10);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -29,12 +31,13 @@ TEST(alpha_test, test2) {
     ASSERT_EQ(tokens.fields.size(), 10);
 }
 
-TEST(float_test, test1) {
+TEST(float_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/float_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
     ASSERT_EQ(tokens.getFloatTokens().size(), 4);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -42,12 +45,13 @@ TEST(float_test, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-TEST(num_test, test1) {
+TEST(pos_num_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/num_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 5);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -55,12 +59,27 @@ TEST(num_test, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-TEST(date_test, test1) {
+TEST(neg_num_test_file, test1) {
+    std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/neg_num_test_1.csv";
+    const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
+    ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokens().size(), 0);
+    ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 5);
+    ASSERT_EQ(tokens.getDateTokens().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokens().size(), 0);
+    ASSERT_EQ(tokens.getIPTokens().size(), 0);
+
+    ASSERT_EQ(tokens.fields.size(), 1);
+}
+
+TEST(date_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/date_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 2);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -68,12 +87,13 @@ TEST(date_test, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-TEST(time_test, test1) {
+TEST(time_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/time_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 3);
     ASSERT_EQ(tokens.getIPTokens().size(), 0);
@@ -81,15 +101,126 @@ TEST(time_test, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-TEST(ip_test, test1) {
+TEST(ip_test_file, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/ipv4_test_1.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
     ASSERT_EQ(tokens.getAlphaTokens().size(), 0);
     ASSERT_EQ(tokens.getFloatTokens().size(), 0);
     ASSERT_EQ(tokens.getNumTokens().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 0);
     ASSERT_EQ(tokens.getDateTokens().size(), 0);
     ASSERT_EQ(tokens.getTimeTokens().size(), 0);
     ASSERT_EQ(tokens.getIPTokens().size(), 4);
 
     ASSERT_EQ(tokens.fields.size(), 1);
+}
+
+TEST(mixed_test_file, test1) {
+    std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/mixed_test_1.csv";
+    const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
+    ASSERT_EQ(tokens.getAlphaTokens().size(), 1);
+    ASSERT_EQ(tokens.getFloatTokens().size(), 1);
+    ASSERT_EQ(tokens.getNumTokens().size(), 1);
+    ASSERT_EQ(tokens.getNegNumTokens().size(), 1);
+    ASSERT_EQ(tokens.getDateTokens().size(), 1);
+    ASSERT_EQ(tokens.getTimeTokens().size(), 1);
+    ASSERT_EQ(tokens.getIPTokens().size(), 1);
+
+    ASSERT_EQ(tokens.fields.size(), 1);
+}
+
+TEST(alpha_test_string, test1) {
+    std::string input = "one two three four five six";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 6);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(float_test_string, test1) {
+    std::string input = "1.1 5.555 9.0 0.11";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 4);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(pos_num_test_string, test1) {
+    std::string input = "1 5 99999999 556545 0";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 5);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(neg_num_test_string, test1) {
+    std::string input = "-1 -5 -99999999 -556545 -99";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 5);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(date_test_string, test1) {
+    std::string input = "2001-03-23 1999-01-01 2033-12-31";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 3);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(time_test_string, test1) {
+    std::string input = "14:30:00 12:01:00 00:00:00 00:30:50";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 4);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(ip_test_string, test1) {
+    std::string input = "192.168.0.1 1.1.1.1";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 2);
+}
+
+TEST(mixed_test_string, test1) {
+    std::string input = "hello 1 -1 1.1 2001-03-23 14:30:22 1.1.1.1";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 1);
 }
