@@ -36,6 +36,7 @@ add_library(indexer_lib
     src/pef.cpp
     src/search.cpp
     src/output.cpp
+    src/crc.cpp
     src/query/parser.cpp
     src/query/ast.cpp
     third_party/simdjson/simdjson.cpp
