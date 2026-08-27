@@ -35,13 +35,14 @@ int main(int argc, const char *argv[]) {
 
   uint8_t enc_type = EncType::INVALID;
   if (vm.count("encoding")) {
+    std::cout << "here" << std::endl;
     try {
       enc_type = get_enc_type(vm["encoding"].as<std::string>());
     } catch (std::exception& e) {
       std::cout << "Encoding argument invalid. Usage: ./ingest --help\n";
       return 1;
     }
-  } else {
+  } else if (act_mode != "v" && act_mode !=  "verify"){
     std::cout << "Encoding argument missing. Usage: ./ingest --help\n";
     return 1;
   }
@@ -75,8 +76,9 @@ int main(int argc, const char *argv[]) {
   } else if (act_mode == "r" || act_mode ==  "recreate") { // Recreate index mode
     return recreate_mode(index_path, data_path, fields, enc_type);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
-    
     return search_mode(index_path, data_path, output_path, queries, enc_type);
+  } else if (act_mode == "v" || act_mode ==  "verify") { // Index search mode
+    return verify_mode(index_path);
   } else {
     std::cout << "Invalid mode. Usage: ./ingest --help\n";
     return 1;

@@ -4,6 +4,7 @@
 #include "search.h"
 #include "tokenizer.h"
 #include "output.h"
+#include "crc.h"
 #include "query/parser.h"
 #include <cstdio>
 #include <iostream>
@@ -74,11 +75,22 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
   return 0;
 }
 
+int verify_mode(const std::string &index_path) {
+  bool res = check_checksum_file(index_path + "/checksum.crc", index_path);
+  if (res) {
+    std::cout << "Checksum Correct\n";
+  } else {
+    std::cout << "Checksum Incorrect\n";
+  }
+
+  return 0;
+}
+
 int parse_options(po::options_description &desc, po::variables_map &vm, const int argc, const char *argv[]) {
   try {
     desc.add_options()
     ("help", "produce help message")
-    ("mode,m", po::value<std::string>(), "set operation mode [create/recreate/search] or [c/r/s]")
+    ("mode,m", po::value<std::string>(), "set operation mode [create/recreate/search/verify] or [c/r/s/v]")
     ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
     ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/recreate, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")

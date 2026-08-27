@@ -1,6 +1,7 @@
 add_executable(indexer_tests
     test_ast.cpp
     test_coder.cpp
+    test_crc.cpp
     test_fst.cpp
     test_helper.cpp
     test_index.cpp

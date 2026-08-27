@@ -62,13 +62,6 @@ void create_index(const std::vector<std::string> &fields,
   check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 
   create_checksum_file(index_dir_str);
-  bool correct = check_checksum_file(index_dir_str+"/checksum.crc", index_dir_str);
-  if (correct) {
-    std::cout << "checksum working" << std::endl;
-  } else {
-    std::cout << "checksum not working" << std::endl;
-  }
-  
 }
 
 void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id) {
