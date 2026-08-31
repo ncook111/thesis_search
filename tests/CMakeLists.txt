@@ -12,12 +12,14 @@ add_executable(indexer_tests
     test_search.cpp
     test_tokenizer.cpp
     test_program.cpp
+    fuzzing.cpp
 )
 
 target_link_libraries(indexer_tests PRIVATE
     indexer_lib
     GTest::gtest_main
     GTest::gmock
+    faker-cxx
 )
 
 include(GoogleTest)

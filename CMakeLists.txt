@@ -65,6 +65,7 @@ option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTING)
     include(FetchContent)
+
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
@@ -72,6 +73,14 @@ if(BUILD_TESTING)
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
+
+    set(FAKER_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        faker
+        GIT_REPOSITORY https://github.com/cieslarmichal/faker-cxx.git
+        GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(faker)
 
     add_subdirectory(tests)
 endif()
