@@ -37,6 +37,7 @@ add_library(indexer_lib
     src/search.cpp
     src/output.cpp
     src/crc.cpp
+    src/logfmt_parser.cpp
     src/query/parser.cpp
     src/query/ast.cpp
     third_party/simdjson/simdjson.cpp

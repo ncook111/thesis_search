@@ -286,7 +286,9 @@ void Tokenizer::tokenize_json() {
   std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
 
-void Tokenizer::tokenize_logfmt() {}
+void Tokenizer::tokenize_logfmt() {
+  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+}
 
 void Tokenizer::tokenize_field(const std::string_view field_str,
                                const uint64_t doc_id, const uint64_t field_id) {
