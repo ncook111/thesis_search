@@ -31,13 +31,14 @@ std::vector<uint64_t> generate_int_dist(size_t size) {
         int added = 0;
 
         if (mod < per_range) {
-            for (size_t i = 0; i < mod; ++i) {
+            // Start at 1 to skip 0
+            for (uint64_t i = 1; i < mod; ++i) {
                 input_set.insert(i);
             }
         } else {
             while (added < per_range) {
                 uint64_t val = distr_64(eng) % mod;
-                if (input_set.insert(val).second) {
+                if (val != 0 && input_set.insert(val).second) {
                     ++added;
                 }
             }
@@ -47,8 +48,8 @@ std::vector<uint64_t> generate_int_dist(size_t size) {
     // Likely will be short some values, insert the rest
     size_t leftover = size - input_set.size();
     while (leftover > 0) {
-        uint64_t val = distr_64(eng) % 0xFFFFFFFFFFFFFFFF;
-        if (input_set.insert(val).second) {
+        uint64_t val = distr_64(eng); // full 64-bit range, no modulo bias
+        if (val != 0 && input_set.insert(val).second) {
             --leftover;
         }
     }
@@ -258,66 +259,66 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
 }
 
 
-// BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64Vec, delta_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64Vec, delta_u64_t_encode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
