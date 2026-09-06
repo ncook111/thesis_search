@@ -1,32 +1,63 @@
 #include "logfmt_parser.h"
 #include "helper.h"
 #include <unordered_map>
+#include <iostream>
 
+#define LINES_TO_BUFFER 100
 LogfmtParser::LogfmtParser(const std::string &file_path) {
     const MappedFile mf = open_mmap_r(file_path);
     file = static_cast<uint8_t *>(mf.addr());
     file_size = mf.size();
     file_offset = 0;
 
-    buffer_lines(100);
+    buffer_lines(LINES_TO_BUFFER);
 }
 
 std::unordered_map<std::string, std::string> LogfmtParser::current_row() {
-    return buffered_rows.back();
+    if (buffered_rows.size())
+        return buffered_rows.front();
+    else
+        return std::unordered_map<std::string, std::string>();
 }
+
 uint64_t LogfmtParser::current_offset() {
-    return buffered_line_offsets.back();
+    if (buffered_line_offsets.size())
+        return buffered_line_offsets.front();
+    else
+        return 0;
 }
 
 std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
     size_t line_start = file_offset;
     std::string line;
 
+    bool in_quotes = false;
+    bool is_escaped = false;
+
     for (size_t i = file_offset; i < file_size; ++i) {
-        if (file[i] == '\n') {
-            size_t size = i - file_offset;
-            line.assign(reinterpret_cast<const char*>(&file[line_start]), size);
-            file_offset = i + 1;
+        switch (file[i]) {
+            case '\n':
+                if (!in_quotes && !is_escaped) {
+                    size_t size = i - file_offset;
+                    line.assign(reinterpret_cast<const char*>(&file[line_start]), size);
+                    file_offset = i + 1;
+                    
+                    return std::make_pair(line, line_start);
+                }
+
+                is_escaped = false;
+                break;
+            case '"':
+                if (!is_escaped) in_quotes = !in_quotes;
+
+                is_escaped = false;
+                break;
+            case '\\':
+                is_escaped = !is_escaped;
+                break;
+            default:
+                is_escaped = false;
+                break;
         }
     }
 
@@ -37,7 +68,7 @@ std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
         file_offset = file_size;
     }
 
-    return std::make_pair(line, line_start);
+    return std::make_pair(line, line_start); 
 }
 
 void LogfmtParser::buffer_lines(size_t n_lines) {
@@ -48,6 +79,20 @@ void LogfmtParser::buffer_lines(size_t n_lines) {
         buffered_rows.push_back(parse_line(line));
         buffered_line_offsets.push_back(line_start);
     }
+}
+
+bool LogfmtParser::has_next_row() {
+    if (buffered_rows.size() && buffered_line_offsets.size()) { // Rows already buffered
+        return true;
+    } 
+        
+    if (file_offset != file_size) { // More to read from file
+            buffer_lines(LINES_TO_BUFFER);
+            return true;
+    }
+
+    // No rows buffered and nothing left to read from file
+    return false;
 }
 
 /*

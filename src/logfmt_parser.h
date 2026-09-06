@@ -6,7 +6,6 @@
 #include <deque>
 #include <unordered_map>
 
-
 class LogfmtParser {
 public:
     class iterator {
@@ -19,11 +18,10 @@ public:
 
         iterator() : parser_(nullptr) {}
         explicit iterator(LogfmtParser* p) : parser_(p) {
-            advance();
+            init();
         }
 
         iterator& operator++() { advance(); return *this; }
-        iterator operator++(int) { iterator tmp = *this; advance(); return tmp; }
 
         reference operator*() const { return *parser_; }
         pointer operator->() const { return parser_; }
@@ -33,23 +31,35 @@ public:
 
     private:
         void advance() {
-            if (parser_) {
+            if (!parser_) {
+                return;
+            }
+
+            if (!parser_->buffered_rows.empty()) {
                 parser_->buffered_rows.pop_front();
                 parser_->buffered_line_offsets.pop_front();
+            }
 
-                if (!parser_->has_next_row()) {
-                    parser_ = nullptr;
-                }
-            } else {
+            if (!parser_->has_next_row()) {
+                parser_ = nullptr;
+            }
+        }
+
+        void init() {
+            if (!parser_) {
+                return;
+            }
+
+            if (!parser_->has_next_row()) {
                 parser_ = nullptr;
             }
         }
 
         LogfmtParser* parser_;
-        std::pair<std::unordered_map<std::string, std::string>, uint64_t> current_;
     };
 
     explicit LogfmtParser(const std::string &file_path);
+    LogfmtParser() = default;
     iterator begin() { return iterator(this); }
     iterator end()   { return iterator(); }
 

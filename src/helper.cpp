@@ -2,6 +2,7 @@
 #include "tokenizer.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <filesystem>
 #include <arpa/inet.h>
 
 using namespace boost::interprocess;
@@ -51,6 +52,10 @@ const uint8_t get_query_mode(const std::string &mode) {
 }
 
 const MappedFile open_mmap_r(const std::string &file_path) {
+  if (std::filesystem::file_size(file_path) == 0) {
+    return MappedFile{}; // empty state, no mapping needed
+  }
+
   file_mapping file_mapping(file_path.data(), read_only);
   mapped_region file_region(file_mapping, read_only);
 
@@ -58,6 +63,10 @@ const MappedFile open_mmap_r(const std::string &file_path) {
 }
 
 const MappedFile open_mmap_rw(const std::string &file_path) {
+  if (std::filesystem::file_size(file_path) == 0) {
+    return MappedFile{}; // empty state, no mapping needed
+  }
+
   file_mapping file_mapping(file_path.data(), read_write);
   mapped_region file_region(file_mapping, read_write);
 

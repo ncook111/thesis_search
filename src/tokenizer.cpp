@@ -17,6 +17,7 @@
 #include <string_view>
 #include <sys/stat.h>
 #include <time.h>
+#include "logfmt_parser.h"
 
 const bool Tokenizer::is_pint(const std::string &s) const {
   size_t i = s.front() == '+' ? 1 : 0;
@@ -288,6 +289,39 @@ void Tokenizer::tokenize_json() {
 
 void Tokenizer::tokenize_logfmt() {
   std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+  LogfmtParser parser = LogfmtParser(file_path);
+
+  uint64_t doc_id = 1; // Doc_id's 1-indexed
+  for (auto it = parser.begin(); it != parser.end(); ++it) {
+    std::__1::unordered_map<std::__1::string, std::__1::string> doc = (*it).current_row();
+    uint64_t offset = (*it).current_offset();
+
+    // If no fields add all fields
+    // This assumes fields for every json object will be the same
+    if (!fields.size()) {
+      for (auto field : doc) { // Key : Value pair
+        fields.push_back(field.first);
+      }
+    }
+    for (uint64_t field_id = 0; field_id < fields.size(); ++field_id) {
+      if (doc.contains(fields[field_id])) {
+        tokenize_field(doc[fields[field_id]], doc_id, field_id);
+      } 
+    }
+
+    entry_offsets.push_back(offset + 1);
+
+    if (doc_id % 10000 == 0)
+      std::cout << "Processed: "
+                << (float)(offset / (float)file_size) * 100 << "%"
+                << std::endl;
+
+    ++doc_id;
+  }
+
+  entry_offsets.push_back(file_size);
+
+  std::cout << "Lines: " << entry_offsets.size() << std::endl;
 }
 
 void Tokenizer::tokenize_field(const std::string_view field_str,
