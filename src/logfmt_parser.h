@@ -1,10 +1,12 @@
 #ifndef LOGFMT_PARSER_H
 #define LOGFMT_PARSER_H
 
+#include "helper.h"
 #include <string>
 #include <vector>
 #include <deque>
 #include <unordered_map>
+
 
 class LogfmtParser {
 public:
@@ -64,12 +66,12 @@ public:
     iterator end()   { return iterator(); }
 
     std::unordered_map<std::string, std::string> current_row();
-    uint64_t current_offset();
+    int64_t current_offset();
 
 private:
     std::deque<std::unordered_map<std::string, std::string>> buffered_rows;
     std::deque<uint64_t> buffered_line_offsets;
-    uint8_t *file;
+    MappedFile mf;
     size_t file_size;
     uint64_t file_offset;
 

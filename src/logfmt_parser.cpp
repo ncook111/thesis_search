@@ -1,12 +1,9 @@
 #include "logfmt_parser.h"
-#include "helper.h"
 #include <unordered_map>
 #include <iostream>
 
 #define LINES_TO_BUFFER 100
-LogfmtParser::LogfmtParser(const std::string &file_path) {
-    const MappedFile mf = open_mmap_r(file_path);
-    file = static_cast<uint8_t *>(mf.addr());
+LogfmtParser::LogfmtParser(const std::string &file_path) : mf(open_mmap_r(file_path)) {
     file_size = mf.size();
     file_offset = 0;
 
@@ -20,15 +17,16 @@ std::unordered_map<std::string, std::string> LogfmtParser::current_row() {
         return std::unordered_map<std::string, std::string>();
 }
 
-uint64_t LogfmtParser::current_offset() {
+int64_t LogfmtParser::current_offset() {
     if (buffered_line_offsets.size())
         return buffered_line_offsets.front();
     else
-        return 0;
+        return -1;
 }
 
 std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
     size_t line_start = file_offset;
+	uint8_t* file = static_cast<uint8_t *>(mf.addr());
     std::string line;
 
     bool in_quotes = false;
@@ -72,10 +70,13 @@ std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
 }
 
 void LogfmtParser::buffer_lines(size_t n_lines) {
+	std::cout << "here" << std::endl;
     for (size_t i = 0; i < n_lines; ++i) {
-        if (file_offset == file_size) break;
+		std::cout << "buffering lines" << std::endl;
+        if (file_offset == file_size) break; 
 
         auto [line, line_start] = read_next_line();
+		std::cout << "buffering lines" << std::endl;
         buffered_rows.push_back(parse_line(line));
         buffered_line_offsets.push_back(line_start);
     }
@@ -87,6 +88,7 @@ bool LogfmtParser::has_next_row() {
     } 
         
     if (file_offset != file_size) { // More to read from file
+		std::cout << "buffering" << std::endl;
             buffer_lines(LINES_TO_BUFFER);
             return true;
     }

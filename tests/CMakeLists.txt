@@ -12,6 +12,7 @@ add_executable(indexer_tests
     test_search.cpp
     test_tokenizer.cpp
     test_program.cpp
+    test_program_fuzzed.cpp
     test_logfmt_parser.cpp
     fuzzing.cpp
 )

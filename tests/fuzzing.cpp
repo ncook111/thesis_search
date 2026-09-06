@@ -35,6 +35,15 @@ void generateJSONData(const int rowCount, const std::vector<std::string> &fields
     }
 }
 
+void generateLOGFMTData(const int rowCount, const std::vector<std::string> &fields, std::string &out) {
+    for (int i = 0; i < rowCount; ++i) {
+        out += fields[0] + "=" + faker::date::birthdateByYear().substr(0, 10) + ' ';
+        out += fields[1] + "=" + faker::finance::accountNumber() + ' ';
+        out += fields[2] + "=" + faker::finance::amount(0, 5000);
+        out += "\n";
+    }
+}
+
 void generateFuzzedDataFile(const uint8_t file_type, const uint32_t rowCount, const std::string &data_path, const std::vector<std::string> &fields) {
     std::filesystem::create_directory(data_path);
 
@@ -47,6 +56,9 @@ void generateFuzzedDataFile(const uint8_t file_type, const uint32_t rowCount, co
     } else if (file_type == FileType::JSON) {
         file.open(data_path + "/fuzzed.json", std::ios::binary);
         generateJSONData(rowCount, fields, out);
+    } else if (file_type == FileType::LOGFMT) {
+        file.open(data_path + "/fuzzed.logfmt", std::ios::binary);
+        generateLOGFMTData(rowCount, fields, out);
     } else {
         throw std::invalid_argument("FileType not supported/invalid");
     }
