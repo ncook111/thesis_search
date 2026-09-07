@@ -1,4 +1,5 @@
 #include "logfmt_parser.h"
+#include "helper.h"
 #include <unordered_map>
 #include <iostream>
 

@@ -22,7 +22,7 @@ enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
 namespace EncType {
-enum Value : uint8_t { GVB = 0, PEF = 1, INVALID = 2 };
+enum Value : uint8_t { GVB = 0, PEF = 1, FLS = 2, INVALID = 2 };
 }
 
 namespace QueryMode {

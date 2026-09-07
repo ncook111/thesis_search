@@ -1,3 +1,5 @@
+include(FetchContent)
+
 cmake_minimum_required(VERSION 3.16)
 project(indexer CXX)
 
@@ -26,6 +28,48 @@ endif()
 add_subdirectory(third_party/csv-parser)
 add_subdirectory(third_party/ds2i/succinct)
 
+FetchContent_Declare(
+    fastlanes_src
+    GIT_REPOSITORY https://github.com/cwida/FastLanes.git
+    GIT_TAG        dev
+)
+FetchContent_Populate(fastlanes_src)
+
+set(FASTLANES_PUB ${fastlanes_src_SOURCE_DIR}/publications/data_parallelized_encodings)
+
+add_library(fastlanes_bp STATIC
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_pack_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unpack_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_ffor_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unffor_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unrsum_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_rsum_src.cpp
+)
+
+target_include_directories(fastlanes_bp PUBLIC
+    ${FASTLANES_PUB}/fls_generated/include
+)
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    target_sources(fastlanes_bp PRIVATE
+        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unffor_src.cpp
+        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unpack_src.cpp
+        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp
+    )
+    target_compile_options(fastlanes_bp PUBLIC -march=armv8-a+simd)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(fastlanes_bp PRIVATE -flax-vector-conversions)
+    endif()
+    target_compile_definitions(fastlanes_bp PUBLIC FASTLANES_HAVE_NEON=1)
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    target_sources(fastlanes_bp PRIVATE
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unffor_src.cpp
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unpack_src.cpp
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp
+    )
+    target_compile_options(fastlanes_bp PUBLIC -mavx512bw -mavx512f)
+endif()
+
 add_library(indexer_lib
     src/ingest.cpp
     src/coder.cpp
@@ -34,6 +78,7 @@ add_library(indexer_lib
     src/index.cpp
     src/helper.cpp
     src/pef.cpp
+    src/fls.cpp
     src/search.cpp
     src/output.cpp
     src/crc.cpp
@@ -55,6 +100,7 @@ target_link_libraries(indexer_lib PUBLIC
     csv
     Boost::program_options
     ${OPENFST_LIBRARY}
+    fastlanes_bp
 )
 
 add_executable(indexer src/indexer.cpp)
@@ -65,7 +111,6 @@ include(CTest)
 option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTING)
-    include(FetchContent)
 
     FetchContent_Declare(
         googletest

@@ -52,7 +52,6 @@ void create_index(const std::vector<std::string> &fields,
     const uint8_t type = get_file_type(f.extension());
     std::cout << "here" << std::endl;
     Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type, fields);
-    std::cout << "here2" << std::endl;
     tokenizer.printStatistics();
     const std::string file_id = std::to_string(i++);
 
