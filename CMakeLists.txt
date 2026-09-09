@@ -1,6 +1,7 @@
+cmake_minimum_required(VERSION 3.16)
+
 include(FetchContent)
 
-cmake_minimum_required(VERSION 3.16)
 project(indexer CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -28,6 +29,44 @@ endif()
 add_subdirectory(third_party/csv-parser)
 add_subdirectory(third_party/ds2i/succinct)
 
+###### SIMD TARGET ######
+
+set(SIMD_TARGET "scalar" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
+
+set(_simd ${SIMD_TARGET})
+
+# check combination possible
+if (_simd STREQUAL "neon" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    message(FATAL_ERROR "SIMD_TARGET=neon requested but target is not arm64/aarch64")
+endif()
+if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    message(FATAL_ERROR "SIMD_TARGET=${_simd} requested but target is not x86_64")
+endif()
+
+add_library(simd_target INTERFACE)
+
+if (_simd STREQUAL "scalar")
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SCALAR=1)
+elseif (_simd STREQUAL "neon")
+    target_compile_options(simd_target INTERFACE -march=armv8-a+simd)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(simd_target INTERFACE -flax-vector-conversions)
+    endif()
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_NEON=1)
+elseif (_simd STREQUAL "sse")
+    target_compile_options(simd_target INTERFACE -msse4.2)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SSE=1)
+elseif (_simd STREQUAL "avx2")
+    target_compile_options(simd_target INTERFACE -mavx2)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1)
+elseif (_simd STREQUAL "avx512bw")
+    target_compile_options(simd_target INTERFACE -mavx512bw -mavx512f)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1)
+endif()
+
+###### FASTLANES ######
+
 FetchContent_Declare(
     fastlanes_src
     GIT_REPOSITORY https://github.com/cwida/FastLanes.git
@@ -38,36 +77,32 @@ FetchContent_Populate(fastlanes_src)
 set(FASTLANES_PUB ${fastlanes_src_SOURCE_DIR}/publications/data_parallelized_encodings)
 
 add_library(fastlanes_bp STATIC
-    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_pack_src.cpp
-    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unpack_src.cpp
     ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_ffor_src.cpp
     ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unffor_src.cpp
-    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unrsum_src.cpp
     ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_rsum_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_unrsum_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_transpose_src.cpp
+    ${FASTLANES_PUB}/fls_generated/fallback/scalar_av_uf1/fallback_scalar_av_1024_uf1_untranspose_src.cpp
 )
 
-target_include_directories(fastlanes_bp PUBLIC
-    ${FASTLANES_PUB}/fls_generated/include
-)
+target_include_directories(fastlanes_bp PUBLIC ${FASTLANES_PUB}/fls_generated/include)
+target_link_libraries(fastlanes_bp PUBLIC simd_target)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+if (_simd STREQUAL "neon")
     target_sources(fastlanes_bp PRIVATE
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unffor_src.cpp
-        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unpack_src.cpp
-        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp
-    )
-    target_compile_options(fastlanes_bp PUBLIC -march=armv8-a+simd)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(fastlanes_bp PRIVATE -flax-vector-conversions)
-    endif()
-    target_compile_definitions(fastlanes_bp PUBLIC FASTLANES_HAVE_NEON=1)
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp)
+elseif (_simd STREQUAL "sse")
+    target_sources(fastlanes_bp PRIVATE
+        ${FASTLANES_PUB}/fls_generated/x86_64/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_unffor_src.cpp)
+elseif (_simd STREQUAL "avx2")
+    target_sources(fastlanes_bp PRIVATE
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_unffor_src.cpp
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_rsum_src.cpp)
+elseif (_simd STREQUAL "avx512bw")
     target_sources(fastlanes_bp PRIVATE
         ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unffor_src.cpp
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unpack_src.cpp
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp
-    )
-    target_compile_options(fastlanes_bp PUBLIC -mavx512bw -mavx512f)
+        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp)
 endif()
 
 add_library(indexer_lib

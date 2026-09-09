@@ -1,6 +1,6 @@
 add_executable(indexer_tests
     test_ast.cpp
-    test_coder.cpp
+    test_coder_fuzzed.cpp
     test_crc.cpp
     test_fst.cpp
     test_helper.cpp
@@ -8,7 +8,8 @@ add_executable(indexer_tests
     test_ingest.cpp
     test_output.cpp
     test_parser.cpp
-    test_pef.cpp
+    test_pef_fuzzed.cpp
+    test_fls_fuzzed.cpp
     test_search.cpp
     test_tokenizer.cpp
     test_program.cpp

@@ -1,7 +1,7 @@
 #include <vector>
 #include <span>
 #include "fls_gen/transpose/transpose.hpp"
-#include "fls_gen/rsum_and_untranspose/rsum_and_untranspose.hpp"
+#include "fls_gen/untranspose/untranspose.hpp"
 #include "fls_gen/unrsum/unrsum.hpp"
 #include "fls_gen/rsum/rsum.hpp"
 #include "fls_gen/ffor/ffor.hpp"
@@ -17,11 +17,11 @@ const uint16_t n_encoded_bytes_uint64_t(uint8_t bw) {
     return bw * 128;
 }
 
-const size_t fls_encode_uint64_t(std::vector<uint64_t> &input, std::vector<uint8_t> &output) {
+const size_t fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector<uint8_t> &output) {
     size_t num_blocks = 0;
     size_t i = N;
     for (i; i <= input.size(); i += N) {
-        std::span<uint64_t> input_view(input.data() + (i - N), N);
+        const std::span<const uint64_t> input_view(input.data() + (i - N), N);
         FlsEncodedBlockU64 block = fls_encode_block_uint64_t(input_view);
 
         size_t old_size = output.size();
@@ -52,7 +52,7 @@ const size_t fls_encode_uint64_t(std::vector<uint64_t> &input, std::vector<uint8
     return num_blocks;
 }
 
-const FlsEncodedBlockU64 fls_encode_block_uint64_t(std::span<uint64_t> &input) {
+const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_t> &input) {
     FlsEncodedBlockU64 encoded;
 
     std::vector<uint64_t> transposed(N);
@@ -117,82 +117,48 @@ const FlsEncodedBlockU64 construct_encoded_block(const std::vector<uint8_t> &inp
 }
 
 const std::vector<uint64_t> fls_decode_block_uint64_t(const FlsEncodedBlockU64 &encoded) {
-    std::vector<uint64_t> deltas(N, 0);
-    generated::unffor::fallback::scalar::unffor(encoded.encoded_data.data(), deltas.data(), encoded.bw, &encoded.ffor_base);
+    const std::vector<uint64_t> deltas = select_unffor_decoder(encoded.encoded_data, encoded.ffor_base, encoded.bw);
 
+    const std::vector<uint64_t> decoded = select_delta_decoder(deltas, encoded.delta_base);
+
+    std::vector<uint64_t> untransposed(N, 0);
+    generated::untranspose::fallback::scalar::untranspose_i(decoded.data(), untransposed.data());
+
+    return untransposed;
+}
+
+const std::vector<uint64_t> select_unffor_decoder(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
     std::vector<uint64_t> decoded(N, 0);
-    generated::rsum_and_untranspose::fallback::scalar::rsum_and_untranspose(deltas.data(), decoded.data(), encoded.delta_base.data());
+    
+    #if defined(SIMD_TARGET_AVX512BW)
+        generated::unffor::x86_64::avx512bw::unffor(encoded.data(), decoded.data(), bw, &base);
+    #elif defined(SIMD_TARGET_AVX2)
+        generated::unffor::x86_64::avx2::unffor(encoded.data(), decoded.data(), bw, &base);
+    #elif defined(SIMD_TARGET_SSE)
+        generated::unffor::x86_64::sse::unffor(encoded.data(), decoded.data(), bw, &base);
+    #elif defined(SIMD_TARGET_NEON)
+        generated::unffor::arm64v8::neon::unffor(encoded.data(), decoded.data(), bw, &base);
+    #elif defined(SIMD_TARGET_SCALAR)
+        generated::unffor::fallback::scalar::unffor(encoded.data(), decoded.data(), bw, &base);
+    #endif
 
     return decoded;
 }
 
-const std::vector<uint64_t> fls_ffor_decode_scalar(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(n_encoded_bytes_uint64_t(bw) / sizeof(uint64_t), 0);
-    generated::unffor::fallback::scalar::unffor(encoded.data(), decoded.data(), bw, &base);
+const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> &base) {
+   std::vector<uint64_t> decoded(N, 0);
 
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_ffor_decode_neon(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(n_encoded_bytes_uint64_t(bw) / sizeof(uint64_t), 0);
-    generated::unffor::arm64v8::neon::unffor(encoded.data(), decoded.data(), bw, &base);
-
-    return decoded;
-}
-
-
-const std::vector<uint64_t> fls_ffor_decode_avx512(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(n_encoded_bytes_uint64_t(bw) / sizeof(uint64_t), 0);
-    generated::unffor::x86_64::avx512bw::unffor(encoded.data(), decoded.data(), bw, &base);
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_ffor_decode_avx2(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(n_encoded_bytes_uint64_t(bw) / sizeof(uint64_t), 0);
-    generated::unffor::x86_64::avx2::unffor(encoded.data(), decoded.data(), bw, &base);
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_ffor_decode_sse(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(n_encoded_bytes_uint64_t(bw) / sizeof(uint64_t), 0);
-    generated::unffor::x86_64::sse::unffor(encoded.data(), decoded.data(), bw, &base);
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_delta_decode_scalar(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> base) {
-    std::vector<uint64_t> decoded(encoded.size(), 0);
-    generated::rsum::fallback::scalar::rsum(encoded.data(), decoded.data(), base.data());
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_delta_decode_neon(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> base) {
-    std::vector<uint64_t> decoded(encoded.size(), 0);
-    generated::rsum::arm64v8::neon::rsum(encoded.data(), decoded.data(), base.data());
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_delta_decode_avx512(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> base) {
-    std::vector<uint64_t> decoded(encoded.size(), 0);
-    generated::rsum::x86_64::avx512bw::rsum(encoded.data(), decoded.data(), base.data());
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_delta_decode_avx2(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> base) {
-    std::vector<uint64_t> decoded(encoded.size(), 0);
-    generated::rsum::x86_64::avx2::rsum(encoded.data(), decoded.data(), base.data());
-
-    return decoded;
-}
-
-const std::vector<uint64_t> fls_delta_decode_sse(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> base) {
-    std::vector<uint64_t> decoded(encoded.size(), 0);
-    generated::rsum::x86_64::sse::rsum(encoded.data(), decoded.data(), base.data());
+    #if defined(SIMD_TARGET_AVX512BW)
+        generated::rsum::x86_64::avx512bw::rsum(encoded.data(), decoded.data(), base.data());
+    #elif defined(SIMD_TARGET_AVX2)
+        generated::rsum::x86_64::avx2::rsum(encoded.data(), decoded.data(), base.data());
+    #elif defined(SIMD_TARGET_SSE)
+        generated::rsum::x86_64::sse::rsum(encoded.data(), decoded.data(), base.data());
+    #elif defined(SIMD_TARGET_NEON)
+        generated::rsum::arm64v8::neon::rsum(encoded.data(), decoded.data(), base.data());
+    #elif defined(SIMD_TARGET_SCALAR)
+        generated::rsum::fallback::scalar::rsum(encoded.data(), decoded.data(), base.data());
+    #endif
 
     return decoded;
 }

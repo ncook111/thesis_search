@@ -1,6 +1,7 @@
 
 #include "../src/coder.h"
 #include "../src/pef.h"
+#include "../src/fls.h"
 #include "cache_flush.h"
 #include <benchmark/benchmark.h>
 #include <random>
@@ -85,7 +86,7 @@ class U64DeltaDecode : public benchmark::Fixture {
 public:
     std::vector<uint64_t> input;
     void SetUp(::benchmark::State& state) {
-        input = delta_decode(generate_int_dist(state.range(0)));
+        input = delta_encode(generate_int_dist(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -99,6 +100,20 @@ public:
 
     void SetUp(::benchmark::State& state) {
         header = partitioned_ef_encode(input, generate_int_dist(state.range(0)));
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U64FLSDecode : public benchmark::Fixture {
+public:
+    std::vector<uint8_t> input;
+    size_t num_blocks;
+
+    void SetUp(::benchmark::State& state) {
+        input.clear();
+        num_blocks = fls_encode_uint64_t(generate_int_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -190,6 +205,31 @@ BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
+BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
+    std::vector<uint8_t> encoded;
+    size_t num_blocks;
+
+    for (auto _ : state) {
+        state.PauseTiming();
+        encoded.clear();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        num_blocks = fls_encode_uint64_t(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::DoNotOptimize(num_blocks);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * 8);
+    const double encoded_bytes = static_cast<double>(encoded.size() + sizeof(num_blocks));
+
+    state.counters["InputBytes"]   = input_bytes;
+    state.counters["EncodedBytes"] = encoded_bytes;
+    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
 BENCHMARK_DEFINE_F(U64GVBDecode, gvb_u64_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
@@ -258,6 +298,23 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
+BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        std::vector<uint64_t> decoded = fls_decode_uint64_t(input, num_blocks);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes = static_cast<double>(input.size() + sizeof(num_blocks));
+
+    state.counters["InputBytes"] = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
 
 BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
     ->Arg(1000) // 1k
@@ -275,7 +332,15 @@ BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
+// BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
+//     ->Arg(1000) // 1k
+//     ->Arg(10000) // 10k
+//     ->Arg(100000) // 100k
+//     ->Arg(1000000) // 1m
+//     ->Arg(10000000) // 10m
+//     ->Iterations(50);
+
+BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -299,7 +364,15 @@ BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
+// BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
+//     ->Arg(1000) // 1k
+//     ->Arg(10000) // 10k
+//     ->Arg(100000) // 100k
+//     ->Arg(1000000) // 1m
+//     ->Arg(10000000) // 10m
+//     ->Iterations(50);
+
+BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -307,18 +380,10 @@ BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(U64Vec, delta_u64_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Iterations(50);
+// BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
+//     ->Arg(1000) // 1k
+//     ->Arg(10000) // 10k
+//     ->Arg(100000) // 100k
+//     ->Arg(1000000) // 1m
+//     ->Arg(10000000) // 10m
+//     ->Iterations(50);
