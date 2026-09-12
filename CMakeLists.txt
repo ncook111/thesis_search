@@ -31,7 +31,7 @@ add_subdirectory(third_party/ds2i/succinct)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "scalar" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
@@ -47,6 +47,7 @@ endif()
 add_library(simd_target INTERFACE)
 
 if (_simd STREQUAL "scalar")
+    target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SCALAR=1)
 elseif (_simd STREQUAL "neon")
     target_compile_options(simd_target INTERFACE -march=armv8-a+simd)

@@ -3,6 +3,7 @@
 #include "fst.h"
 #include "helper.h"
 #include "crc.h"
+#include "fls.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -155,8 +156,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   file.close();
 
-  //check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  //check_all_pef_tokens(tokenizer, file_name + ".off");
+  check_offsets_file(tokenizer, file_name + ".off", enc_type);
+  check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
@@ -187,6 +188,9 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
       break;
     case EncType::PEF:
       write_vec_pef(entry_offsets, file);
+      break;
+    case EncType::FLS:
+      write_vec_fls(entry_offsets, file);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -236,23 +240,6 @@ const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets,
     std::cout << "og size: " << entry_offsets_0.size() << std::endl;
     return false;
   }
-}
-
-const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t size_to_read) {
-  std::vector<uint8_t> enc_id_to_offset(size_to_read);
-  std::memcpy(reinterpret_cast<char *>(enc_id_to_offset.data()), file, size_to_read);                                             
-  const std::vector<uint64_t> id_to_offset = delta_decode(gvb_decode_uint64_t(enc_id_to_offset));
-  
-  return id_to_offset;
-}
-
-const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t size_to_read) {
-  // Read in universe and n first
-  const auto  &[header, size] = get_bv_header(file);
-  const succinct::bit_vector bv =
-      get_bv(file + size, header, size_to_read - size);
-
-  return partitioned_ef_decode(bv, header.universe, header.n);
 }
 
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type) {
@@ -312,28 +299,17 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
 
   switch (enc_type) {
     case EncType::GVB:
-      return read_id_offsets_gvb(file + addr_offset, size_to_read);
+      return read_vec_gvb(file + addr_offset, size_to_read);
       break;
     case EncType::PEF:
-      return read_id_offsets_pef(file + addr_offset, size_to_read);
+      return read_vec_pef(file + addr_offset, size_to_read);
+      break;
+    case EncType::FLS: 
+      return read_vec_fls(file + addr_offset, size_to_read);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
   }
-}
-
-const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint64_t size_to_read) {
-  std::vector<uint8_t> enc_tok_offsets(size_to_read);
-  std::memcpy(reinterpret_cast<char *>(enc_tok_offsets.data()), file, size_to_read);
-  return delta_decode(gvb_decode_uint64_t(enc_tok_offsets));
-}
-
-const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t size_to_read) {
-  // Read in universe and n first
-  const auto  &[header, size] = get_bv_header(file);
-  const succinct::bit_vector bv = get_bv(file + size, header, size_to_read - size);
-  
-  return partitioned_ef_decode(bv, header.universe, header.n);
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
@@ -483,10 +459,13 @@ get_tok_offsets(const uint64_t token_id,
     std::vector<uint64_t> docids;
     switch (enc_type) {
       case EncType::GVB:
-        docids = read_tok_offsets_gvb(file + addr_offset, field_sizes[i]);
+        docids = read_vec_gvb(file + addr_offset, field_sizes[i]);
         break;
       case EncType::PEF:
-        docids = read_tok_offsets_pef(file + addr_offset, field_sizes[i]);
+        docids = read_vec_pef(file + addr_offset, field_sizes[i]);
+        break;
+      case EncType::FLS:
+        docids = read_vec_fls(file + addr_offset, field_sizes[i]);
         break;
       default:
         throw std::invalid_argument("Not a valid encoding type");
@@ -508,32 +487,33 @@ get_tok_offsets(const uint64_t token_id,
 }
 
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read) {
-  std::vector<uint8_t> enc_entry_offsets_vec(size_to_read);
-  std::memcpy(reinterpret_cast<char *>(enc_entry_offsets_vec.data()), file, size_to_read);
-
-  std::vector<uint64_t> entry_offsets_vec = delta_decode(gvb_decode_uint64_t(enc_entry_offsets_vec));
+  std::vector<uint64_t> decoded = read_vec_gvb(file, size_to_read);
 
   // Convert to 0 indexing
-  for (auto &o : entry_offsets_vec)
+  for (auto &o : decoded)
     --o;
 
-  return entry_offsets_vec;
+  return decoded;
 }
 
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
-  // Read in universe and n first
-  const auto  &[header, size] = get_bv_header(file);
-  const succinct::bit_vector bv =
-      get_bv(file + size, header, size_to_read - size);
-
-  std::vector<uint64_t> offsets =
-      partitioned_ef_decode(bv, header.universe, header.n);
+  std::vector<uint64_t> offsets = read_vec_pef(file, size_to_read);
 
   // Convert back to 0 indexing
   for (auto &o : offsets)
     --o;
 
   return offsets;
+}
+
+const std::vector<uint64_t> read_entry_offsets_fls(const uint8_t *file, const size_t size_to_read) {
+  std::vector<uint64_t> decoded = read_vec_fls(file, size_to_read);
+
+  // Convert to 0 indexing
+  for (auto &o : decoded)
+    --o;
+
+  return decoded;
 }
 
 // Output converts offsets values from file from 1 indexing back to 0 indexing
@@ -560,6 +540,9 @@ get_entry_offsets_from_file(const std::string &file_name,
     break;
   case EncType::PEF:
     return read_entry_offsets_pef(file + header.entry_offsets_header, size_to_read);
+    break;
+  case EncType::FLS:
+    return read_entry_offsets_fls(file + header.entry_offsets_header, size_to_read);
     break;
   default:
     throw std::invalid_argument("Not a valid encoding type");
@@ -644,4 +627,36 @@ const uint64_t write_vec_pef(const std::vector<uint64_t> &vec, std::ofstream &fi
   file.write(reinterpret_cast<const char *>(enc.data().data()), enc_size);
 
   return enc_size + c_header_size;
+}
+
+const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &file) {
+  std::vector<uint8_t> enc = fls_encode_uint64_t(vec);
+  const uint64_t enc_size = enc.size();
+  file.write(reinterpret_cast<const char *>(enc.data()), enc_size);
+
+  return enc_size;
+}
+
+const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read) {
+  std::vector<uint8_t> decoded_gvb(size_to_read);
+  std::memcpy(reinterpret_cast<char *>(decoded_gvb.data()), file, size_to_read);                                             
+  return  delta_decode(gvb_decode_uint64_t(decoded_gvb));
+}
+
+const std::vector<uint64_t> read_vec_pef(const uint8_t *file, const size_t size_to_read) {
+  // Read in universe and n first
+  const auto  &[header, size] = get_bv_header(file);
+  const succinct::bit_vector bv =
+      get_bv(file + size, header, size_to_read - size);
+
+  return partitioned_ef_decode(bv, header.universe, header.n);
+}
+
+const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_to_read) {
+  size_t num_blocks;
+  std::vector<uint8_t> decoded_fls(size_to_read);
+
+  std::memcpy(reinterpret_cast<char *>(decoded_fls.data()), file, size_to_read);
+
+  return fls_decode_uint64_t(decoded_fls);
 }

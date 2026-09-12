@@ -4,6 +4,7 @@
 #include "coder.h"
 #include "custom_types.h"
 #include "fst.h"
+#include "fls.h"
 #include "helper.h"
 #include "pef.h"
 #include "tokenizer.h"
@@ -77,12 +78,9 @@ get_entry_offsets_from_file(const std::string &file_name,
 const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets,
                                const std::string &file_name,
                                const uint8_t enc_type);
-const std::vector<uint64_t> read_id_offsets_gvb(const uint8_t *file, const uint64_t size_to_read);
-const std::vector<uint64_t> read_id_offsets_pef(const uint8_t *file, const uint64_t size_to_read);
-const std::vector<uint64_t> read_tok_offsets_gvb(const uint8_t *file, const uint64_t size_to_read);
-const std::vector<uint64_t> read_tok_offsets_pef(const uint8_t *file, const uint64_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read);
+const std::vector<uint64_t> read_entry_offsets_fls(const uint8_t *file, const size_t size_to_read);
 void check_all_pef_tokens(const Tokenizer &tokenizer,
                           const std::string &file_path);
 std::pair<uint64_t, uint64_t>
@@ -91,6 +89,10 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
 void check_index_dir_valid(const std::string &index_path);
 const uint64_t write_vec_gvb(const std::vector<uint64_t> &vec, std::ofstream &file);
 const uint64_t write_vec_pef(const std::vector<uint64_t> &vec, std::ofstream &file);
+const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &file);
+const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read);
+const std::vector<uint64_t> read_vec_pef(const uint8_t *file, const size_t size_to_read);
+const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_to_read);
 
 
 template <MapType M>
@@ -226,6 +228,9 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
         case EncType::PEF:
           local_offset += write_vec_pef(offsets_dedup, file);
           break;
+        case EncType::FLS:
+          local_offset += write_vec_fls(offsets_dedup, file);
+          break;
         default:
           throw std::invalid_argument("Not a valid encoding type");
       }
@@ -248,7 +253,10 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
       write_vec_gvb(id_to_offset, file);
       break;
     case EncType::PEF:
-     write_vec_pef(id_to_offset, file);
+      write_vec_pef(id_to_offset, file);
+      break;
+    case EncType::FLS:
+      write_vec_fls(id_to_offset, file);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -305,10 +313,16 @@ bool check_offsets_file_by_type(
           
           const uint8_t c_header_size = sizeof(uint8_t) + compressed.size();
 
-          // Write id_to_offsets data
           uint64_t enc_size = enc.data().size() * sizeof(uint64_t);
 
           local_offset += enc_size + c_header_size;
+          break;
+        }
+        case EncType::FLS:
+        {
+            std::vector<uint8_t> enc = fls_encode_uint64_t(offsets_dedup);
+            const uint64_t enc_size = enc.size();
+            local_offset += enc_size;
           break;
         }
         default:
@@ -320,12 +334,21 @@ bool check_offsets_file_by_type(
   }
 
   // Check id_to_offsets
-    std::cout << "here1" << std::endl;
-    std::cout << id_to_offset.size() << std::endl;
+  std::cout << "here1" << std::endl;
+  std::cout << id_to_offset.size() << std::endl;
   std::vector<uint64_t> id_to_offset_from_file = get_id_offsets_from_file(file_name, type, enc_type);
-    std::cout << "here2" << std::endl;
+  std::cout << "here2" << std::endl;
   if (id_to_offset_from_file != id_to_offset) {
     std::cout << "id offsets incorrect\n";
+    std::cout << "file\n";
+    for (auto off : id_to_offset_from_file) {
+      std::cout << off << std::endl;
+    }
+
+    std::cout << "og\n";
+    for (auto off : id_to_offset) {
+      std::cout << off << std::endl;
+    }
     return false;
   }
 

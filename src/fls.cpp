@@ -17,9 +17,13 @@ const uint16_t n_encoded_bytes_uint64_t(uint8_t bw) {
     return bw * 128;
 }
 
-const size_t fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector<uint8_t> &output) {
+const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &input) {
     size_t num_blocks = 0;
     size_t i = N;
+
+    // Reserve space at the front of output to store num_blocks as a header
+    std::vector<uint8_t> output(sizeof(num_blocks));
+    
     for (i; i <= input.size(); i += N) {
         const std::span<const uint64_t> input_view(input.data() + (i - N), N);
         FlsEncodedBlockU64 block = fls_encode_block_uint64_t(input_view);
@@ -49,7 +53,10 @@ const size_t fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector
         output.insert(output.end(), std::make_move_iterator(remainder.begin()), std::make_move_iterator(remainder.end()));
     }
 
-    return num_blocks;
+    // Write header to front of vec
+    std::memcpy(output.data(), &num_blocks, sizeof(num_blocks));
+
+    return output;
 }
 
 const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_t> &input) {
@@ -72,18 +79,22 @@ const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_
 }
 
 
-const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input, const uint32_t num_blocks) {
+const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input) {
     std::vector<uint64_t> all_decoded;
+    
+    // Retrieve num_blocks from the head of the vector
+    size_t num_blocks;
+    std::memcpy(&num_blocks, input.data(), sizeof(num_blocks));
 
-    size_t i = 0;
+    size_t offset = sizeof(num_blocks);
     for (size_t blk = 0; blk < num_blocks; ++blk) {
-        FlsEncodedBlockU64 encoded_block = construct_encoded_block(input, i);
+        FlsEncodedBlockU64 encoded_block = construct_encoded_block(input, offset);
         std::vector<uint64_t> decoded = fls_decode_block_uint64_t(encoded_block);
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
     }
 
-    if (i < input.size()) { // gvb encoded remainder
-        std::vector<uint8_t> remainder(input.begin() + i, input.end());
+    if (offset < input.size()) { // gvb encoded remainder
+        std::vector<uint8_t> remainder(input.begin() + offset, input.end());
         std::vector<uint64_t> decoded = gvb_decode_uint64_t(remainder);
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
     }

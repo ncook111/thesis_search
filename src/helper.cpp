@@ -27,7 +27,8 @@ const uint8_t get_enc_type(const std::string &type) {
     return EncType::GVB;
   if (type == "pef")
     return EncType::PEF;
-
+  if (type == "fls")
+    return EncType::FLS;
   throw std::invalid_argument("Encoding type not supported");
 }
 
@@ -36,7 +37,8 @@ const std::string enc_type_to_str(const uint8_t &type) {
     return "gvb";
   if (type == EncType::PEF)
     return "pef";
-
+  if (type == EncType::FLS)
+    return "fls";
   throw std::invalid_argument("Encoding type not supported");
 }
 
