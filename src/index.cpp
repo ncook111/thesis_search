@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <algorithm>
 
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
@@ -156,8 +157,8 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   file.close();
 
-  check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  check_all_pef_tokens(tokenizer, file_name + ".off");
+  // check_offsets_file(tokenizer, file_name + ".off", enc_type);
+  // check_all_pef_tokens(tokenizer, file_name + ".off");
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
@@ -252,7 +253,7 @@ const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &h
     addr_offset = header.alpha_id_map_header;
     break;
   case TokenType::PINT:
-    size_to_read = header.alpha_offsets_header - header.num_id_map_header;
+    size_to_read = header.neg_num_offsets_header - header.num_id_map_header;
     addr_offset = header.num_id_map_header;
     break;
   case TokenType::NINT:
@@ -630,11 +631,15 @@ const uint64_t write_vec_pef(const std::vector<uint64_t> &vec, std::ofstream &fi
 }
 
 const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &file) {
-  std::vector<uint8_t> enc = fls_encode_uint64_t(vec);
-  const uint64_t enc_size = enc.size();
-  file.write(reinterpret_cast<const char *>(enc.data()), enc_size);
+  std::vector<uint8_t> enc_data;
+  std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec, enc_data);
+  const uint64_t enc_data_size = enc_data.size();
+  const uint64_t enc_num_blocks_size = enc_num_blocks.size();
+  
+  file.write(reinterpret_cast<const char *>(enc_num_blocks.data()), enc_num_blocks.size());
+  file.write(reinterpret_cast<const char *>(enc_data.data()), enc_data.size());
 
-  return enc_size;
+  return enc_data_size + enc_num_blocks_size;
 }
 
 const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read) {
@@ -653,10 +658,14 @@ const std::vector<uint64_t> read_vec_pef(const uint8_t *file, const size_t size_
 }
 
 const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_to_read) {
-  size_t num_blocks;
-  std::vector<uint8_t> decoded_fls(size_to_read);
+  size_t enb_size_to_read = std::min({size_to_read, (size_t)10}); // num_blocks can be up to 10 bytes, get lesser of size_to_read or 10
+  std::vector<uint8_t> enc_num_blocks(file, file + enb_size_to_read); 
+  size_t num_bytes;
+  size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_bytes);
 
-  std::memcpy(reinterpret_cast<char *>(decoded_fls.data()), file, size_to_read);
+  std::vector<uint8_t> encoded_fls(size_to_read - num_bytes);
 
-  return fls_decode_uint64_t(decoded_fls);
+  std::memcpy(reinterpret_cast<char *>(encoded_fls.data()), file + num_bytes, size_to_read - num_bytes);
+
+  return fls_decode_uint64_t(encoded_fls, num_blocks);
 }

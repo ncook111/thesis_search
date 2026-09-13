@@ -282,10 +282,10 @@ bool check_offsets_file_by_type(
     for (const auto &[field_id, _] : fields)
       field_ids.push_back(field_id);
 
-    std::vector<uint64_t> field_offsets;
+    std::vector<uint32_t> field_offsets;
     field_offsets.reserve(num_fields);
 
-    const uint64_t f_header_size = sizeof(uint64_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
+    const uint64_t f_header_size = sizeof(uint32_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
     for (const auto &[id, offsets] : fields) {
@@ -320,9 +320,11 @@ bool check_offsets_file_by_type(
         }
         case EncType::FLS:
         {
-            std::vector<uint8_t> enc = fls_encode_uint64_t(offsets_dedup);
-            const uint64_t enc_size = enc.size();
-            local_offset += enc_size;
+            std::vector<uint8_t> enc_data;
+            std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(offsets_dedup, enc_data);
+            const uint64_t enc_data_size = enc_data.size();
+            const uint64_t enc_num_blocks_size = enc_num_blocks.size();
+            local_offset += enc_data_size + enc_num_blocks_size;
           break;
         }
         default:
@@ -352,18 +354,32 @@ bool check_offsets_file_by_type(
     return false;
   }
 
+
   uint64_t token_id = 0;
   for (const auto &[_, fields] : tokens_map) {
     for (const auto &[field_id, docids] : fields) {
+      const std::vector<uint64_t> docids_dedup = remove_dups_sorted(docids); 
       std::vector<uint64_t> from_file = get_tok_offsets_from_file(token_id, id_to_offset, std::vector<uint64_t>() = {field_id}, file_name, type, enc_type);
       for (auto &i : from_file) ++i; // Normalise
-      if (from_file != docids) {
+      if (from_file != docids_dedup) {
+        std::cout << "from_file size: " << from_file.size() << std::endl;
+        std::cout << "docids size: " << docids.size() << std::endl;
+        std::cout << "docids incorrect" << std::endl;
+
+        size_t i = 0;
+        for (i; i < std::max({from_file.size(), docids_dedup.size()}); ++i) {
+          if (from_file[i] != docids_dedup[i]) break;
+        }
+
+        std::cout << "from_file[i] = " << from_file[i] << std::endl;
+        std::cout << "docids[i] = " << docids_dedup[i] << std::endl;
         return false;
       }
     }
     ++token_id;
   }
 
+  std::cout << "correct" << std::endl;
   return true;
 }
 

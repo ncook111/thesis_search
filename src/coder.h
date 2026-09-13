@@ -3,10 +3,8 @@
 
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
-
-const int8_t vb_encode_num(std::array<uint8_t, 5> &bytes, uint32_t num);
-const std::vector<uint8_t> vb_encode(const std::vector<uint32_t> &nums);
-const std::vector<uint32_t> vb_decode(const std::vector<uint8_t> &bytes);
+const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num);
+const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed);
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums);
 const std::vector<uint32_t>

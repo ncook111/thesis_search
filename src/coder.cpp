@@ -52,6 +52,43 @@ inline const uint8_t get_length(const uint64_t num) {
   }
 }
 
+const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num) {
+    std::vector<uint8_t> bytes;
+
+    while(true) {
+        bytes.push_back(num & BYTE_RST); // Get least sig 7 bits
+
+        if (num < BYTE_FST) {
+            bytes.front() |= BYTE_FST; // Set continuation bit
+            break;
+        }
+
+        num >>= 7;
+    }
+
+    std::reverse(bytes.begin(), bytes.end());
+
+    return bytes;
+}
+
+const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed) {
+    uint64_t num = 0;
+    bytes_consumed = 0;
+
+    for (auto it = bytes.begin(); it != bytes.end(); ++it) {
+        ++bytes_consumed;
+        
+        if (!(*it & BYTE_FST)) { // More bytes for num
+            num = (num << 7) + *it;
+        } else {
+            num = (num << 7) + (*it & BYTE_RST); // Last byte of num
+            break;
+        }
+    }
+
+    return num;
+}
+
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums) {
   std::vector<uint8_t> encoded;

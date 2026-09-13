@@ -109,10 +109,13 @@ public:
 class U64FLSDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
+    size_t num_consumed;
     size_t num_blocks;
 
     void SetUp(::benchmark::State& state) {
-        input = fls_encode_uint64_t(generate_int_dist(state.range(0)));
+        input.clear();
+        std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(generate_int_dist(state.range(0)), input);
+        num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -206,13 +209,15 @@ BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
+    std::vector<uint8_t> num_blocks;
 
     for (auto _ : state) {
         state.PauseTiming();
         encoded.clear();
+        num_blocks.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        std::vector<uint8_t> encoded = fls_encode_uint64_t(input);
+        num_blocks = fls_encode_uint64_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -300,7 +305,7 @@ BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        std::vector<uint64_t> decoded = fls_decode_uint64_t(input);
+        std::vector<uint64_t> decoded = fls_decode_uint64_t(input, num_blocks);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }

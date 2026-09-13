@@ -17,14 +17,11 @@ const uint16_t n_encoded_bytes_uint64_t(uint8_t bw) {
     return bw * 128;
 }
 
-const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &input) {
+const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector<uint8_t> &output) {
     size_t num_blocks = 0;
     size_t i = N;
-
-    // Reserve space at the front of output to store num_blocks as a header
-    std::vector<uint8_t> output(sizeof(num_blocks));
     
-    for (i; i <= input.size(); i += N) {
+    for (; i <= input.size(); i += N) {
         const std::span<const uint64_t> input_view(input.data() + (i - N), N);
         FlsEncodedBlockU64 block = fls_encode_block_uint64_t(input_view);
 
@@ -53,10 +50,9 @@ const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &inpu
         output.insert(output.end(), std::make_move_iterator(remainder.begin()), std::make_move_iterator(remainder.end()));
     }
 
-    // Write header to front of vec
-    std::memcpy(output.data(), &num_blocks, sizeof(num_blocks));
+    std::vector<uint8_t> var_byte_nb = vb_encode_num_uint64_t(num_blocks);
 
-    return output;
+    return var_byte_nb;
 }
 
 const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_t> &input) {
@@ -78,16 +74,11 @@ const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_
     return encoded;
 }
 
-
-const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input) {
+const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input, const size_t num_blocks) {
     std::vector<uint64_t> all_decoded;
-    
-    // Retrieve num_blocks from the head of the vector
-    size_t num_blocks;
-    std::memcpy(&num_blocks, input.data(), sizeof(num_blocks));
 
-    size_t offset = sizeof(num_blocks);
-    for (size_t blk = 0; blk < num_blocks; ++blk) {
+    size_t offset = 0;
+    for (size_t i = 0; i < num_blocks; ++i) {
         FlsEncodedBlockU64 encoded_block = construct_encoded_block(input, offset);
         std::vector<uint64_t> decoded = fls_decode_block_uint64_t(encoded_block);
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
