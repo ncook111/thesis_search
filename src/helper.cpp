@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <arpa/inet.h>
 
-using namespace boost::interprocess;
-
 const bool valid_extension(const std::string &ext) {
   return (ext == ".csv" || ext == ".json" || ext == ".logfmt");
 }
@@ -29,6 +27,14 @@ const uint8_t get_enc_type(const std::string &type) {
     return EncType::PEF;
   if (type == "fls")
     return EncType::FLS;
+  if (type == "bpd1")
+    return EncType::BPD1;
+  if (type == "bpd2")
+    return EncType::BPD2;
+  if (type == "bpd4")
+    return EncType::BPD4;
+  if (type == "bpdm")
+    return EncType::BPDM;
   throw std::invalid_argument("Encoding type not supported");
 }
 
@@ -39,6 +45,14 @@ const std::string enc_type_to_str(const uint8_t &type) {
     return "pef";
   if (type == EncType::FLS)
     return "fls";
+  if (type == EncType::BPD1)
+    return "bpd1";
+  if (type == EncType::BPD2)
+    return "bpd2";
+  if (type == EncType::BPD4)
+    return "bpd4";
+  if (type == EncType::BPDM)
+    return "bpdm";
   throw std::invalid_argument("Encoding type not supported");
 }
 
@@ -58,8 +72,8 @@ const MappedFile open_mmap_r(const std::string &file_path) {
     return MappedFile{}; // empty state, no mapping needed
   }
 
-  file_mapping file_mapping(file_path.data(), read_only);
-  mapped_region file_region(file_mapping, read_only);
+  boost::interprocess::file_mapping file_mapping(file_path.data(), boost::interprocess::read_only);
+  boost::interprocess::mapped_region file_region(file_mapping, boost::interprocess::read_only);
 
   return MappedFile{std::move(file_mapping), std::move(file_region)};
 }
@@ -69,8 +83,8 @@ const MappedFile open_mmap_rw(const std::string &file_path) {
     return MappedFile{}; // empty state, no mapping needed
   }
 
-  file_mapping file_mapping(file_path.data(), read_write);
-  mapped_region file_region(file_mapping, read_write);
+  boost::interprocess::file_mapping file_mapping(file_path.data(), boost::interprocess::read_write);
+  boost::interprocess::mapped_region file_region(file_mapping, boost::interprocess::read_write);
 
   return MappedFile{std::move(file_mapping), std::move(file_region)};
 }

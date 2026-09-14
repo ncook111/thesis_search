@@ -1,3 +1,0 @@
-[field1,field2,field3] = "query1" | [field1] = {1,2}
-
-[field1,field2,field3] = "query1" | ([field1] = {1,2} & [field2] = "query2")

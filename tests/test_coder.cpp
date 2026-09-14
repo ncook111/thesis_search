@@ -3,7 +3,7 @@
 #include "fuzzing.h"
 
 TEST(gvb_u64_t_encode_decode_test_fuzzed, test1) {
-    const std::vector<uint64_t> input = generate_rand_int_vec_dist(1000000);
+    const std::vector<uint64_t> input = generate_rand_uint64_t_vec_dist(1000000);
     const std::vector<uint8_t> encoded = gvb_encode_uint64_t(input);
     const std::vector<uint64_t> decoded = gvb_decode_uint64_t(encoded);
 
@@ -11,7 +11,7 @@ TEST(gvb_u64_t_encode_decode_test_fuzzed, test1) {
 }
 
 TEST(delta_u64_t_encode_decode_test_fuzzed, test1) {
-    const std::vector<uint64_t> input = generate_rand_int_vec_dist(1000000);
+    const std::vector<uint64_t> input = generate_rand_uint64_t_vec_dist(1000000);
     const std::vector<uint64_t> encoded = delta_encode(input);
     const std::vector<uint64_t> decoded = delta_decode((encoded));
 
@@ -19,7 +19,7 @@ TEST(delta_u64_t_encode_decode_test_fuzzed, test1) {
 }
 
 TEST(gvb_delta_u64_t_encode_decode_test_fuzzed, test1) {
-    const std::vector<uint64_t> input = generate_rand_int_vec_dist(1000000);
+    const std::vector<uint64_t> input = generate_rand_uint64_t_vec_dist(1000000);
     const std::vector<uint8_t> encoded = gvb_encode_uint64_t(delta_encode(input));
     const std::vector<uint64_t> decoded = delta_decode(gvb_decode_uint64_t(encoded));
 
@@ -90,7 +90,7 @@ TEST(vb_encode_num_uint64_t_test, test7) {
 }
 
 TEST(vb_encode_num_uint64_t_fuzzed, test1) {
-    const std::vector<uint64_t> input_nums = generate_rand_int_vec_dist(1000000);
+    const std::vector<uint64_t> input_nums = generate_rand_uint64_t_vec_dist(1000000);
 
     for (const auto num : input_nums) {
         const std::vector<uint8_t> encoded = vb_encode_num_uint64_t(num);

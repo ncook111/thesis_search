@@ -7,11 +7,9 @@
 #include <map>
 #include <vector>
 
-using namespace boost::interprocess;
-
 struct MappedFile {
-  file_mapping mapping;
-  mapped_region region;
+  boost::interprocess::file_mapping mapping;
+  boost::interprocess::mapped_region region;
 
   [[nodiscard]] void *addr() const { return region.get_address(); }
   [[nodiscard]] std::size_t size() const { return region.get_size(); }
@@ -22,7 +20,7 @@ enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
 namespace EncType {
-enum Value : uint8_t { GVB = 0, PEF = 1, FLS = 2, INVALID = 2 };
+enum Value : uint8_t { GVB = 0, PEF = 1, FLS = 2, BPD1 = 3, BPD2 = 4, BPD4 = 5, BPDM = 6, INVALID = 7 };
 }
 
 namespace QueryMode {

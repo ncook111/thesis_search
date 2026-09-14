@@ -48,7 +48,7 @@ TEST(fls_u64_t_encode_decode_test_small, test4) {
 }
 
 TEST(fls_u64_t_encode_decode_test_fuzzed, test1) {
-    const std::vector<uint64_t> input = generate_rand_int_vec_dist(1000000);
+    const std::vector<uint64_t> input = generate_rand_uint64_t_vec_dist(1000000);
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;

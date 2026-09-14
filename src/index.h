@@ -1,13 +1,14 @@
 #ifndef INDEX_H
 #define INDEX_H
 
+#include "tokenizer.h"
+#include "simdbp128.h"
 #include "coder.h"
 #include "custom_types.h"
 #include "fst.h"
 #include "fls.h"
 #include "helper.h"
 #include "pef.h"
-#include "tokenizer.h"
 #include <fstream>
 #include <map>
 #include <vector>
@@ -81,6 +82,7 @@ const bool check_entry_offsets(const std::vector<uint64_t> &entry_offsets,
 const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read);
 const std::vector<uint64_t> read_entry_offsets_fls(const uint8_t *file, const size_t size_to_read);
+const std::vector<uint64_t> read_entry_offsets_bp128(const uint8_t *file, const size_t size_to_read, uint8_t enc_type);
 void check_all_pef_tokens(const Tokenizer &tokenizer,
                           const std::string &file_path);
 std::pair<uint64_t, uint64_t>
@@ -90,9 +92,11 @@ void check_index_dir_valid(const std::string &index_path);
 const uint64_t write_vec_gvb(const std::vector<uint64_t> &vec, std::ofstream &file);
 const uint64_t write_vec_pef(const std::vector<uint64_t> &vec, std::ofstream &file);
 const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &file);
+const uint64_t write_vec_bp128(std::vector<uint64_t> vec, std::ofstream &file, const uint8_t encoding);
 const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read);
 const std::vector<uint64_t> read_vec_pef(const uint8_t *file, const size_t size_to_read);
 const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_to_read);
+const std::vector<uint64_t> read_vec_bp128(const uint8_t *file, const size_t size_to_read, const uint8_t encoding);
 
 
 template <MapType M>
@@ -231,6 +235,12 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
         case EncType::FLS:
           local_offset += write_vec_fls(offsets_dedup, file);
           break;
+        case EncType::BPD1: [[fallthrough]];
+        case EncType::BPD2: [[fallthrough]];
+        case EncType::BPD4: [[fallthrough]];
+        case EncType::BPDM:
+            local_offset += write_vec_bp128(offsets_dedup, file, enc_type);
+            break;
         default:
           throw std::invalid_argument("Not a valid encoding type");
       }
@@ -257,6 +267,12 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
       break;
     case EncType::FLS:
       write_vec_fls(id_to_offset, file);
+      break;
+    case EncType::BPD1: [[fallthrough]];
+    case EncType::BPD2: [[fallthrough]];
+    case EncType::BPD4: [[fallthrough]];
+    case EncType::BPDM:
+      write_vec_bp128(id_to_offset, file, enc_type);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -325,6 +341,26 @@ bool check_offsets_file_by_type(
             const uint64_t enc_data_size = enc_data.size();
             const uint64_t enc_num_blocks_size = enc_num_blocks.size();
             local_offset += enc_data_size + enc_num_blocks_size;
+          break;
+        }
+        case EncType::BPD1: [[fallthrough]];
+        case EncType::BPD2: [[fallthrough]];
+        case EncType::BPD4: [[fallthrough]];
+        case EncType::BPDM:
+        {
+          size_t orig_size = offsets_dedup.size();
+
+          std::vector<uint32_t> vec32(offsets_dedup.begin(), offsets_dedup.end());
+
+          for (const auto v : offsets_dedup) {
+            if (v > UINT32_MAX) {
+              throw std::runtime_error("uint32_t conversion overflow");
+            }
+          }
+          const std::vector<uint32_t> enc_data = encode_simdbp128(vec32, enc_type);
+          const uint64_t enc_data_size = enc_data.size() * sizeof(uint32_t);
+
+          local_offset += enc_data_size + sizeof(orig_size);
           break;
         }
         default:

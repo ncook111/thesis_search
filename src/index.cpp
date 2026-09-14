@@ -1,3 +1,5 @@
+#include "tokenizer.h"
+#include "simdbp128.h"
 #include "index.h"
 #include "coder.h"
 #include "fst.h"
@@ -193,6 +195,12 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
     case EncType::FLS:
       write_vec_fls(entry_offsets, file);
       break;
+    case EncType::BPD1: [[fallthrough]];
+    case EncType::BPD2: [[fallthrough]];
+    case EncType::BPD4: [[fallthrough]];
+    case EncType::BPDM:
+      write_vec_bp128(entry_offsets, file, enc_type);
+      break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
       break;
@@ -301,13 +309,15 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
   switch (enc_type) {
     case EncType::GVB:
       return read_vec_gvb(file + addr_offset, size_to_read);
-      break;
     case EncType::PEF:
       return read_vec_pef(file + addr_offset, size_to_read);
-      break;
     case EncType::FLS: 
       return read_vec_fls(file + addr_offset, size_to_read);
-      break;
+    case EncType::BPD1: [[fallthrough]];
+    case EncType::BPD2: [[fallthrough]];
+    case EncType::BPD4: [[fallthrough]];
+    case EncType::BPDM:
+      return read_vec_bp128(file + addr_offset, size_to_read, enc_type);
     default:
       throw std::invalid_argument("Not a valid encoding type");
   }
@@ -468,6 +478,12 @@ get_tok_offsets(const uint64_t token_id,
       case EncType::FLS:
         docids = read_vec_fls(file + addr_offset, field_sizes[i]);
         break;
+      case EncType::BPD1: [[fallthrough]];
+      case EncType::BPD2: [[fallthrough]];
+      case EncType::BPD4: [[fallthrough]];
+      case EncType::BPDM:
+        docids = read_vec_bp128(file + addr_offset, field_sizes[i], enc_type);
+        break;
       default:
         throw std::invalid_argument("Not a valid encoding type");
     }
@@ -517,6 +533,16 @@ const std::vector<uint64_t> read_entry_offsets_fls(const uint8_t *file, const si
   return decoded;
 }
 
+const std::vector<uint64_t> read_entry_offsets_bp128(const uint8_t *file, const size_t size_to_read, uint8_t enc_type) {
+  std::vector<uint64_t> decoded = read_vec_bp128(file, size_to_read, enc_type);
+
+  // Convert to 0 indexing
+  for (auto &o : decoded)
+    --o;
+
+  return decoded;
+}
+
 // Output converts offsets values from file from 1 indexing back to 0 indexing
 const std::vector<uint64_t>
 get_entry_offsets_from_file(const std::string &file_name,
@@ -538,13 +564,15 @@ get_entry_offsets_from_file(const std::string &file_name,
   switch (enc_type) {
   case EncType::GVB:
     return read_entry_offsets_gvb(file + header.entry_offsets_header, size_to_read);
-    break;
   case EncType::PEF:
     return read_entry_offsets_pef(file + header.entry_offsets_header, size_to_read);
-    break;
   case EncType::FLS:
     return read_entry_offsets_fls(file + header.entry_offsets_header, size_to_read);
-    break;
+  case EncType::BPD1: [[fallthrough]];
+  case EncType::BPD2: [[fallthrough]];
+  case EncType::BPD4: [[fallthrough]];
+  case EncType::BPDM:
+      return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, enc_type);
   default:
     throw std::invalid_argument("Not a valid encoding type");
   }
@@ -642,6 +670,28 @@ const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &fi
   return enc_data_size + enc_num_blocks_size;
 }
 
+const uint64_t write_vec_bp128(std::vector<uint64_t> vec, std::ofstream &file, const uint8_t encoding) {
+  size_t orig_size = vec.size();
+
+  std::vector<uint32_t> vec32(vec.begin(), vec.end());
+
+  for (const auto v : vec) {
+    if (v > UINT32_MAX) {
+      throw std::runtime_error("uint32_t conversion overflow");
+    }
+  }
+  const std::vector<uint32_t> enc_data = encode_simdbp128(vec32, encoding);
+  const uint64_t enc_data_size = enc_data.size() * sizeof(uint32_t);
+
+  std::vector<uint8_t> enc_orig_size = vb_encode_num_uint64_t(orig_size);
+  const uint64_t enc_orig_size_size = enc_orig_size.size();
+  
+  file.write(reinterpret_cast<const char *>(enc_orig_size.data()), enc_orig_size_size);
+  file.write(reinterpret_cast<const char *>(enc_data.data()), enc_data_size);
+
+  return enc_data_size + enc_orig_size_size;
+}
+
 const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read) {
   std::vector<uint8_t> decoded_gvb(size_to_read);
   std::memcpy(reinterpret_cast<char *>(decoded_gvb.data()), file, size_to_read);                                             
@@ -668,4 +718,19 @@ const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_
   std::memcpy(reinterpret_cast<char *>(encoded_fls.data()), file + num_bytes, size_to_read - num_bytes);
 
   return fls_decode_uint64_t(encoded_fls, num_blocks);
+}
+
+const std::vector<uint64_t> read_vec_bp128(const uint8_t *file, const size_t size_to_read, const uint8_t encoding) {
+  size_t eos_size_to_read = std::min({size_to_read, (size_t)10}); // orig_size can be up to 10 bytes, get lesser of size_to_read or 10
+  std::vector<uint8_t> enc_orig_size(file, file + eos_size_to_read); 
+
+  size_t num_bytes;
+  size_t orig_size = vb_decode_num_uint64_t(enc_orig_size, num_bytes);
+
+  std::vector<uint32_t> encoded((size_to_read - num_bytes) / sizeof(uint32_t));
+  std::memcpy(reinterpret_cast<char *>(encoded.data()), file + num_bytes, size_to_read - num_bytes);  
+
+  const std::vector<uint32_t> decoded = decode_simdbp128(encoded, encoding, orig_size);
+
+  return std::vector<uint64_t>(decoded.begin(), decoded.end());
 }

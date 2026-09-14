@@ -46,6 +46,10 @@ endif()
 
 add_library(simd_target INTERFACE)
 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    target_compile_options(simd_target INTERFACE -mavx)
+endif()
+
 if (_simd STREQUAL "scalar")
     target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SCALAR=1)
@@ -106,6 +110,18 @@ elseif (_simd STREQUAL "avx512bw")
         ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp)
 endif()
 
+###### SIMDBP128 ######
+
+include(FetchContent)
+
+FetchContent_Declare(
+    simdcomp_src
+    GIT_REPOSITORY https://github.com/fast-pack/SIMDCompressionAndIntersection.git
+    GIT_TAG        v0.2.0
+)
+set(SIMDCOMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)   # don't build their unit/bench/example executables
+FetchContent_MakeAvailable(simdcomp_src)
+
 add_library(indexer_lib
     src/ingest.cpp
     src/coder.cpp
@@ -115,6 +131,7 @@ add_library(indexer_lib
     src/helper.cpp
     src/pef.cpp
     src/fls.cpp
+    src/simdbp128.cpp
     src/search.cpp
     src/output.cpp
     src/crc.cpp
@@ -137,6 +154,7 @@ target_link_libraries(indexer_lib PUBLIC
     Boost::program_options
     ${OPENFST_LIBRARY}
     fastlanes_bp
+    SIMDCompressionAndIntersection::SIMDCompressionAndIntersection
 )
 
 add_executable(indexer src/indexer.cpp)

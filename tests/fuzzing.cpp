@@ -100,7 +100,7 @@ void generateFuzzedIndexFolder(const std::string &index_path) {
     generateFuzzedIndexFile(index_path + "/fuzzed_4.bin");
 }
 
-std::vector<uint64_t> generate_rand_int_vec_dist(size_t size) {
+std::vector<uint64_t> generate_rand_uint64_t_vec_dist(size_t size) {
     std::mt19937_64 eng(42);
     std::uniform_int_distribution<uint64_t> distr_64;
 
@@ -148,4 +148,50 @@ std::vector<uint64_t> generate_rand_int_vec_dist(size_t size) {
     }
 
     return std::vector<uint64_t>(input_set.begin(), input_set.end());
+}
+
+std::vector<uint32_t> generate_rand_uint32_t_vec_dist(size_t size) {
+    std::mt19937 eng(42);
+    std::uniform_int_distribution<uint32_t> distr_32;
+
+    std::set<uint32_t> input_set;
+    std::vector<uint32_t> input;
+
+    const int per_range = size / 4;
+
+    const uint32_t moduli[] = {
+        0xFF,
+        0xFFFF,
+        0xFFFFFF,
+        0xFFFFFFFF
+    };
+
+    for (uint32_t mod : moduli) {
+        int added = 0;
+
+        if (mod < per_range) {
+            // Start at 1 to skip 0
+            for (uint32_t i = 1; i < mod; ++i) {
+                input_set.insert(i);
+            }
+        } else {
+            while (added < per_range) {
+                uint32_t val = distr_32(eng) % mod;
+                if (val != 0 && input_set.insert(val).second) {
+                    ++added;
+                }
+            }
+        }
+    }
+
+    // Likely will be short some values, insert the rest
+    size_t leftover = size - input_set.size();
+    while (leftover > 0) {
+        uint32_t val = distr_32(eng); // full 32-bit range, no modulo bias
+        if (val != 0 && input_set.insert(val).second) {
+            --leftover;
+        }
+    }
+
+    return std::vector<uint32_t>(input_set.begin(), input_set.end());
 }
