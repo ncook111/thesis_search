@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#define MAX_INT_VAL ((uint64_t)1 << 62)
+
 namespace TokenType {
 enum Value : uint8_t {
   ALPHA = 0,

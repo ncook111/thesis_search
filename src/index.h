@@ -103,7 +103,7 @@ std::vector<M> read_pef_tokens(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in universe and n first
-  const auto  &[header, size] = get_bv_header(file + offset);
+  const auto  &[header, size] = read_bv_header(file + offset);
 
   // If null return empty vec
   if (!header.n)
@@ -111,7 +111,7 @@ std::vector<M> read_pef_tokens(const std::string &file_path,
   
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
-  const std::vector<uint64_t> offsets = partitioned_ef_decode(bv, header.universe, header.n);
+  const std::vector<uint64_t> offsets = partitioned_ef_decode_u64(bv, header.universe, header.n);
 
   return offsets;
 }
@@ -127,7 +127,7 @@ const uint64_t create_pef_tokens(const std::vector<M> &tokens,
   const uint64_t pos = file.tellp();
 
   succinct::bit_vector pef_tokens;
-  const Pef_Header header = partitioned_ef_encode(pef_tokens, tokens);
+  const Pef_Header header = partitioned_ef_encode_u64(pef_tokens, tokens);
   const std::vector<uint8_t> compressed = gvb_encode_uint64_t({header.num_bits+1, header.universe+1, header.n+1});
 
   // Write size of following compressed header
@@ -312,7 +312,7 @@ bool check_offsets_file_by_type(
         case EncType::PEF:
         {
           succinct::bit_vector enc;
-          const Pef_Header header = partitioned_ef_encode(enc, offsets_dedup);
+          const Pef_Header header = partitioned_ef_encode_u64(enc, offsets_dedup);
           const std::vector<uint8_t> compressed = gvb_encode_uint64_t({header.num_bits+1, header.universe+1, header.n+1});
 
           // Write size of following compressed header

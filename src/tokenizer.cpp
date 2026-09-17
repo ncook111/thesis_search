@@ -360,12 +360,14 @@ void Tokenizer::tokenize_string(const std::string &input) {
 }
 
 void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
-  std::int64_t res_int;
+  std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
   res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_int, options);
   if (res_err.ec == std::errc()) {
+    if (res_int > MAX_INT_VAL) return; // Guard against values that trigger a bug in the PEF library
+
     // File tokenization
     if (offset) {
         num_tokens[res_int][field_id].push_back(offset);
@@ -383,18 +385,20 @@ void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
 }
 
 void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
-  std::int64_t res_int;
+  std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
-  res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_int, options);
+  res_err = fast_float::from_chars_advanced(curr_token.data() + 1, curr_token.data() + curr_token.size(), res_int, options);
   if (res_err.ec == std::errc()) {
+    if (res_int > MAX_INT_VAL) return; // Guard against values that trigger a bug in the PEF library
+    
     // File tokenization
     if (offset) {
-        neg_num_tokens[res_int * -1][field_id].push_back(offset);
+        neg_num_tokens[res_int][field_id].push_back(offset);
     // String tokenization
     } else {
-        neg_num_tokens_q.insert(res_int * -1);
+        neg_num_tokens_q.insert(res_int);
     }
   } else if (res_err.ec == std::errc::invalid_argument) {
     std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
@@ -446,6 +450,7 @@ void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
 
   curr_token.erase();
 }
+
 void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::istringstream in(curr_token);
   std::chrono::seconds timeTimePoint;
