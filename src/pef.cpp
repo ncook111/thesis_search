@@ -43,7 +43,7 @@ partitioned_ef_decode_u32(const succinct::bit_vector &bv_f, const uint64_t unive
 
 // Encoding a single vector with ef
 const Pef_Header
-partitioned_ef_encode(succinct::bit_vector &bv,
+partitioned_ef_encode_u64(succinct::bit_vector &bv,
                       const std::vector<uint64_t> &nums) {
   const uint64_t universe = nums.back() + 1;
   const uint64_t n = nums.size();
@@ -62,7 +62,7 @@ partitioned_ef_encode(succinct::bit_vector &bv,
 }
 
 const std::vector<uint64_t>
-partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe,
+partitioned_ef_decode_u64(const succinct::bit_vector &bv_f, const uint64_t universe,
                       const uint64_t n) {
   ds2i::partitioned_sequence<>::enumerator e(bv_f, 0, universe, n,
                                              ds2i::global_parameters());
@@ -174,7 +174,7 @@ const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header,
 
 uint64_t write_pef_to_file(const std::vector<uint64_t> &vec, std::ofstream &file) {
   succinct::bit_vector enc;
-  const Pef_Header header = partitioned_ef_encode(enc, vec);
+  const Pef_Header header = partitioned_ef_encode_u64(enc, vec);
   
   const size_t c_header_size = write_bv_header(header, file);
 
@@ -191,6 +191,6 @@ std::vector<uint64_t> read_pef_from_file(const uint8_t *file, const size_t size_
   const succinct::bit_vector bv =
       get_bv(file + size, header, size_to_read - size);
 
-  return partitioned_ef_decode(bv, header.universe, header.n);
+  return partitioned_ef_decode_u64(bv, header.universe, header.n);
 
 }

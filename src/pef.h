@@ -24,10 +24,10 @@ const std::vector<uint32_t>
 partitioned_ef_decode_u32(const succinct::bit_vector &bv_f, const uint64_t universe,
                       const uint64_t n);
 const Pef_Header
-partitioned_ef_encode(succinct::bit_vector &bv,
+partitioned_ef_encode_u64(succinct::bit_vector &bv,
                       const std::vector<uint64_t> &nums);
 const std::vector<uint64_t>
-partitioned_ef_decode(const succinct::bit_vector &bv_f, const uint64_t universe,
+partitioned_ef_decode_u64(const succinct::bit_vector &bv_f, const uint64_t universe,
                       const uint64_t n);
 const std::optional<uint64_t> find_pef_id(const std::string &file_path,
                                           const uint64_t offset,

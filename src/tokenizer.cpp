@@ -404,7 +404,7 @@ void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
     
     // File tokenization
     if (offset) {
-        insert_into_fields_vec(num_tokens[res_int], offset, field_id);
+        insert_into_fields_vec(neg_num_tokens[res_int], offset, field_id);
     // String tokenization
     } else {
         neg_num_tokens_q.insert(res_int);
@@ -539,7 +539,7 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
 
   if (curr_token.size()) {
     std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
-    alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
+    insert_into_fields_vec(alpha_tokens[curr_token], offset, field_id);
     curr_token.erase();
   }
 }
