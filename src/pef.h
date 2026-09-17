@@ -3,7 +3,6 @@
 
 #include "helper.h"
 #include "partitioned_sequence.hpp"
-#include "pef.h"
 #include <succinct/bit_vector.hpp>
 #include <utility>
 
@@ -34,5 +33,7 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path,
                                              const uint64_t offset,
                                              const uint64_t size_to_read,
                                              const Range range);
+uint64_t write_pef_to_file(const std::vector<uint64_t> &vec, std::ofstream &file);
+std::vector<uint64_t> read_pef_from_file(const uint8_t *file, const size_t size_to_read);
 
 #endif

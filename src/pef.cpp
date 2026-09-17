@@ -123,3 +123,33 @@ const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header,
 
   return succinct::bit_vector(&bvb2);
 }
+
+uint64_t write_pef_to_file(const std::vector<uint64_t> &vec, std::ofstream &file) {
+  succinct::bit_vector enc;
+  const Pef_Header header = partitioned_ef_encode(enc, vec);
+  const std::vector<uint8_t> compressed = gvb_encode_uint64_t({header.num_bits+1, header.universe+1, header.n+1});
+
+  // Write size of following compressed header
+  const uint8_t size_byte = static_cast<uint8_t>(compressed.size());
+  file.write(reinterpret_cast<const char *>(&size_byte), sizeof(size_byte));
+
+  // Write num_bits, universe and n
+  file.write(reinterpret_cast<const char *>(compressed.data()), compressed.size());
+  
+  const uint8_t c_header_size = sizeof(uint8_t) + compressed.size();
+
+  // Write id_to_offsets data
+  uint64_t enc_size = enc.data().size() * sizeof(uint64_t);
+  file.write(reinterpret_cast<const char *>(enc.data().data()), enc_size);
+
+  return enc_size + c_header_size;
+}
+
+std::vector<uint64_t> read_pef_from_file(const uint8_t *file, const size_t size_to_read) {
+  // Read in universe and n first
+  const auto  &[header, size] = get_bv_header(file);
+  const succinct::bit_vector bv =
+      get_bv(file + size, header, size_to_read - size);
+
+  return partitioned_ef_decode(bv, header.universe, header.n);
+}

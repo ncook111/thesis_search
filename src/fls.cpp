@@ -164,3 +164,28 @@ const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &en
 
     return decoded;
 }
+
+uint64_t write_fls_to_file(const std::vector<uint64_t> &vec, std::ofstream &file) {
+  std::vector<uint8_t> enc_data;
+  std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec, enc_data);
+  const uint64_t enc_data_size = enc_data.size();
+  const uint64_t enc_num_blocks_size = enc_num_blocks.size();
+  
+  file.write(reinterpret_cast<const char *>(enc_num_blocks.data()), enc_num_blocks.size());
+  file.write(reinterpret_cast<const char *>(enc_data.data()), enc_data.size());
+
+  return enc_data_size + enc_num_blocks_size;
+}
+
+std::vector<uint64_t> read_fls_from_file(const uint8_t *file, const size_t size_to_read) {
+  size_t enb_size_to_read = std::min({size_to_read, (size_t)10}); // num_blocks can be up to 10 bytes, get lesser of size_to_read or 10
+  std::vector<uint8_t> enc_num_blocks(file, file + enb_size_to_read); 
+  size_t num_bytes;
+  size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_bytes);
+
+  std::vector<uint8_t> encoded_fls(size_to_read - num_bytes);
+
+  std::memcpy(reinterpret_cast<char *>(encoded_fls.data()), file + num_bytes, size_to_read - num_bytes);
+
+  return fls_decode_uint64_t(encoded_fls, num_blocks);
+}

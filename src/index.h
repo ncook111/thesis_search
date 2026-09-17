@@ -89,15 +89,6 @@ std::pair<uint64_t, uint64_t>
 get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
                                const uint8_t type);
 void check_index_dir_valid(const std::string &index_path);
-const uint64_t write_vec_gvb(const std::vector<uint64_t> &vec, std::ofstream &file);
-const uint64_t write_vec_pef(const std::vector<uint64_t> &vec, std::ofstream &file);
-const uint64_t write_vec_fls(const std::vector<uint64_t> &vec, std::ofstream &file);
-const uint64_t write_vec_bp128(std::vector<uint64_t> vec, std::ofstream &file, const uint8_t encoding);
-const std::vector<uint64_t> read_vec_gvb(const uint8_t *file, const size_t size_to_read);
-const std::vector<uint64_t> read_vec_pef(const uint8_t *file, const size_t size_to_read);
-const std::vector<uint64_t> read_vec_fls(const uint8_t *file, const size_t size_to_read);
-const std::vector<uint64_t> read_vec_bp128(const uint8_t *file, const size_t size_to_read, const uint8_t encoding);
-
 
 template <MapType M>
 std::vector<M> read_pef_tokens(const std::string &file_path,
@@ -227,19 +218,19 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
 
       switch (enc_type) {
         case EncType::GVB:
-          local_offset += write_vec_gvb(offsets_dedup, file);
+          local_offset += write_gvb_to_file(offsets_dedup, file);
           break;
         case EncType::PEF:
-          local_offset += write_vec_pef(offsets_dedup, file);
+          local_offset += write_pef_to_file(offsets_dedup, file);
           break;
         case EncType::FLS:
-          local_offset += write_vec_fls(offsets_dedup, file);
+          local_offset += write_fls_to_file(offsets_dedup, file);
           break;
         case EncType::BPD1: [[fallthrough]];
         case EncType::BPD2: [[fallthrough]];
         case EncType::BPD4: [[fallthrough]];
         case EncType::BPDM:
-            local_offset += write_vec_bp128(offsets_dedup, file, enc_type);
+            local_offset += write_bp128_to_file(offsets_dedup, file, enc_type);
             break;
         default:
           throw std::invalid_argument("Not a valid encoding type");
@@ -260,19 +251,19 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
 
   switch (enc_type) {
     case EncType::GVB:
-      write_vec_gvb(id_to_offset, file);
+      write_gvb_to_file(id_to_offset, file);
       break;
     case EncType::PEF:
-      write_vec_pef(id_to_offset, file);
+      write_pef_to_file(id_to_offset, file);
       break;
     case EncType::FLS:
-      write_vec_fls(id_to_offset, file);
+      write_fls_to_file(id_to_offset, file);
       break;
     case EncType::BPD1: [[fallthrough]];
     case EncType::BPD2: [[fallthrough]];
     case EncType::BPD4: [[fallthrough]];
     case EncType::BPDM:
-      write_vec_bp128(id_to_offset, file, enc_type);
+      write_bp128_to_file(id_to_offset, file, enc_type);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");

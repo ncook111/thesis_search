@@ -15,6 +15,8 @@ const std::vector<uint64_t>
 gvb_decode_uint64_t(const std::vector<uint8_t> &bytes);
 inline const uint8_t get_length(const uint64_t num);
 inline const uint8_t get_length(const uint32_t num);
+uint64_t write_gvb_to_file(const std::vector<uint64_t> &vec, std::ofstream &file);
+std::vector<uint64_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read);
 void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 

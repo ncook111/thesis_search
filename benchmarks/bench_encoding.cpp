@@ -589,39 +589,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-// BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
-
-// BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
-
-// BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
-
-// BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
-
-    BENCHMARK_REGISTER_F(U32Vec, simdbp128_d1_encode)
+BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -629,7 +597,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32Vec, simdbp128_d2_encode)
+BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -637,7 +605,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32Vec, simdbp128_d4_encode)
+BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -645,7 +613,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32Vec, simdbp128_dm_encode)
+BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -653,39 +621,39 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, simdbp128_d1_encode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, simdbp128_d2_encode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, simdbp128_d4_encode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, simdbp128_dm_encode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32BPD1Decode, simdbp128_d1_decode)
+BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -693,7 +661,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32BPD2Decode, simdbp128_d2_decode)
+BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -701,7 +669,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32BPD4Decode, simdbp128_d4_decode)
+BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -709,7 +677,7 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-    BENCHMARK_REGISTER_F(U32BPDMDecode, simdbp128_dm_decode)
+BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
@@ -717,10 +685,42 @@ BENCHMARK_DEFINE_F(U32BPDMDecode, simdbp128_dm_decode)(benchmark::State& state) 
     ->Arg(10000000) // 10m
     ->Iterations(50);
 
-// BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
-//     ->Arg(1000) // 1k
-//     ->Arg(10000) // 10k
-//     ->Arg(100000) // 100k
-//     ->Arg(1000000) // 1m
-//     ->Arg(10000000) // 10m
-//     ->Iterations(50);
+BENCHMARK_REGISTER_F(U32BPD1Decode, simdbp128_d1_decode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
+
+BENCHMARK_REGISTER_F(U32BPD2Decode, simdbp128_d2_decode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
+
+BENCHMARK_REGISTER_F(U32BPD4Decode, simdbp128_d4_decode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
+
+BENCHMARK_REGISTER_F(U32BPDMDecode, simdbp128_dm_decode)
+->Arg(1000) // 1k
+->Arg(10000) // 10k
+->Arg(100000) // 100k
+->Arg(1000000) // 1m
+->Arg(10000000) // 10m
+->Iterations(50);
+
+BENCHMARK_REGISTER_F(U64DeltaDecode, delta_u64_t_decode)
+    ->Arg(1000) // 1k
+    ->Arg(10000) // 10k
+    ->Arg(100000) // 100k
+    ->Arg(1000000) // 1m
+    ->Arg(10000000) // 10m
+    ->Iterations(50);
