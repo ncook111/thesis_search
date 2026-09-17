@@ -19,15 +19,6 @@
 #include <time.h>
 #include "logfmt_parser.h"
 
-void Tokenizer::insert_into_fields_vec(std::vector<std::vector<uint64_t>> &vec, const uint64_t offset, const uint64_t field_id) {
-  // First element inserted here, set up vector to fit all fields
-  if (vec.size() == 0) {
-    vec = std::vector<std::vector<uint64_t>>(fields.size(), std::vector<uint64_t>());
-  }
-
-  vec[field_id].push_back(offset);
-}
-
 const bool Tokenizer::is_pint(const std::string &s) const {
   size_t i = s.front() == '+' ? 1 : 0;
 
@@ -379,7 +370,7 @@ void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
 
     // File tokenization
     if (offset) {
-        insert_into_fields_vec(num_tokens[res_int], offset, field_id);
+        num_tokens[res_int][field_id].push_back(offset);
     // String tokenization
     } else {
         num_tokens_q.insert(res_int);
@@ -404,7 +395,7 @@ void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
     
     // File tokenization
     if (offset) {
-        insert_into_fields_vec(neg_num_tokens[res_int], offset, field_id);
+        neg_num_tokens[res_int][field_id].push_back(offset);
     // String tokenization
     } else {
         neg_num_tokens_q.insert(res_int);
@@ -426,7 +417,7 @@ void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
   if (res_err.ec == std::errc()) {
     // File tokenization
     if (offset)
-      insert_into_fields_vec(float_tokens[res_float], offset, field_id);
+      float_tokens[std::move(res_float)][field_id].push_back(offset);
     // String tokenization
     else
       float_tokens_q.insert(res_float);
@@ -451,7 +442,7 @@ void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
   } else {
     // File tokenization
     if (offset)
-      insert_into_fields_vec(d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())], offset, field_id);
+      d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id].push_back(offset);
     // String tokenization
     else
       d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
@@ -472,7 +463,7 @@ void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
   } else {
     // File tokenization
     if (offset)
-      insert_into_fields_vec(t_tokens[static_cast<uint64_t>(timeTimePoint.count())], offset, field_id);
+      t_tokens[static_cast<uint64_t>(timeTimePoint.count())][field_id].push_back(offset);
     // String tokenization
     else
       t_tokens_q.insert(static_cast<uint64_t>(timeTimePoint.count()));
@@ -484,7 +475,7 @@ void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, cons
   // File tokenization
   uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token);
   if (offset)
-    insert_into_fields_vec(ipv4_tokens[ip_addr], offset, field_id);
+    ipv4_tokens[ip_addr][field_id].push_back(offset);
   // String tokenization
   else
     ipv4_tokens_q.insert(ip_addr);
@@ -539,7 +530,7 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
 
   if (curr_token.size()) {
     std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
-    insert_into_fields_vec(alpha_tokens[curr_token], offset, field_id);
+    alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
     curr_token.erase();
   }
 }
