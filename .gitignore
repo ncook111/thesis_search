@@ -6,3 +6,4 @@ third_party/
 build/
 benchmarks/bench_data/
 tests/test_data/
+.DS_Store
