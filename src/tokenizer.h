@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#define MAX_INT_VAL ((uint64_t)1 << 62)
+
 namespace TokenType {
 enum Value : uint8_t {
   ALPHA = 0,
@@ -39,14 +41,14 @@ public:
   // E.g. "Wooden Table" would have an entry for "wooden" and "table"
   // Each entry contains a vector for each field tokenized, with each vector containing
   // Another vector of docids in which that token is found
-  std::map<std::string, std::map<uint64_t, std::vector<uint64_t>>> alpha_tokens;
-  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> num_tokens;
-  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> neg_num_tokens;
-  std::map<float, std::map<uint64_t, std::vector<uint64_t>>> float_tokens;
-  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> d_tokens;
-  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> t_tokens;
-  std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> ipv4_tokens;
-  std::map<uint64_t, std::map<uint64_t,std::vector<uint64_t>>> ipv6_tokens;
+  std::map<std::string, std::vector<std::vector<uint64_t>>> alpha_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> num_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> neg_num_tokens;
+  std::map<float, std::vector<std::vector<uint64_t>>> float_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> d_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> t_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> ipv4_tokens;
+  std::map<uint64_t, std::vector<std::vector<uint64_t>>> ipv6_tokens;
   
   // Map of boolean tokens for each field
   std::map<uint64_t, std::vector<uint64_t>> t_bool_tokens;
@@ -118,6 +120,7 @@ private:
   void handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   void handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void insert_into_fields_vec(std::vector<std::vector<uint64_t>> &vec, const uint64_t offset, const uint64_t field_id);
 
   std::string file_path;
   uint8_t type;

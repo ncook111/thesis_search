@@ -103,7 +103,7 @@ std::vector<M> read_pef_tokens(const std::string &file_path,
   const size_t file_size = mf.size();
 
   // Read in universe and n first
-  const auto  &[header, size] = get_bv_header(file + offset);
+  const auto  &[header, size] = read_bv_header(file + offset);
 
   // If null return empty vec
   if (!header.n)
@@ -172,7 +172,7 @@ bool check_pef_tokens(const std::vector<M> &tokens, const std::string file_path,
 
 template <MapType M>
 const Write_pos
-write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
+write_offsets_to_file(const std::map<M, std::vector<std::vector<uint64_t>>> &tokens_map,
                       std::ofstream &file, const uint8_t enc_type) {
   if (tokens_map.size() == 0) {
     return Write_pos{static_cast<uint64_t>(file.tellp()),
@@ -189,13 +189,13 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
   for (const auto &[_, fields] : tokens_map) {
     id_to_offset.push_back(offset);
     
-    const uint16_t num_fields = fields.size();
-
     std::vector<uint16_t> field_ids;
-    field_ids.reserve(num_fields);
-    for (const auto &[field_id, _] : fields)
-      field_ids.push_back(field_id);
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (fields[i].size() > 0)
+        field_ids.push_back(i);
+    }
 
+    const uint16_t num_fields = field_ids.size();
     std::vector<uint32_t> field_offsets;
     field_offsets.reserve(num_fields);
 
@@ -210,9 +210,9 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     const uint64_t f_header_size = sizeof(uint32_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
-    for (const auto &[_, offsets] : fields) {
+    for (auto idx : field_ids) {
       // Duplicate docids may be present from tokenization stage, remove them
-      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(offsets);
+      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(fields[idx]);
 
       field_offsets.push_back(local_offset);
 
@@ -274,7 +274,7 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
 
 template <MapType M>
 bool check_offsets_file_by_type(
-    const std::map<M, std::map<uint64_t, std::vector<uint64_t>>> &tokens_map,
+    const std::map<M, std::vector<std::vector<uint64_t>>> &tokens_map,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   std::vector<uint64_t> id_to_offset;
 
@@ -282,22 +282,22 @@ bool check_offsets_file_by_type(
   for (const auto &[_, fields] : tokens_map) {
     id_to_offset.push_back(offset);
     
-    const uint16_t num_fields = fields.size();
-
     std::vector<uint16_t> field_ids;
-    field_ids.reserve(num_fields);
-    for (const auto &[field_id, _] : fields)
-      field_ids.push_back(field_id);
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (fields[i].size() > 0)
+        field_ids.push_back(i);
+    }
 
+    const uint16_t num_fields = field_ids.size();
     std::vector<uint32_t> field_offsets;
     field_offsets.reserve(num_fields);
 
     const uint64_t f_header_size = sizeof(uint32_t) * num_fields + sizeof(uint16_t) * num_fields + sizeof(uint16_t);
 
     uint64_t local_offset = offset + f_header_size;
-    for (const auto &[id, offsets] : fields) {
+    for (const auto idx : field_ids) {
       // Duplicate docids may be present from tokenization stage, remove them
-      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(offsets);
+      const std::vector<uint64_t> offsets_dedup = remove_dups_sorted(fields[idx]);
 
       field_offsets.push_back(local_offset);
 
@@ -384,7 +384,12 @@ bool check_offsets_file_by_type(
 
   uint64_t token_id = 0;
   for (const auto &[_, fields] : tokens_map) {
-    for (const auto &[field_id, docids] : fields) {
+    size_t field_id = 0;
+    for (std::vector<uint64_t> docids : fields) {
+      if (docids.size() == 0) {
+        ++field_id;
+        continue;
+      }
       const std::vector<uint64_t> docids_dedup = remove_dups_sorted(docids); 
       std::vector<uint64_t> from_file = get_tok_offsets_from_file(token_id, id_to_offset, std::vector<uint64_t>() = {field_id}, file_name, type, enc_type);
       for (auto &i : from_file) ++i; // Normalise
@@ -402,6 +407,8 @@ bool check_offsets_file_by_type(
         std::cout << "docids[i] = " << docids_dedup[i] << std::endl;
         return false;
       }
+
+      ++field_id;
     }
     ++token_id;
   }
