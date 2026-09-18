@@ -196,11 +196,17 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
     case EncType::FLS:
       write_fls_to_file(entry_offsets, file);
       break;
-    case EncType::BPD1: [[fallthrough]];
-    case EncType::BPD2: [[fallthrough]];
-    case EncType::BPD4: [[fallthrough]];
+    case EncType::BPD1:
+      write_bp128_to_file(entry_offsets, file, EncType::BPD1);
+      break;
+    case EncType::BPD2:
+      write_bp128_to_file(entry_offsets, file, EncType::BPD2);
+      break;
+    case EncType::BPD4:
+      write_bp128_to_file(entry_offsets, file, EncType::BPD4);
+      break;
     case EncType::BPDM:
-      write_bp128_to_file(entry_offsets, file, enc_type);
+      write_bp128_to_file(entry_offsets, file, EncType::BPDM);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -314,19 +320,22 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
       return read_pef_from_file(file + addr_offset, size_to_read);
     case EncType::FLS: 
       return read_fls_from_file(file + addr_offset, size_to_read);
-    case EncType::BPD1: [[fallthrough]];
-    case EncType::BPD2: [[fallthrough]];
-    case EncType::BPD4: [[fallthrough]];
+    case EncType::BPD1:
+      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD1);
+    case EncType::BPD2:
+      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD2);
+    case EncType::BPD4:
+      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD4);
     case EncType::BPDM:
-      return read_bp128_from_file(file + addr_offset, size_to_read, enc_type);
+      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPDM);
     default:
       throw std::invalid_argument("Not a valid encoding type");
   }
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
-    const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
+  const uint64_t token_id, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
+  const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
@@ -336,8 +345,8 @@ const std::vector<uint64_t> get_tok_offsets_from_file(
 }
 
 const std::vector<uint64_t> get_tok_offsets_from_file(
-    const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
-    const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
+  const Range token_ids, const std::vector<uint64_t> &id_to_offset, const std::vector<uint64_t> &field_ids,
+  const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
@@ -414,7 +423,7 @@ get_tok_offsets_setup(const std::vector<uint64_t> &id_to_offset,
       offset = header.ipv4_offsets_header;
       break;
     default:
-      break;
+      throw std::invalid_argument("Not a valid token type");
   }
 
   return {tok_offsets_length, offset};
@@ -479,11 +488,14 @@ get_tok_offsets(const uint64_t token_id,
       case EncType::FLS:
         docids = read_fls_from_file(file + addr_offset, field_sizes[i]);
         break;
-      case EncType::BPD1: [[fallthrough]];
-      case EncType::BPD2: [[fallthrough]];
-      case EncType::BPD4: [[fallthrough]];
+      case EncType::BPD1:
+        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD1);
+      case EncType::BPD2:
+        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD2);
+      case EncType::BPD4:
+        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD4);
       case EncType::BPDM:
-        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], enc_type);
+        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPDM);
         break;
       default:
         throw std::invalid_argument("Not a valid encoding type");
@@ -515,13 +527,13 @@ const std::vector<uint64_t> read_entry_offsets_gvb(const uint8_t *file, const si
 }
 
 const std::vector<uint64_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
-  std::vector<uint64_t> offsets = read_pef_from_file(file, size_to_read);
+  std::vector<uint64_t> decoded = read_pef_from_file(file, size_to_read);
 
   // Convert back to 0 indexing
-  for (auto &o : offsets)
+  for (auto &o : decoded)
     --o;
 
-  return offsets;
+  return decoded;
 }
 
 const std::vector<uint64_t> read_entry_offsets_fls(const uint8_t *file, const size_t size_to_read) {
@@ -569,11 +581,14 @@ get_entry_offsets_from_file(const std::string &file_name,
     return read_entry_offsets_pef(file + header.entry_offsets_header, size_to_read);
   case EncType::FLS:
     return read_entry_offsets_fls(file + header.entry_offsets_header, size_to_read);
-  case EncType::BPD1: [[fallthrough]];
-  case EncType::BPD2: [[fallthrough]];
-  case EncType::BPD4: [[fallthrough]];
+  case EncType::BPD1:
+    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD1);
+  case EncType::BPD2:
+    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD2);
+  case EncType::BPD4:
+    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD4);
   case EncType::BPDM:
-      return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, enc_type);
+    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPDM);
   default:
     throw std::invalid_argument("Not a valid encoding type");
   }

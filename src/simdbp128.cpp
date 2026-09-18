@@ -41,9 +41,6 @@ std::vector<uint32_t> decode_simdbp128(std::vector<uint32_t> &input, const uint8
 
     vector<uint32_t> decoded(decoded_size);
     codec->decodeArray(input.data(), input.size(), decoded.data(), decoded_size);
-    
-    decoded.resize(decoded_size);
-    decoded.shrink_to_fit();
 
     return decoded;
 }

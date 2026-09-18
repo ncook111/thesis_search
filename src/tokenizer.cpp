@@ -55,21 +55,11 @@ const bool Tokenizer::is_float(const std::string &s) const {
     }
   }
 
-  // Determine if float
-  try {
-    size_t processed; // Number of characters processed, must match string size
-                      // to be valid float
-    std::stof(s, &processed);
-
-    if (processed == s.size())
-      return true;
-  } catch (const std::invalid_argument) {
-    return false;
-  } catch (const std::out_of_range) {
-    return false;
-  }
-
-  return false;
+  float res_float;
+  fast_float::from_chars_result res_err;
+  fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
+  res_err = fast_float::from_chars_advanced(s.data(), s.data() + s.size(), res_float, options);
+  return res_err.ec == std::errc() && res_err.ptr == s.data() + s.size();
 }
 
 const bool Tokenizer::is_date(const std::string &s) const {
