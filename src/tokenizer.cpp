@@ -172,18 +172,22 @@ inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
   if (is_float(s)) {
     return TokenType::FLOAT;
   }
+
   if (is_date(s)) {
     return TokenType::DATE;
   }
   if (is_time(s)) {
     return TokenType::TIME;
   }
+
   if (is_ipv4(s)) {
     return TokenType::IPV4;
   }
+
   if (is_bool(s)) {
     return TokenType::BOOLEAN;
   }
+  
   return TokenType::ALPHA;
 }
 

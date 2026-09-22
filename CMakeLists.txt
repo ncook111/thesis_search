@@ -26,8 +26,36 @@ if(NOT OPENFST_INCLUDE_DIR OR NOT OPENFST_LIBRARY)
     message(FATAL_ERROR "OpenFST not found, check `brew install openfst`")
 endif()
 
-add_subdirectory(third_party/csv-parser)
-add_subdirectory(third_party/ds2i/succinct)
+###### SIMDJSON ######
+
+FetchContent_Declare(
+    simdjson
+    GIT_REPOSITORY https://github.com/simdjson/simdjson.git
+    GIT_TAG        90adaa4aef486a1743dd888297c27cba64101f79 # 
+)
+FetchContent_MakeAvailable(simdjson)
+
+###### DS2I ######
+
+FetchContent_Declare(
+    ds2i_src
+    GIT_REPOSITORY https://github.com/ncook111/ds2i_u64.git
+    GIT_TAG        8a00f31448df4d7698d021b9be19eb0a2a4378c0
+    GIT_SUBMODULES succinct
+)
+FetchContent_Populate(ds2i_src)
+
+add_subdirectory(${ds2i_src_SOURCE_DIR}/succinct ${ds2i_src_BINARY_DIR}/succinct)
+
+###### CSV-PARSER ######
+
+FetchContent_Declare(
+    csv_src
+    GIT_REPOSITORY https://github.com/vincentlaucsb/csv-parser.git
+    GIT_TAG        5976d7a44df00ac55a6feec28a5e0a11d06f1872  # master @ 2026-09-21
+)
+set(CSV_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)   # don't build their example/demo programs
+FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
@@ -75,7 +103,7 @@ endif()
 FetchContent_Declare(
     fastlanes_src
     GIT_REPOSITORY https://github.com/cwida/FastLanes.git
-    GIT_TAG        dev
+    GIT_TAG        f0edc1020a538f1f8098640fce8347c9ac247a0d
 )
 FetchContent_Populate(fastlanes_src)
 
@@ -138,14 +166,12 @@ add_library(indexer_lib
     src/logfmt_parser.cpp
     src/query/parser.cpp
     src/query/ast.cpp
-    third_party/simdjson/simdjson.cpp
 )
 
 target_include_directories(indexer_lib PUBLIC
     include
     ${OPENFST_INCLUDE_DIR}
-    third_party/ds2i
-    third_party/simdjson
+    ${ds2i_src_SOURCE_DIR}
 )
 
 target_link_libraries(indexer_lib PUBLIC
@@ -155,6 +181,7 @@ target_link_libraries(indexer_lib PUBLIC
     ${OPENFST_LIBRARY}
     fastlanes_bp
     SIMDCompressionAndIntersection::SIMDCompressionAndIntersection
+    simdjson::simdjson
 )
 
 add_executable(indexer src/indexer.cpp)

@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 #include <filesystem>
 #include "cache_flush.h"
-#include "../../src/ingest.h"
-#include "../../src/helper.h"
+#include "../src/ingest.h"
+#include "../src/helper.h"
 
 constexpr size_t cache_size = 4096 * 1024;
 
@@ -12,23 +12,48 @@ static std::string index_path = "../benchmarks/bench_data/temp_indexes/index_sea
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-static const std::vector<std::string> bench_paths = {"small_data/data_1",/* "small_data/data_2", "small_data/data_3", "small_data/data_4", "medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", "large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4"*/};
+static const std::vector<std::string> bench_paths = {/*"small_data/data_1","small_data/data_2", "small_data/data_3", "small_data/data_4", */"medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", /*"large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4"*/};
 
 static const std::vector<std::vector<std::string>> queries = {
         // simple_search
-        {"[*] = \"male\"", "[*] = \"1994-01-01\"", "[*] = \"Pavel \"", "[*] = \"53\""},
+        {
+            "[*] = \"male\"", 
+            "[*] = \"1994-01-01\"", 
+            "[*] = \"Pavel \"", 
+            "[*] = \"53\""
+        },
 
         // union_search
-        {"[sex] = \"male\" | [sex] = \"female\"", "[dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}", "[authors] = \"Pavel\" | [authors] = \"Louis\"", "[time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\""},
+        {
+            "[sex] = \"male\" | [sex] = \"female\"",
+            "[dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}",
+            "[authors] = \"Pavel\" | [authors] = \"Louis\"",
+            "[time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\""
+        },
 
         // intersection_search
-        {"[sex] = \"male\" & [first_name] = \"bob\"", "[dob] = {1994-01-01,1995-12-31} & [acc_bal] = {0.1,2000.1}", "[authors] = \"Pavel\" & [authors] = \"Dimitry\"", "[time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\""},
+        {
+            "[sex] = \"male\" & [first_name] = \"bob\"",
+            "[dob] = {1994-01-01,1995-12-31} & [acc_bal] = {0.1,2000.1}",
+            "[authors] = \"Pavel\" & [authors] = \"Dimitry\"",
+            "[time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\""
+        },
 
         // combination_search
-        {"([sex] = \"male\" | [sex] = \"female\") & [first_name] = \"bob\"", "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1}", "([authors] = \"Pavel\" | [authors] = \"Louis\") & [title] = \"Graph Decompositions\"", "([time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\") | [time_stamp] = \"07:00:00\""},
+        {
+            "([sex] = \"male\" | [sex] = \"female\") & [first_name] = \"bob\"",
+            "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1}",
+            "([authors] = \"Pavel\" | [authors] = \"Louis\") & [title] = \"Graph Decompositions\"",
+            "([time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\") | [time_stamp] = \"07:00:00\""
+        },
 
         // complex combination_search
-        {"([sex] = \"male\" & [first_name] = \"bob\") | ([sex] = \"female\" & [first_name] = \"Gloria\" & ![city] = \"Kingsport\")", "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1} & ![acc_num] = \"74578716\"", "([authors] = \"Pavel\" | [authors] = \"Dimitry\" | [authors] = \"Alejandro\") & ([title] = \"Graph Decompositions\" | [title] = \"prompt diphoton\") & ![authors] = \"Berger\"", "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07::00::00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}"}
+        {
+            "([sex] = \"male\" & [first_name] = \"bob\") | ([sex] = \"female\" & [first_name] = \"Gloria\" & ![city] = \"Kingsport\")",
+            "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1} & ![acc_num] = \"74578716\"",
+            "([authors] = \"Pavel\" | [authors] = \"Dimitry\" | [authors] = \"Alejandro\") & ([title] = \"Graph Decompositions\" | [title] = \"prompt diphoton\") & ![authors] = \"Berger\"",
+            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07::00::00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}"
+        }
 }; 
 
 class IndexSearch : public benchmark::Fixture {
@@ -55,6 +80,11 @@ public:
             for (auto bench_path : bench_paths) {
                 create_mode(index_path + bench_path + "_gvb", csv_data_path + bench_path, {}, EncType::GVB);
                 create_mode(index_path + bench_path + "_pef", csv_data_path + bench_path, {}, EncType::PEF);
+                create_mode(index_path + bench_path + "_fls", csv_data_path + bench_path, {}, EncType::FLS);
+                create_mode(index_path + bench_path + "_bpd1", csv_data_path + bench_path, {}, EncType::BPD1);
+                create_mode(index_path + bench_path + "_bpd2", csv_data_path + bench_path, {}, EncType::BPD2);
+                create_mode(index_path + bench_path + "_bpd4", csv_data_path + bench_path, {}, EncType::BPD4);
+                create_mode(index_path + bench_path + "_bpdm", csv_data_path + bench_path, {}, EncType::BPDM);
             }
         });
     }
@@ -127,58 +157,77 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
 //     Arg3: file type
 //     Arg4: encoding
 // */
-// // Dataset 1
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Iterations(50);
+    ->Args({1, 0, FileType::CSV, EncType::GVB})
+    ->Args({1, 1, FileType::CSV, EncType::GVB})
+    ->Args({1, 2, FileType::CSV, EncType::GVB})
+    ->Args({1, 3, FileType::CSV, EncType::GVB})
+    ->Args({1, 0, FileType::CSV, EncType::PEF})
+    ->Args({1, 1, FileType::CSV, EncType::PEF})
+    ->Args({1, 2, FileType::CSV, EncType::PEF})
+    ->Args({1, 3, FileType::CSV, EncType::PEF})
+    ->Args({1, 0, FileType::CSV, EncType::FLS})
+    ->Args({1, 1, FileType::CSV, EncType::FLS})
+    ->Args({1, 2, FileType::CSV, EncType::FLS})
+    ->Args({1, 3, FileType::CSV, EncType::FLS})
+    ->Args({1, 0, FileType::CSV, EncType::BPD1})
+    ->Args({1, 1, FileType::CSV, EncType::BPD1})
+    ->Args({1, 2, FileType::CSV, EncType::BPD1})
+    ->Args({1, 3, FileType::CSV, EncType::BPD1})
+    ->Args({1, 0, FileType::CSV, EncType::BPD2})
+    ->Args({1, 1, FileType::CSV, EncType::BPD2})
+    ->Args({1, 2, FileType::CSV, EncType::BPD2})
+    ->Args({1, 3, FileType::CSV, EncType::BPD2})
+    ->Args({1, 0, FileType::CSV, EncType::BPD4})
+    ->Args({1, 1, FileType::CSV, EncType::BPD4})
+    ->Args({1, 2, FileType::CSV, EncType::BPD4})
+    ->Args({1, 3, FileType::CSV, EncType::BPD4})
+    ->Args({1, 0, FileType::CSV, EncType::BPDM})
+    ->Args({1, 1, FileType::CSV, EncType::BPDM})
+    ->Args({1, 2, FileType::CSV, EncType::BPDM})
+    ->Args({1, 3, FileType::CSV, EncType::BPDM})
+    ->Iterations(100);
 
-BENCHMARK_REGISTER_F(IndexSearch, union_search)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Iterations(50);
+// BENCHMARK_REGISTER_F(IndexSearch, union_search)
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 1, FileType::CSV, EncType::GVB})
+//     ->Args({1, 2, FileType::CSV, EncType::GVB})
+//     ->Args({1, 3, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 1, FileType::CSV, EncType::PEF})
+//     ->Args({1, 2, FileType::CSV, EncType::PEF})
+//     ->Args({1, 3, FileType::CSV, EncType::PEF})
+//     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Iterations(50);
+// BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 1, FileType::CSV, EncType::GVB})
+//     ->Args({1, 2, FileType::CSV, EncType::GVB})
+//     ->Args({1, 3, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 1, FileType::CSV, EncType::PEF})
+//     ->Args({1, 2, FileType::CSV, EncType::PEF})
+//     ->Args({1, 3, FileType::CSV, EncType::PEF})
+//     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(IndexSearch, combination_search)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Iterations(50);
+// BENCHMARK_REGISTER_F(IndexSearch, combination_search)
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 1, FileType::CSV, EncType::GVB})
+//     ->Args({1, 2, FileType::CSV, EncType::GVB})
+//     ->Args({1, 3, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 1, FileType::CSV, EncType::PEF})
+//     ->Args({1, 2, FileType::CSV, EncType::PEF})
+//     ->Args({1, 3, FileType::CSV, EncType::PEF})
+//     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Iterations(50);
+// BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)
+//     ->Args({1, 0, FileType::CSV, EncType::GVB})
+//     ->Args({1, 1, FileType::CSV, EncType::GVB})
+//     ->Args({1, 2, FileType::CSV, EncType::GVB})
+//     ->Args({1, 3, FileType::CSV, EncType::GVB})
+//     ->Args({1, 0, FileType::CSV, EncType::PEF})
+//     ->Args({1, 1, FileType::CSV, EncType::PEF})
+//     ->Args({1, 2, FileType::CSV, EncType::PEF})
+//     ->Args({1, 3, FileType::CSV, EncType::PEF})
+//     ->Iterations(50);

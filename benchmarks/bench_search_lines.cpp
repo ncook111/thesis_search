@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 #include <filesystem>
 #include "cache_flush.h"
-#include "../../src/ingest.h"
-#include "../../src/helper.h"
+#include "../src/ingest.h"
+#include "../src/helper.h"
 
 constexpr size_t cache_size = 4096 * 1024;
 

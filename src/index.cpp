@@ -490,10 +490,13 @@ get_tok_offsets(const uint64_t token_id,
         break;
       case EncType::BPD1:
         docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD1);
+        break;
       case EncType::BPD2:
         docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD2);
+        break;
       case EncType::BPD4:
         docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD4);
+        break;
       case EncType::BPDM:
         docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPDM);
         break;
