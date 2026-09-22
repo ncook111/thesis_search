@@ -1,7 +1,8 @@
 #include "../src/tokenizer.h"
+#include "../src/helper.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "testing_setup.h"
+#include "helper.h"
 
 TEST(alpha_test_file_csv, test1) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/csv/alpha_test_1.csv";

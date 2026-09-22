@@ -71,13 +71,10 @@ std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
 }
 
 void LogfmtParser::buffer_lines(size_t n_lines) {
-	std::cout << "here" << std::endl;
     for (size_t i = 0; i < n_lines; ++i) {
-		std::cout << "buffering lines" << std::endl;
         if (file_offset == file_size) break; 
 
         auto [line, line_start] = read_next_line();
-		std::cout << "buffering lines" << std::endl;
         buffered_rows.push_back(parse_line(line));
         buffered_line_offsets.push_back(line_start);
     }
@@ -89,7 +86,6 @@ bool LogfmtParser::has_next_row() {
     } 
         
     if (file_offset != file_size) { // More to read from file
-		std::cout << "buffering" << std::endl;
             buffer_lines(LINES_TO_BUFFER);
             return true;
     }

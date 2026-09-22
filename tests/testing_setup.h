@@ -6,11 +6,12 @@
 #include <gmock/gmock.h>
 #include <string>
 #include <filesystem>
+#include <fstream>
 #include "../src/ingest.h"
 #include "../src/helper.h"
 
-inline std::string index_path = "../../tests/test_data/all_indexes/index_1";
-inline std::string data_path = "../../tests/test_data/all_input_data/data_1";
+static std::string index_path = "../../tests/test_data/all_indexes/index_1";
+static std::string data_path = "../../tests/test_data/all_input_data/data_1";
 
 class index_setup : public ::testing::Test {
 protected:

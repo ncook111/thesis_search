@@ -1,6 +1,7 @@
 #include "../src/ingest.h"
 #include "../src/helper.h"
 #include "fuzzing.h"
+#include "helper.h"
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -32,6 +33,7 @@ TEST_F(program_test, creation_and_search_test_gvb) {
     std::string query = "[*] = \"here\"";
     ASSERT_NO_THROW(ret = search_mode(index_path+"index_gvb", "", output_path, query, EncType::GVB));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_pef) {
@@ -41,8 +43,9 @@ TEST_F(program_test, creation_and_search_test_pef) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_pef", data_path+"/data_1", output_path, query, EncType::PEF));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_pef", "", output_path, query, EncType::PEF));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_fls) {
@@ -52,8 +55,9 @@ TEST_F(program_test, creation_and_search_test_fls) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_fls", data_path+"/data_1", output_path, query, EncType::FLS));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_fls", "", output_path, query, EncType::FLS));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);;
 }
 
 TEST_F(program_test, creation_and_search_test_bpd1) {
@@ -63,8 +67,9 @@ TEST_F(program_test, creation_and_search_test_bpd1) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd1", data_path+"/data_1", output_path, query, EncType::BPD1));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd1", "", output_path, query, EncType::BPD1));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_bpd2) {
@@ -74,8 +79,9 @@ TEST_F(program_test, creation_and_search_test_bpd2) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd2", data_path+"/data_1", output_path, query, EncType::BPD2));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd2", "", output_path, query, EncType::BPD2));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_bpd4) {
@@ -85,8 +91,9 @@ TEST_F(program_test, creation_and_search_test_bpd4) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", data_path+"/data_1", output_path, query, EncType::BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query, EncType::BPD4));
     ASSERT_EQ(ret, 0);
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_bpdm) {
@@ -96,6 +103,7 @@ TEST_F(program_test, creation_and_search_test_bpdm) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", data_path+"/data_1", output_path, query, EncType::BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query, EncType::BPDM));
     ASSERT_EQ(ret, 0);
+     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
