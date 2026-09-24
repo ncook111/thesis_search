@@ -13,7 +13,7 @@
 constexpr size_t N = 1024;
 constexpr size_t N_LANES = 1024 / (sizeof(uint64_t) * 8);
 
-const uint16_t n_encoded_bytes_uint64_t(uint8_t bw) {
+const uint16_t n_encoded_bytes_uint64_t(const uint8_t bw) {
     return bw * 128;
 }
 

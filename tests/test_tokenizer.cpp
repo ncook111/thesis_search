@@ -18,7 +18,6 @@ TEST(alpha_test_file_csv, test1) {
     ASSERT_EQ(tokens.fields.size(), 1);
 }
 
-
 TEST(alpha_test_file_csv, test2) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/csv/alpha_test_2.csv";
     const Tokenizer tokens = Tokenizer::from_file(data_path, FileType::CSV, std::vector<std::string>()); 
@@ -46,7 +45,6 @@ TEST(alpha_test_file_json, test1) {
 
     ASSERT_EQ(tokens.fields.size(), 1);
 }
-
 
 TEST(alpha_test_file_json, test2) {
     std::string data_path = "../../tests/test_data/all_input_data/tokenizer_test_data/json/alpha_test_2.json";
@@ -482,7 +480,7 @@ TEST(mixed_test_string, test1) {
 }
 
 TEST(large_pint_string, test1) {
-    std::string input = "4611686018427387905";
+    std::string input = "18446744073709551616";
     const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 1);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
@@ -494,7 +492,7 @@ TEST(large_pint_string, test1) {
 }
 
 TEST(large_pint_string, test2) {
-    std::string input = "4611686018427387904";
+    std::string input = "18446744073709551615";
     const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
@@ -506,7 +504,7 @@ TEST(large_pint_string, test2) {
 }
 
 TEST(large_nint_string, test1) {
-    std::string input = "-4611686018427387905";
+    std::string input = "-18446744073709551616";
     const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 1);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
@@ -518,7 +516,7 @@ TEST(large_nint_string, test1) {
 }
 
 TEST(large_nint_string, test2) {
-    std::string input = "-4611686018427387904";
+    std::string input = "-18446744073709551615";
     const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);

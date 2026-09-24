@@ -70,7 +70,7 @@ std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
     return std::make_pair(line, line_start); 
 }
 
-void LogfmtParser::buffer_lines(size_t n_lines) {
+void LogfmtParser::buffer_lines(const size_t n_lines) {
     for (size_t i = 0; i < n_lines; ++i) {
         if (file_offset == file_size) break; 
 

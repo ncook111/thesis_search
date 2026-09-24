@@ -24,7 +24,7 @@ uint64_t get_count_from_file(const std::string &path) {
     return value;
 }
 
-std::string get_matching_query(const std::string &path, uint8_t file_type) {
+std::string get_matching_query(const std::string &path, const uint8_t file_type) {
     std::ifstream in;
     in.open(path);
 

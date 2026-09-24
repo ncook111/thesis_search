@@ -100,7 +100,7 @@ void generateFuzzedIndexFolder(const std::string &index_path) {
     generateFuzzedIndexFile(index_path + "/fuzzed_4.bin");
 }
 
-std::vector<uint64_t> generate_rand_uint64_t_vec_dist(size_t size) {
+std::vector<uint64_t> generate_rand_uint64_t_vec_dist(const size_t size) {
     std::mt19937_64 eng(42);
     std::uniform_int_distribution<uint64_t> distr_64;
 
@@ -150,7 +150,7 @@ std::vector<uint64_t> generate_rand_uint64_t_vec_dist(size_t size) {
     return std::vector<uint64_t>(input_set.begin(), input_set.end());
 }
 
-std::vector<uint32_t> generate_rand_uint32_t_vec_dist(size_t size) {
+std::vector<uint32_t> generate_rand_uint32_t_vec_dist(const size_t size) {
     std::mt19937 eng(42);
     std::uniform_int_distribution<uint32_t> distr_32;
 

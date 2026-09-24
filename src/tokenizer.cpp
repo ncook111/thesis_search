@@ -325,10 +325,12 @@ void Tokenizer::tokenize_field(const std::string_view field_str,
                                const uint64_t doc_id, const uint64_t field_id) {
   std::string curr_token;
   for (const char c : field_str) {
-    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':')
+    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
       curr_token.push_back(c);
-    else if (curr_token.size())
-        processToken(curr_token, doc_id, field_id);
+    } else if (curr_token.size()) {
+      processToken(curr_token, doc_id, field_id);
+      curr_token.clear();
+    }
   }
 
   // Process leftover token if present
@@ -338,13 +340,13 @@ void Tokenizer::tokenize_field(const std::string_view field_str,
 
 void Tokenizer::tokenize_string(const std::string &input) {
   std::string curr_token;
-  const size_t input_size = input.size();
 
   for (const char c : input) {
     if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
       curr_token.push_back(c);
     } else if (curr_token.size()) {
       processToken(curr_token);
+      curr_token.clear();
     }
   }
 
@@ -353,15 +355,15 @@ void Tokenizer::tokenize_string(const std::string &input) {
     processToken(curr_token);
 }
 
-void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
   res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_int, options);
   if (res_err.ec == std::errc()) {
-    if (res_int > MAX_INT_VAL) return; // Guard against values that trigger a bug in the PEF library
-
+    if (res_err.ptr != curr_token.data() + curr_token.size())
+      return false; // Didnt read the whole string
     // File tokenization
     if (offset) {
         num_tokens[res_int][field_id].push_back(offset);
@@ -370,23 +372,23 @@ void Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
         num_tokens_q.insert(res_int);
     }
   } else if (res_err.ec == std::errc::invalid_argument) {
-    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+    throw std::invalid_argument("Malformed number: \"" + curr_token);
   } else if (res_err.ec == std::errc::result_out_of_range) {
-    return;
+    return false;
   }
 
-  curr_token.erase();
+  return true;
 }
 
-void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
 
   res_err = fast_float::from_chars_advanced(curr_token.data() + 1, curr_token.data() + curr_token.size(), res_int, options);
   if (res_err.ec == std::errc()) {
-    if (res_int > MAX_INT_VAL) return; // Guard against values that trigger a bug in the PEF library
-    
+    if (res_err.ptr != curr_token.data() + curr_token.size())
+      return false; // Didnt read the whole string
     // File tokenization
     if (offset) {
         neg_num_tokens[res_int][field_id].push_back(offset);
@@ -395,20 +397,22 @@ void Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
         neg_num_tokens_q.insert(res_int);
     }
   } else if (res_err.ec == std::errc::invalid_argument) {
-    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+    throw std::invalid_argument("Malformed number: \"" + curr_token);
   } else if (res_err.ec == std::errc::result_out_of_range) {
-    return;
+    return false;
   }
 
-  curr_token.erase();
+  return true;
 }
 
-void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   float res_float;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
   res_err = fast_float::from_chars_advanced(curr_token.data(), curr_token.data() + curr_token.size(), res_float, options);
   if (res_err.ec == std::errc()) {
+    if (res_err.ptr != curr_token.data() + curr_token.size())
+      return false; // Didnt read the whole string
     // File tokenization
     if (offset)
       float_tokens[std::move(res_float)][field_id].push_back(offset);
@@ -416,15 +420,15 @@ void Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
     else
       float_tokens_q.insert(res_float);
   } else if (res_err.ec == std::errc::invalid_argument) {
-    std::cout << "Malformed number: \"" << curr_token << "\"" << std::endl;
+    throw std::invalid_argument("Malformed number: \"" + curr_token);
   } else if (res_err.ec == std::errc::result_out_of_range) {
-    return;
+    return false;
   }
 
-  curr_token.erase();
+  return true;
 }
 
-void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::istringstream in(curr_token);
   date::sys_time<std::chrono::seconds> dateTimePoint;
 
@@ -432,7 +436,7 @@ void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
   in >> date::parse("%Y-%m-%d", dateTimePoint);
   // Check if parsable
   if (in.fail() || in.peek() != EOF) {
-    return;
+    return false;
   } else {
     // File tokenization
     if (offset)
@@ -442,10 +446,10 @@ void Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
       d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
   }
 
-  curr_token.erase();
+  return true;
 }
 
-void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   std::istringstream in(curr_token);
   std::chrono::seconds timeTimePoint;
 
@@ -453,7 +457,7 @@ void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
   in >> date::parse("%T", timeTimePoint);
   // Check if parsable
   if (in.fail() || in.peek() != EOF) {
-    return;
+    return false;
   } else {
     // File tokenization
     if (offset)
@@ -463,9 +467,10 @@ void Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
       t_tokens_q.insert(static_cast<uint64_t>(timeTimePoint.count()));
   }
 
-  curr_token.erase();
+  return true;
 }
-void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+
+bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
   uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token);
   if (offset)
@@ -473,11 +478,11 @@ void Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, cons
   // String tokenization
   else
     ipv4_tokens_q.insert(ip_addr);
-  
-  curr_token.erase();
+
+  return true;
 }
 
-void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
   // File tokenization
   if (offset) {
     if (curr_token == "true")
@@ -492,74 +497,76 @@ void Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, con
       f_bool_token_q = true;
   }
 
-  curr_token.erase();
+  return true;
 };
 
 void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  bool processed = false;
+
   switch (numeric_type(curr_token)) {
     case TokenType::PINT:
-      handle_pint(curr_token, offset, field_id);
+      processed = handle_pint(curr_token, offset, field_id);
       break;
     case TokenType::NINT:
-      handle_nint(curr_token, offset, field_id);
+      processed = handle_nint(curr_token, offset, field_id);
       break;
     case TokenType::FLOAT:
-      handle_float(curr_token, offset, field_id);
+      processed = handle_float(curr_token, offset, field_id);
       break;
     case TokenType::DATE:
-      handle_date(curr_token, offset, field_id);
+      processed = handle_date(curr_token, offset, field_id);
       break;
     case TokenType::TIME:
-      handle_time(curr_token, offset, field_id);
+      processed = handle_time(curr_token, offset, field_id);
       break;
     case TokenType::IPV4:
-      handle_ipv4(curr_token, offset, field_id);
+      processed = handle_ipv4(curr_token, offset, field_id);
       break;
     case TokenType::BOOLEAN:
-      handle_bool(curr_token, offset, field_id);
+      processed = handle_bool(curr_token, offset, field_id);
       break;
     default:
       break;
   }
 
-  if (curr_token.size()) {
+  if (!processed) {
     std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
     alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
-    curr_token.erase();
   }
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
+  bool processed = false;
+
   switch (numeric_type(curr_token)) {
     case TokenType::PINT:
-      handle_pint(curr_token);
+      processed = handle_pint(curr_token);
       break;
     case TokenType::NINT:
-      handle_nint(curr_token);
+      processed = handle_nint(curr_token);
       break;
     case TokenType::FLOAT:
-      handle_float(curr_token);
+      processed = handle_float(curr_token);
       break;
     case TokenType::DATE:
-      handle_date(curr_token);
+      processed = handle_date(curr_token);
       break;
     case TokenType::TIME:
-      handle_time(curr_token);
+      processed = handle_time(curr_token);
       break;
     case TokenType::IPV4:
-      handle_ipv4(curr_token);
+      processed = handle_ipv4(curr_token);
       break;
     case TokenType::BOOLEAN:
-      handle_bool(curr_token);
+      processed = handle_bool(curr_token);
       break;
     default:
       break;
   }
 
-  if (curr_token.size()) {
+  if (!processed) {
     std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
     alpha_tokens_q.insert(std::move(curr_token));
-    curr_token.erase();
   }
 }
 

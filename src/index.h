@@ -404,14 +404,6 @@ bool check_offsets_file_by_type(
         std::cout << "from_file size: " << from_file.size() << std::endl;
         std::cout << "docids size: " << docids.size() << std::endl;
         std::cout << "docids incorrect" << std::endl;
-
-        size_t i = 0;
-        for (i; i < std::max({from_file.size(), docids_dedup.size()}); ++i) {
-          if (from_file[i] != docids_dedup[i]) break;
-        }
-
-        std::cout << "from_file[i] = " << from_file[i] << std::endl;
-        std::cout << "docids[i] = " << docids_dedup[i] << std::endl;
         return false;
       }
     }

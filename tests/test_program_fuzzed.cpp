@@ -24,6 +24,7 @@ protected:
         std::filesystem::remove_all(index_path+"_bpd2");
         std::filesystem::remove_all(index_path+"_bpd4");
         std::filesystem::remove_all(index_path+"_bpdm");
+        std::filesystem::remove_all(output_path);
     }
 };
 
@@ -33,7 +34,7 @@ protected:
         generateFuzzedDataFile(FileType::JSON, 100000, data_path+"/fuzzed_json", {"dob", "acc_num", "acc_bal"});
     }
     void TearDown() {
-        // std::filesystem::remove_all(data_path+"/fuzzed_json");
+        std::filesystem::remove_all(data_path+"/fuzzed_json");
         std::filesystem::remove_all(index_path+"_gvb");
         std::filesystem::remove_all(index_path+"_pef");
         std::filesystem::remove_all(index_path+"_fls");
@@ -41,6 +42,7 @@ protected:
         std::filesystem::remove_all(index_path+"_bpd2");
         std::filesystem::remove_all(index_path+"_bpd4");
         std::filesystem::remove_all(index_path+"_bpdm");
+        std::filesystem::remove_all(output_path);
     }
 };
 
@@ -50,7 +52,7 @@ protected:
         generateFuzzedDataFile(FileType::LOGFMT, 100000, data_path+"/fuzzed_logfmt", {"dob", "acc_num", "acc_bal"});
     }
     void TearDown() {
-        // std::filesystem::remove_all(data_path+"/fuzzed_logfmt");
+        std::filesystem::remove_all(data_path+"/fuzzed_logfmt");
         std::filesystem::remove_all(index_path+"_gvb");
         std::filesystem::remove_all(index_path+"_pef");
         std::filesystem::remove_all(index_path+"_fls");
@@ -59,6 +61,7 @@ protected:
         std::filesystem::remove_all(index_path+"_bpd4");
         std::filesystem::remove_all(index_path+"_bpdm");
         std::filesystem::remove_all(index_path+"_bpdm");
+        std::filesystem::remove_all(output_path);
     }
 };
 

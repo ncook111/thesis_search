@@ -12,8 +12,7 @@ struct FlsEncodedBlockU64 {
 
 };
 
-const uint8_t bits_needed(uint64_t max_val);
-const uint16_t n_encoded_bytes_uint64_t(uint8_t bw);
+const uint16_t n_encoded_bytes_uint64_t(const uint8_t bw);
 const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector<uint8_t> &output);
 const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_t> &input);
 const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input, const size_t num_blocks);

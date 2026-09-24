@@ -57,7 +57,7 @@ TEST_F(program_test, creation_and_search_test_fls) {
     std::string query = "[*] = \"here\"";
     ASSERT_NO_THROW(ret = search_mode(index_path+"index_fls", "", output_path, query, EncType::FLS));
     ASSERT_EQ(ret, 0);
-    ASSERT_EQ(get_count_from_file(output_path), 4);;
+    ASSERT_EQ(get_count_from_file(output_path), 4);
 }
 
 TEST_F(program_test, creation_and_search_test_bpd1) {

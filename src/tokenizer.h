@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define MAX_INT_VAL ((uint64_t)1 << 62)
-
 namespace TokenType {
 enum Value : uint8_t {
   ALPHA = 0,
@@ -113,13 +111,13 @@ private:
   const bool is_pint(const std::string &s) const;
   const bool is_nint(const std::string &s) const;
   const bool is_bool(const std::string &s) const;
-  void handle_pint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_nint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
-  void handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_pint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_nint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_date(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  bool handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
 
   std::string file_path;
   uint8_t type;

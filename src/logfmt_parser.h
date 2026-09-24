@@ -75,7 +75,7 @@ private:
     size_t file_size;
     uint64_t file_offset;
 
-    void buffer_lines(size_t n_lines);
+    void buffer_lines(const size_t n_lines);
     std::unordered_map<std::string, std::string> parse_line(const std::string &data);
     std::pair<std::string, uint64_t> read_next_line();
     bool has_next_row();
