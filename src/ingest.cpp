@@ -8,6 +8,7 @@
 #include "query/parser.h"
 #include <cstdio>
 #include <iostream>
+#include <filesystem>
 #include <boost/program_options.hpp>
 
 int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
