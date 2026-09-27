@@ -1,5 +1,6 @@
 #include <benchmark/benchmark.h>
 #include <filesystem>
+#include <mutex>
 #include "cache_flush.h"
 #include "../src/ingest.h"
 #include "../src/helper.h"
