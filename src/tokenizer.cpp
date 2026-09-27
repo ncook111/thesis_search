@@ -17,6 +17,7 @@
 #include <string_view>
 #include <sys/stat.h>
 #include <time.h>
+#include <filesystem>
 #include "logfmt_parser.h"
 
 const bool Tokenizer::is_pint(const std::string &s) const {

@@ -5,6 +5,7 @@
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
 #include <utility>
+#include <optional>
 
 struct Range {
   int64_t min;
