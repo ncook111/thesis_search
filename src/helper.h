@@ -20,7 +20,19 @@ enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
 namespace EncType {
-enum Value : uint8_t { GVB = 0, PEF = 1, FLS = 2, BPD1 = 3, BPD2 = 4, BPD4 = 5, BPDM = 6, INVALID = 7 };
+enum Value : uint8_t { 
+  GVB = 0,
+  PEF = 1,
+  FLS = 2,
+  S4_BPD1 = 3,
+  S4_BPD2 = 4,
+  S4_BPD4 = 5,
+  S4_BPDM = 6,
+  S8_BPD4 = 7,
+  S8_BPDM = 8,
+  S16_BPD4 = 9,
+  S16_BPDM = 10,
+  INVALID = 11 };
 }
 
 namespace QueryMode {

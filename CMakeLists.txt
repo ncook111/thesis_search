@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 include(FetchContent)
 
-project(indexer CXX)
+project(indexer C CXX) # C needed for simdcomp
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -59,7 +59,7 @@ FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "AVX2" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
@@ -94,8 +94,9 @@ elseif (_simd STREQUAL "avx2")
     target_compile_options(simd_target INTERFACE -mavx2)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1)
 elseif (_simd STREQUAL "avx512bw")
+    elseif (_simd STREQUAL "avx512bw")
     target_compile_options(simd_target INTERFACE -mavx512bw -mavx512f)
-    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1 SIMD_TARGET_AVX2=1)
 endif()
 
 ###### FASTLANES ######
@@ -147,8 +148,29 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/fast-pack/SIMDCompressionAndIntersection.git
     GIT_TAG        v0.2.0
 )
-set(SIMDCOMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)   # don't build their unit/bench/example executables
+set(SIMDCOMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(simdcomp_src)
+
+###### SIMDCOMP ######
+
+if (_simd MATCHES "^(avx2|avx512bw)$")
+    FetchContent_Declare(
+        simdcomp_kernels_src
+        GIT_REPOSITORY https://github.com/fast-pack/simdcomp.git
+        GIT_TAG        d5301778fe5045ca8099252de5a6ed8016a287df
+    )
+    FetchContent_Populate(simdcomp_kernels_src)
+
+    add_library(simdcomp_avx STATIC
+        ${simdcomp_kernels_src_SOURCE_DIR}/src/avxbitpacking.c
+        ${simdcomp_kernels_src_SOURCE_DIR}/src/avx512bitpacking.c
+        ${simdcomp_kernels_src_SOURCE_DIR}/src/simdcomputil.c
+    )
+
+    target_include_directories(simdcomp_avx PRIVATE ${simdcomp_kernels_src_SOURCE_DIR}/include)
+
+    target_link_libraries(simdcomp_avx PRIVATE simd_target)
+endif()
 
 add_library(indexer_lib
     src/ingest.cpp
@@ -182,7 +204,12 @@ target_link_libraries(indexer_lib PUBLIC
     fastlanes_bp
     SIMDCompressionAndIntersection::SIMDCompressionAndIntersection
     simdjson::simdjson
+    simd_target
 )
+
+if (TARGET simdcomp_avx)
+    target_link_libraries(indexer_lib PUBLIC simdcomp_avx)
+endif()
 
 add_executable(indexer src/indexer.cpp)
 target_link_libraries(indexer PRIVATE indexer_lib)

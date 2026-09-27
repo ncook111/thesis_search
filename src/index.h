@@ -226,17 +226,9 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
         case EncType::FLS:
           local_offset += write_fls_to_file(offsets_dedup, file);
           break;
-        case EncType::BPD1:
-          local_offset += write_bp128_to_file(offsets_dedup, file, EncType::BPD1);
-          break;
-        case EncType::BPD2:
-          local_offset += write_bp128_to_file(offsets_dedup, file, EncType::BPD2);
-          break;
-        case EncType::BPD4:
-          local_offset += write_bp128_to_file(offsets_dedup, file, EncType::BPD4);
-          break;
-        case EncType::BPDM:
-          local_offset += write_bp128_to_file(offsets_dedup, file, EncType::BPDM);
+        case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+        case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM:
+          local_offset += write_bp128_to_file(offsets_dedup, file, enc_type);
           break;
         default:
           throw std::invalid_argument("Not a valid encoding type");
@@ -265,17 +257,9 @@ write_offsets_to_file(const std::map<M, std::map<uint64_t, std::vector<uint64_t>
     case EncType::FLS:
       write_fls_to_file(id_to_offset, file);
       break;
-    case EncType::BPD1:
-      write_bp128_to_file(id_to_offset, file, EncType::BPD1);
-      break;
-    case EncType::BPD2:
-      write_bp128_to_file(id_to_offset, file, EncType::BPD2);
-      break;
-    case EncType::BPD4:
-      write_bp128_to_file(id_to_offset, file, EncType::BPD4);
-      break;
-    case EncType::BPDM:
-      write_bp128_to_file(id_to_offset, file, EncType::BPDM);
+    case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+    case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM:
+      write_bp128_to_file(id_to_offset, file, enc_type);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -346,10 +330,8 @@ bool check_offsets_file_by_type(
             local_offset += enc_data_size + enc_num_blocks_size;
           break;
         }
-        case EncType::BPD1: [[fallthrough]];
-        case EncType::BPD2: [[fallthrough]];
-        case EncType::BPD4: [[fallthrough]];
-        case EncType::BPDM:
+        case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+        case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM: 
         {
           size_t orig_size = offsets_dedup.size();
 

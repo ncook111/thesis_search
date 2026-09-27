@@ -196,17 +196,9 @@ write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
     case EncType::FLS:
       write_fls_to_file(entry_offsets, file);
       break;
-    case EncType::BPD1:
-      write_bp128_to_file(entry_offsets, file, EncType::BPD1);
-      break;
-    case EncType::BPD2:
-      write_bp128_to_file(entry_offsets, file, EncType::BPD2);
-      break;
-    case EncType::BPD4:
-      write_bp128_to_file(entry_offsets, file, EncType::BPD4);
-      break;
-    case EncType::BPDM:
-      write_bp128_to_file(entry_offsets, file, EncType::BPDM);
+    case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+    case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM: 
+      write_bp128_to_file(entry_offsets, file, enc_type);
       break;
     default:
       throw std::invalid_argument("Not a valid encoding type");
@@ -320,14 +312,9 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
       return read_pef_from_file(file + addr_offset, size_to_read);
     case EncType::FLS: 
       return read_fls_from_file(file + addr_offset, size_to_read);
-    case EncType::BPD1:
-      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD1);
-    case EncType::BPD2:
-      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD2);
-    case EncType::BPD4:
-      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPD4);
-    case EncType::BPDM:
-      return read_bp128_from_file(file + addr_offset, size_to_read, EncType::BPDM);
+    case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+    case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM: 
+      return read_bp128_from_file(file + addr_offset, size_to_read, enc_type);
     default:
       throw std::invalid_argument("Not a valid encoding type");
   }
@@ -488,17 +475,9 @@ get_tok_offsets(const uint64_t token_id,
       case EncType::FLS:
         docids = read_fls_from_file(file + addr_offset, field_sizes[i]);
         break;
-      case EncType::BPD1:
-        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD1);
-        break;
-      case EncType::BPD2:
-        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD2);
-        break;
-      case EncType::BPD4:
-        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPD4);
-        break;
-      case EncType::BPDM:
-        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], EncType::BPDM);
+      case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+      case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM: 
+        docids = read_bp128_from_file(file + addr_offset, field_sizes[i], enc_type);
         break;
       default:
         throw std::invalid_argument("Not a valid encoding type");
@@ -584,14 +563,9 @@ get_entry_offsets_from_file(const std::string &file_name,
     return read_entry_offsets_pef(file + header.entry_offsets_header, size_to_read);
   case EncType::FLS:
     return read_entry_offsets_fls(file + header.entry_offsets_header, size_to_read);
-  case EncType::BPD1:
-    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD1);
-  case EncType::BPD2:
-    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD2);
-  case EncType::BPD4:
-    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPD4);
-  case EncType::BPDM:
-    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, EncType::BPDM);
+  case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM: 
+  case EncType::S8_BPD4: case EncType::S8_BPDM: case EncType::S16_BPD4: case EncType::S16_BPDM: 
+    return read_entry_offsets_bp128(file + header.entry_offsets_header, size_to_read, enc_type);
   default:
     throw std::invalid_argument("Not a valid encoding type");
   }

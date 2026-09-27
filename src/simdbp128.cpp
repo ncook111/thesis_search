@@ -1,48 +1,71 @@
+
 #include "codecfactory.h"
 #include "helper.h"
+#include "avx2binarypacking.h"
+#include "avx512binarypacking.h"
 #include "coder.h"
 #include <vector>
-
+ 
 using namespace SIMDCompressionLib;
 
-// Library has own fuction to do this, but requires passing a string which is used as a hash key
-// This is slightly faster, especially since it will be called potentially millions of times during encoding
-std::shared_ptr<IntegerCODEC> get_codec(const uint8_t encoding) {
-    switch (encoding) {
-        case EncType::BPD1:
-            return std::shared_ptr<IntegerCODEC>(new CompositeCodec<SIMDBinaryPacking<SIMDIntegratedBlockPacker<RegularDeltaSIMD, true>>, leftovercodec>());
-        case EncType::BPD2:
-            return std::shared_ptr<IntegerCODEC>(new CompositeCodec<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta2SIMD, true>>, leftovercodec>());
-        case EncType::BPD4:
-            return std::shared_ptr<IntegerCODEC>(new CompositeCodec<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta4SIMD, true>>, leftovercodec>());
-        case EncType::BPDM:
-            return std::shared_ptr<IntegerCODEC>(new CompositeCodec<SIMDBinaryPacking<SIMDIntegratedBlockPacker<Max4DeltaSIMD, true>>, leftovercodec>());
-        default:
-            throw std::invalid_argument("Encoding type must be a SIMDBP128 variant");
+template <class Packer>
+static std::shared_ptr<IntegerCODEC> codec_of() {
+  static const std::shared_ptr<IntegerCODEC> c =
+    std::make_shared<CompositeCodec<Packer, leftovercodec>>();
+  return c;
+}
 
+// Library has own fuction to do this, but requires passing a string which is used as a hash key
+// This is slightly faster, especially since it will be called potentially millions of times during encoding.
+// It also allows for support for wider SIMD lane encoding/decoding functions which are drawn from a separate
+// but related project.
+std::shared_ptr<IntegerCODEC> get_codec(const uint8_t encoding) {
+  switch (encoding) {
+    case EncType::S4_BPD1:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<RegularDeltaSIMD>>>();
+    case EncType::S4_BPD2:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta2SIMD>>>();
+    case EncType::S4_BPD4:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta4SIMD>>>();
+    case EncType::S4_BPDM:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<Max4DeltaSIMD>>>();
+#if defined(SIMD_TARGET_AVX2)
+    case EncType::S8_BPD4:  return codec_of<SIMDBinaryPackingAVX2<SIMDBlockPackerAVX2<CoarseDelta4AVX2>>>();
+    case EncType::S8_BPDM:  return codec_of<SIMDBinaryPackingAVX2<SIMDBlockPackerAVX2<Max4DeltaAVX2>>>();
+#else
+    case EncType::S8_BPD4:
+    case EncType::S8_BPDM:
+      throw std::runtime_error("S8 encodings need a build with -mavx2, and require CPU support for AVX2");
+#endif
+#if defined(SIMD_TARGET_AVX512BW)
+    case EncType::S16_BPD4: return codec_of<SIMDBinaryPackingAVX512<SIMDBlockPackerAVX512<CoarseDelta4AVX512>>>();
+    case EncType::S16_BPDM: return codec_of<SIMDBinaryPackingAVX512<SIMDBlockPackerAVX512<Max4DeltaAVX512>>>();
+#else
+    case EncType::S16_BPD4:
+    case EncType::S16_BPDM:
+      throw std::runtime_error("S16 encodings need a build with -mavx512f, and require CPU support for AVX512");
+#endif
+    default:
+      throw std::invalid_argument("Encoding type must be a SIMDBP128 variant");
     }
 }
 
 std::vector<uint32_t> encode_simdbp128(std::vector<uint32_t> &input, const uint8_t encoding) {
-    std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
+  std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
 
-    vector<uint32_t> encoded(input.size() + 1024);
-    size_t encoded_size = encoded.size();
-    codec->encodeArray(input.data(), input.size(), encoded.data(), encoded_size);
+  vector<uint32_t> encoded(2 * input.size()); // Ensure wont overflow
+  size_t encoded_size = encoded.size();
+  codec->encodeArray(input.data(), input.size(), encoded.data(), encoded_size);
 
-    encoded.resize(encoded_size);
-    encoded.shrink_to_fit();
+  encoded.resize(encoded_size);
+  encoded.shrink_to_fit();
 
-    return encoded;
+  return encoded;
 }
 
 std::vector<uint32_t> decode_simdbp128(std::vector<uint32_t> &input, const uint8_t encoding, size_t decoded_size) {
-    std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
+  std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
 
-    vector<uint32_t> decoded(decoded_size);
-    codec->decodeArray(input.data(), input.size(), decoded.data(), decoded_size);
+  vector<uint32_t> decoded(decoded_size);
+  codec->decodeArray(input.data(), input.size(), decoded.data(), decoded_size);
 
-    return decoded;
+  return decoded;
 }
 
 uint64_t write_bp128_to_file(std::vector<uint64_t> vec, std::ofstream &file, const uint8_t encoding) {

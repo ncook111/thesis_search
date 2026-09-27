@@ -27,14 +27,22 @@ const uint8_t get_enc_type(const std::string &type) {
     return EncType::PEF;
   if (type == "fls")
     return EncType::FLS;
-  if (type == "bpd1")
-    return EncType::BPD1;
-  if (type == "bpd2")
-    return EncType::BPD2;
-  if (type == "bpd4")
-    return EncType::BPD4;
-  if (type == "bpdm")
-    return EncType::BPDM;
+  if (type == "s4_bpd1")
+    return EncType::S4_BPD1;
+  if (type == "s4_bpd2")
+    return EncType::S4_BPD2;
+  if (type == "s4_bpd4")
+    return EncType::S4_BPD4;
+  if (type == "s4_bpdm")
+    return EncType::S4_BPDM;
+  if (type == "s8_bpd4")
+    return EncType::S8_BPD4;
+  if (type == "s8_bpdm")
+    return EncType::S8_BPDM;
+  if (type == "s16_bpd4")
+    return EncType::S16_BPD4;
+  if (type == "s16_bpdm")
+    return EncType::S16_BPDM;
   throw std::invalid_argument("Encoding type not supported");
 }
 
@@ -45,14 +53,22 @@ const std::string enc_type_to_str(const uint8_t &type) {
     return "pef";
   if (type == EncType::FLS)
     return "fls";
-  if (type == EncType::BPD1)
-    return "bpd1";
-  if (type == EncType::BPD2)
-    return "bpd2";
-  if (type == EncType::BPD4)
-    return "bpd4";
-  if (type == EncType::BPDM)
-    return "bpdm";
+  if (type == EncType::S4_BPD1)
+    return "s4_bpd1";
+  if (type == EncType::S4_BPD2)
+    return "s4_bpd2";
+  if (type == EncType::S4_BPD4)
+    return "s4_bpd4";
+  if (type == EncType::S4_BPDM)
+    return "s4_bpdm";
+  if (type == EncType::S8_BPD4)
+    return "s8_bpd4";
+  if (type == EncType::S8_BPDM)
+    return "s8_bpdm";
+  if (type == EncType::S16_BPD4)
+    return "s16_bpd4";
+  if (type == EncType::S16_BPDM)
+    return "s16_bpdm";
   throw std::invalid_argument("Encoding type not supported");
 }
 
