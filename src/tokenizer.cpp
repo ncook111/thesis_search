@@ -434,7 +434,7 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
   date::sys_time<std::chrono::seconds> dateTimePoint;
 
   // Check "YY-MM-DD format"
-  in >> date::parse("%Y-%m-%d", dateTimePoint);
+  date::from_stream(in, "%Y-%m-%d", dateTimePoint);
   // Check if parsable
   if (in.fail() || in.peek() != EOF) {
     return false;
@@ -455,7 +455,7 @@ bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
   std::chrono::seconds timeTimePoint;
 
   // Check "HH-MM-SS format"
-  in >> date::parse("%T", timeTimePoint);
+  date::from_stream(in, "%T", timeTimePoint);
   // Check if parsable
   if (in.fail() || in.peek() != EOF) {
     return false;
