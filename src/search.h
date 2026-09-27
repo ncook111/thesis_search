@@ -2,6 +2,7 @@
 #define SEARCH_H
 
 #include "index.h"
+#include <filesystem>
 #include <map>
 
 typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
@@ -42,7 +43,7 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query,
 const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
                                                     const std::string &query);
 const uint8_t get_range_query_type(const Tokenizer &tokens);
-std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::__1::vector<std::__1::string> &fields);
+std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::vector<std::string> &fields);
 
 template <QueryType Q>
 const std::optional<uint64_t> get_id_fst(const Q &query,
