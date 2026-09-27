@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.28)
 
 include(FetchContent)
 
@@ -13,25 +13,62 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
-list(PREPEND CMAKE_PREFIX_PATH /opt/homebrew)
+###### BOOST ######
 
-# dependencies
-find_package(Boost REQUIRED COMPONENTS program_options)
+set(BOOST_ENABLE_COMPATIBILITY_TARGETS ON)
+set(BOOST_IOSTREAMS_ENABLE_ZLIB  OFF)
+set(BOOST_IOSTREAMS_ENABLE_BZIP2 OFF)
+set(BOOST_IOSTREAMS_ENABLE_LZMA  OFF)
+set(BOOST_IOSTREAMS_ENABLE_ZSTD  OFF)
 
-find_path(OPENFST_INCLUDE_DIR fst/fstlib.h)
-find_library(OPENFST_LIBRARY fst)
+FetchContent_Declare(
+    Boost
+    URL https://github.com/boostorg/boost/releases/download/boost-1.92.0/boost-1.92.0-cmake.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
+    EXCLUDE_FROM_ALL
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(Boost)
 
-if(NOT OPENFST_INCLUDE_DIR OR NOT OPENFST_LIBRARY)
-    message(FATAL_ERROR "OpenFST not found, check `brew install openfst`")
-endif()
+###### OPENFST ######
+
+FetchContent_Declare(
+    openfst_src
+    GIT_REPOSITORY https://github.com/google-research/openfst.git
+    GIT_TAG        08f1fb92b2ef7a1657d25d3ddd9db1d6aa866c66 # 1.8.5
+)
+FetchContent_MakeAvailable(openfst_src)
+
+set(OPENFST_SRC ${openfst_src_SOURCE_DIR}/src)
+
+add_library(openfst STATIC
+    ${OPENFST_SRC}/lib/compat.cc
+    ${OPENFST_SRC}/lib/encode.cc
+    ${OPENFST_SRC}/lib/flags.cc
+    ${OPENFST_SRC}/lib/fst.cc
+    ${OPENFST_SRC}/lib/fst-types.cc
+    ${OPENFST_SRC}/lib/mapped-file.cc
+    ${OPENFST_SRC}/lib/properties.cc
+    ${OPENFST_SRC}/lib/symbol-table.cc
+    ${OPENFST_SRC}/lib/symbol-table-ops.cc
+    ${OPENFST_SRC}/lib/weight.cc
+    ${OPENFST_SRC}/lib/util.cc
+)
+target_include_directories(openfst SYSTEM PUBLIC ${OPENFST_SRC}/include)
+target_compile_options(openfst PRIVATE
+    -fsized-deallocation
+    $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-defaulted-function-deleted>
+)
+target_link_libraries(openfst PUBLIC ${CMAKE_DL_LIBS}) # generic-register.h uses dlopen
 
 ###### SIMDJSON ######
 
 FetchContent_Declare(
     simdjson
     GIT_REPOSITORY https://github.com/simdjson/simdjson.git
-    GIT_TAG        90adaa4aef486a1743dd888297c27cba64101f79 # 
+    GIT_TAG        90adaa4aef486a1743dd888297c27cba64101f79 #
 )
 FetchContent_MakeAvailable(simdjson)
 
@@ -45,7 +82,8 @@ FetchContent_Declare(
 )
 FetchContent_Populate(ds2i_src)
 
-add_subdirectory(${ds2i_src_SOURCE_DIR}/succinct ${ds2i_src_BINARY_DIR}/succinct)
+add_subdirectory(${ds2i_src_SOURCE_DIR}/succinct ${ds2i_src_BINARY_DIR}/succinct EXCLUDE_FROM_ALL)
+target_link_libraries(succinct PUBLIC Boost::headers Boost::iostreams) # succinct/util.hpp uses mapped_file
 
 ###### CSV-PARSER ######
 
@@ -59,7 +97,7 @@ FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "AVX2" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
@@ -94,7 +132,6 @@ elseif (_simd STREQUAL "avx2")
     target_compile_options(simd_target INTERFACE -mavx2)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1)
 elseif (_simd STREQUAL "avx512bw")
-    elseif (_simd STREQUAL "avx512bw")
     target_compile_options(simd_target INTERFACE -mavx512bw -mavx512f)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1 SIMD_TARGET_AVX2=1)
 endif()
@@ -140,8 +177,6 @@ elseif (_simd STREQUAL "avx512bw")
 endif()
 
 ###### SIMDBP128 ######
-
-include(FetchContent)
 
 FetchContent_Declare(
     simdcomp_src
@@ -192,7 +227,6 @@ add_library(indexer_lib
 
 target_include_directories(indexer_lib PUBLIC
     include
-    ${OPENFST_INCLUDE_DIR}
     ${ds2i_src_SOURCE_DIR}
 )
 
@@ -200,7 +234,8 @@ target_link_libraries(indexer_lib PUBLIC
     succinct
     csv
     Boost::program_options
-    ${OPENFST_LIBRARY}
+    Boost::headers
+    $<LINK_LIBRARY:WHOLE_ARCHIVE,openfst>
     fastlanes_bp
     SIMDCompressionAndIntersection::SIMDCompressionAndIntersection
     simdjson::simdjson
@@ -242,7 +277,6 @@ endif()
 option(BUILD_BENCHMARKS "Build performance benchmarks" ON)
 
 if(BUILD_BENCHMARKS)
-    include(FetchContent)
     set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
     set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
     set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
