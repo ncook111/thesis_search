@@ -288,7 +288,7 @@ void Tokenizer::tokenize_logfmt() {
 
   uint64_t doc_id = 1; // Doc_id's 1-indexed
   for (auto it = parser.begin(); it != parser.end(); ++it) {
-    std::__1::unordered_map<std::__1::string, std::__1::string> doc = (*it).current_row();
+    std::unordered_map<std::string, std::string> doc = (*it).current_row();
     int64_t offset = (*it).current_offset();
     std::cout << doc_id << std::endl;
 
