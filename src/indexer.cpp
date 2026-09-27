@@ -68,8 +68,10 @@ int main(int argc, const char *argv[]) {
     output_path = vm["output-path"].as<std::string>();
 
   std::string queries;
-  if (vm.count("query"))
+  if (vm.count("query")) {
     queries = vm["query"].as<std::string>();
+    std::cout << queries << std::endl;
+  }
 
   if (act_mode == "c" || act_mode == "create") { // Create index mode
     return create_mode(index_path, data_path, fields, enc_type);

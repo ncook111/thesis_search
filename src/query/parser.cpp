@@ -150,7 +150,9 @@ void validate_tokens(std::vector<std::pair<uint8_t, std::string>> tokens) {
         throw std::invalid_argument("Query must begin with either a opening parenthesis or a field");
 
     while (tokens.size() >= 2) {
-        check_next_expected(get_next_token(tokens), peak_next_token(tokens));
+	const std::pair<uint8_t, std::string> curr = get_next_token(tokens);
+	const std::pair<uint8_t, std::string> next = peak_next_token(tokens);
+        check_next_expected(curr, next);
     }
 
     // Check last token correct
