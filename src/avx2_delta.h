@@ -48,7 +48,7 @@ template <class DeltaHelper> void s8_delta_encode(const std::vector<uint32_t> &i
   size_t i = 0;
   for (; i + 8 <= in_size; i += 8) {
     const __m256i curr = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&in[i]));
-    _mm256_storeu_si256(reinterpret_cast<const __m256i *>(&out[i]), DeltaHelper::Delta(curr, prev));
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(&out[i]), DeltaHelper::Delta(curr, prev));
     prev = curr;
   }
 }
@@ -63,7 +63,7 @@ template <class DeltaHelper> void s8_delta_decode(const std::vector<uint32_t> &i
   size_t i = 0;
   for (; i + 8 <= in_size; i += 8) {
     prev = DeltaHelper::PrefixSum(_mm256_loadu_si256(reinterpret_cast<const __m256i *>(&in[i])), prev);
-    _mm256_storeu_si256(reinterpret_cast<const __m256i *>(&out[i]), prev);
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(&out[i]), prev);
   }
 }
 
