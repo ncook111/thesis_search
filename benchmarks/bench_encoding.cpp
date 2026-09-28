@@ -1,4 +1,3 @@
-
 #include "../src/coder.h"
 #include "../src/pef.h"
 #include "../src/fls.h"
@@ -136,6 +135,17 @@ public:
     std::vector<uint8_t> input;
     void SetUp(::benchmark::State& state) {
         input = gvb_encode_uint64_t(generate_int_dist(state.range(0)));
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U64GVBDeltaDecode : public benchmark::Fixture {
+public:
+    std::vector<uint8_t> input;
+    void SetUp(::benchmark::State& state) {
+        input = gvb_encode_uint64_t(delta_encode(generate_int_dist(state.range(0))));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -332,7 +342,7 @@ BENCHMARK_DEFINE_F(U32Vec, delta_u32_t_encode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint64_t));
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
     state.counters["InputBytes"]   = input_bytes;
 
@@ -602,11 +612,13 @@ BENCHMARK_DEFINE_F(U64GVBDecode, gvb_u64_t_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size());
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32DeltaDecode, delta_u32_t_decode)(benchmark::State& state) {
@@ -619,14 +631,16 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, delta_u32_t_decode)(benchmark::State& state) 
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint64_t));
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U64GVBDecode, gvb_delta_u64_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -636,11 +650,13 @@ BENCHMARK_DEFINE_F(U64GVBDecode, gvb_delta_u64_t_decode)(benchmark::State& state
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size());
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
@@ -653,11 +669,13 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.data().size() * sizeof(uint64_t) + sizeof(header));
+    const double input_bytes = static_cast<double>(input.data().size() * sizeof(uint64_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
@@ -671,10 +689,12 @@ BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
     }
 
     const double input_bytes = static_cast<double>(input.size());
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
 
     state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
@@ -688,11 +708,13 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, s4_bpd1_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD2Decode, s4_bpd2_decode)(benchmark::State& state) {
@@ -705,11 +727,13 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, s4_bpd2_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD4Decode, s4_bpd4_decode)(benchmark::State& state) {
@@ -722,11 +746,13 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, s4_bpd4_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
@@ -739,11 +765,13 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 #endif
 
@@ -758,11 +786,13 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, s8_bpd4_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
@@ -775,11 +805,13 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 #endif
 
@@ -794,11 +826,13 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, s16_bpd4_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
 BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
@@ -811,11 +845,13 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["InputBytes"] = input_bytes;
+    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 #endif
 
@@ -825,6 +861,7 @@ BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
@@ -833,6 +870,7 @@ BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
@@ -841,6 +879,7 @@ BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
@@ -849,6 +888,7 @@ BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
@@ -858,6 +898,7 @@ BENCHMARK_REGISTER_F(U32Vec, s4_bpd1_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32Vec, s4_bpd2_encode)
@@ -866,6 +907,7 @@ BENCHMARK_REGISTER_F(U32Vec, s4_bpd2_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32Vec, s4_bpd4_encode)
@@ -874,6 +916,7 @@ BENCHMARK_REGISTER_F(U32Vec, s4_bpd4_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32Vec, s4_bpdm_encode)
@@ -882,6 +925,7 @@ BENCHMARK_REGISTER_F(U32Vec, s4_bpdm_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -892,6 +936,7 @@ BENCHMARK_REGISTER_F(U32Vec, s8_bpd4_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32Vec, s8_bpdm_encode)
@@ -900,6 +945,7 @@ BENCHMARK_REGISTER_F(U32Vec, s8_bpdm_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -910,6 +956,7 @@ BENCHMARK_REGISTER_F(U32Vec, s16_bpd4_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32Vec, s16_bpdm_encode)
@@ -918,6 +965,7 @@ BENCHMARK_REGISTER_F(U32Vec, s16_bpdm_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -927,14 +975,16 @@ BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
-BENCHMARK_REGISTER_F(U64GVBDecode, gvb_delta_u64_t_decode)
+BENCHMARK_REGISTER_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)
     ->Arg(1000) // 1k
     ->Arg(10000) // 10k
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
@@ -943,6 +993,7 @@ BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
@@ -951,6 +1002,7 @@ BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
@@ -960,6 +1012,7 @@ BENCHMARK_REGISTER_F(U32S4BPD1Decode, s4_bpd1_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32S4BPD2Decode, s4_bpd2_decode)
@@ -968,6 +1021,7 @@ BENCHMARK_REGISTER_F(U32S4BPD2Decode, s4_bpd2_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32S4BPD4Decode, s4_bpd4_decode)
@@ -976,6 +1030,7 @@ BENCHMARK_REGISTER_F(U32S4BPD4Decode, s4_bpd4_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32S4BPDMDecode, s4_bpdm_decode)
@@ -984,6 +1039,7 @@ BENCHMARK_REGISTER_F(U32S4BPDMDecode, s4_bpdm_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -994,6 +1050,7 @@ BENCHMARK_REGISTER_F(U32S8BPD4Decode, s8_bpd4_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32S8BPDMDecode, s8_bpdm_decode)
@@ -1002,6 +1059,7 @@ BENCHMARK_REGISTER_F(U32S8BPDMDecode, s8_bpdm_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -1012,6 +1070,7 @@ BENCHMARK_REGISTER_F(U32S16BPD4Decode, s16_bpd4_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32S16BPDMDecode, s16_bpdm_decode)
@@ -1020,6 +1079,7 @@ BENCHMARK_REGISTER_F(U32S16BPDMDecode, s16_bpdm_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 #endif
 
@@ -1029,6 +1089,7 @@ BENCHMARK_REGISTER_F(U32Vec, delta_u32_t_encode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
 
 BENCHMARK_REGISTER_F(U32DeltaDecode, delta_u32_t_decode)
@@ -1037,4 +1098,5 @@ BENCHMARK_REGISTER_F(U32DeltaDecode, delta_u32_t_decode)
     ->Arg(100000) // 100k
     ->Arg(1000000) // 1m
     ->Arg(10000000) // 10m
+    ->Unit(benchmark::kMicrosecond)
     ->Iterations(50);
