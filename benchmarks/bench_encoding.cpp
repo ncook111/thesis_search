@@ -2,9 +2,14 @@
 #include "../src/pef.h"
 #include "../src/fls.h"
 #include "../src/simdbp128.h"
+#include "../src/sse_neon_delta.h"
+#include "../src/avx2_delta.h"
+#include "../src/avx512_delta.h"
+#include "deltatemplates.h"
 #include "cache_flush.h"
 #include <benchmark/benchmark.h>
 #include <random>
+#include <set>
 
 constexpr size_t cache_size = 4096 * 1024;
 
@@ -102,6 +107,13 @@ std::vector<uint32_t> generate_uint32_t_dist(size_t size) {
     }
 
     return std::vector<uint32_t>(input_set.begin(), input_set.end());
+}
+
+static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
+    args->RangeMultiplier(10)
+     ->Range(1000, 10000000)   // 1k, 10k, 100k, 1M, 10M
+     ->Unit(benchmark::kMicrosecond)
+     ->Iterations(50);
 }
 
 class U32Vec : public benchmark::Fixture {
@@ -248,6 +260,54 @@ public:
     void TearDown(::benchmark::State& state) {
     }
 };
+
+class U32S4D1Decode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s4_delta_encode<RegularDeltaSIMD>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S4D2Decode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s4_delta_encode<CoarseDelta2SIMD>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S4D4Decode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s4_delta_encode<CoarseDelta4SIMD>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S4DMDecode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s4_delta_encode<Max4DeltaSIMD>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
@@ -278,6 +338,30 @@ public:
     void TearDown(::benchmark::State& state) {
     }
 };
+
+class U32S8D4Decode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s8_delta_encode<CoarseDelta4AVX2>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S8DMDecode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s8_delta_encode<Max4DeltaAVX2>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
@@ -303,6 +387,30 @@ public:
         std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S16_BPDM);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S16D4Decode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s16_delta_encode<CoarseDelta4AVX512>(generate_uint32_t_dist(state.range(0)), input);
+    }
+
+    void TearDown(::benchmark::State& state) {
+    }
+};
+
+class U32S16DMDecode : public benchmark::Fixture {
+public:
+    std::vector<uint32_t> input;
+    void SetUp(::benchmark::State& state) {
+        input.resize(state.range(0));
+        s16_delta_encode<Max4DeltaAVX512>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -421,6 +529,78 @@ BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
 }
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+BENCHMARK_DEFINE_F(U32Vec, s4d1_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_encode<RegularDeltaSIMD>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
+BENCHMARK_DEFINE_F(U32Vec, s4d2_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_encode<CoarseDelta2SIMD>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
+BENCHMARK_DEFINE_F(U32Vec, s4d4_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_encode<CoarseDelta4SIMD>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
+BENCHMARK_DEFINE_F(U32Vec, s4dm_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_encode<Max4DeltaSIMD>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
 BENCHMARK_DEFINE_F(U32Vec, s4_bpd1_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
@@ -511,6 +691,42 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpdm_encode)(benchmark::State& state) {
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
+BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s8_delta_encode<CoarseDelta4AVX2>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
+BENCHMARK_DEFINE_F(U32Vec, s8dm_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s8_delta_encode<Max4DeltaAVX2>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
 BENCHMARK_DEFINE_F(U32Vec, s8_bpd4_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
@@ -557,6 +773,42 @@ BENCHMARK_DEFINE_F(U32Vec, s8_bpdm_encode)(benchmark::State& state) {
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
+BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s16_delta_encode<CoarseDelta4AVX512>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
+BENCHMARK_DEFINE_F(U32Vec, s16dm_encode)(benchmark::State& state) {
+    std::vector<uint32_t> encoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s16_delta_encode<Max4DeltaAVX512>(input, encoded);
+        benchmark::DoNotOptimize(encoded);
+        benchmark::ClobberMemory();
+    }
+
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
+
+    state.counters["InputBytes"]   = input_bytes;
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
+}
+
 BENCHMARK_DEFINE_F(U32Vec, s16_bpd4_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
@@ -631,11 +883,7 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, delta_u32_t_decode)(benchmark::State& state) 
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
-
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -773,6 +1021,70 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
+
+BENCHMARK_DEFINE_F(U32S4D1Decode, s4d1_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_decode<RegularDeltaSIMD>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S4D2Decode, s4d2_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_decode<CoarseDelta2SIMD>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S4D4Decode, s4d4_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_decode<CoarseDelta4SIMD>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S4DMDecode, s4dm_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s4_delta_decode<Max4DeltaSIMD>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
@@ -810,6 +1122,38 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
 
     state.counters["InputBytes"] = input_bytes;
     state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S8D4Decode, s8d4_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s8_delta_decode<CoarseDelta4AVX2>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S8DMDecode, s8dm_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s8_delta_decode<Max4DeltaAVX2>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -853,250 +1197,118 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
+
+BENCHMARK_DEFINE_F(U32S16D4Decode, s16d4_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s16_delta_decode<CoarseDelta4AVX512>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
+
+BENCHMARK_DEFINE_F(U32S16DMDecode, s16dm_decode)(benchmark::State& state) {
+    std::vector<uint32_t> decoded(state.range(0));
+    for (auto _ : state) {
+        state.PauseTiming();
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        s16_delta_decode<Max4DeltaAVX512>(input, decoded);
+        benchmark::DoNotOptimize(decoded);
+        benchmark::ClobberMemory();
+    }
+
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
+}
 #endif
 
-BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd1_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd2_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd4_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32Vec, s4_bpdm_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, s4_bpd1_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4_bpd2_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32Vec, s8_bpd4_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32Vec, s8_bpdm_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, s8_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s8_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32Vec, s16_bpd4_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32Vec, s16_bpdm_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, s16_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s16_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
-BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32S4BPD1Decode, s4_bpd1_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32S4BPD2Decode, s4_bpd2_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32S4BPD4Decode, s4_bpd4_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32S4BPDMDecode, s4_bpdm_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32S4BPD1Decode, s4_bpd1_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPD2Decode, s4_bpd2_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPD4Decode, s4_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPDMDecode, s4_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32S8BPD4Decode, s8_bpd4_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32S8BPDMDecode, s8_bpdm_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32S8BPD4Decode, s8_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8BPDMDecode, s8_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32S16BPD4Decode, s16_bpd4_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
-
-BENCHMARK_REGISTER_F(U32S16BPDMDecode, s16_bpdm_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32S16BPD4Decode, s16_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16BPDMDecode, s16_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
-BENCHMARK_REGISTER_F(U32Vec, delta_u32_t_encode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+BENCHMARK_REGISTER_F(U32Vec, delta_u32_t_encode)->Apply(StandardBenchArgs);
 
-BENCHMARK_REGISTER_F(U32DeltaDecode, delta_u32_t_decode)
-    ->Arg(1000) // 1k
-    ->Arg(10000) // 10k
-    ->Arg(100000) // 100k
-    ->Arg(1000000) // 1m
-    ->Arg(10000000) // 10m
-    ->Unit(benchmark::kMicrosecond)
-    ->Iterations(50);
+#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+BENCHMARK_REGISTER_F(U32Vec, s4d1_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4d2_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s4dm_encode)->Apply(StandardBenchArgs);
+#endif
+
+#if defined(SIMD_TARGET_AVX2)
+BENCHMARK_REGISTER_F(U32Vec, s8d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s8dm_encode)->Apply(StandardBenchArgs);
+#endif
+
+#if defined(SIMD_TARGET_AVX512BW)
+BENCHMARK_REGISTER_F(U32Vec, s16d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, s16dm_encode)->Apply(StandardBenchArgs);
+#endif
+
+BENCHMARK_REGISTER_F(U32DeltaDecode, delta_u32_t_decode)->Apply(StandardBenchArgs);
+
+#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+BENCHMARK_REGISTER_F(U32S4D1Decode, s4d1_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4D2Decode, s4d2_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4D4Decode, s4d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4DMDecode, s4dm_decode)->Apply(StandardBenchArgs);
+#endif
+
+#if defined(SIMD_TARGET_AVX2)
+BENCHMARK_REGISTER_F(U32S8D4Decode, s8d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8DMDecode, s8dm_decode)->Apply(StandardBenchArgs);
+#endif
+
+#if defined(SIMD_TARGET_AVX512BW)
+BENCHMARK_REGISTER_F(U32S16D4Decode, s16d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16DMDecode, s16dm_decode)->Apply(StandardBenchArgs);
+#endif

@@ -1,8 +1,8 @@
 
 #include "codecfactory.h"
 #include "helper.h"
-#include "avx2binarypacking.h"
-#include "avx512binarypacking.h"
+#include "avx2_binarypacking.h"
+#include "avx512_binarypacking.h"
 #include "coder.h"
 #include <vector>
  

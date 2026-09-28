@@ -11,6 +11,7 @@
 
 #include "codecs.h"
 #include "util.h"
+#include "avx512_delta.h"
 
 // simdcomp functions - declared this way instead of including above as they
 // contain function names that are present within SIMDCompressionAndIntersection
@@ -20,32 +21,6 @@ extern "C" {
 }
 
 using namespace SIMDCompressionLib;
-
-// Modification of CourseDelta4 to run on 512-bit simd
-// Compares deltas with a gap of 16
-// https://github.com/fast-pack/SIMDCompressionAndIntersection/blob/master/include/deltatemplates.h
-struct CoarseDelta4AVX512 {
-  static __m512i PrefixSum(__m512i curr, __m512i prev) {
-    return _mm512_add_epi32(curr, prev);
-  }
-
-  static __m512i Delta(__m512i curr, __m512i prev) {
-    return _mm512_sub_epi32(curr, prev);
-  }
-};
-
-// Modification of Max4Delta to run on 256-bit simd
-// Compares deltas with a maximum gap of 16
-// https://github.com/fast-pack/SIMDCompressionAndIntersection/blob/master/include/deltatemplates.h
-struct Max4DeltaAVX512 {
-  static __m512i PrefixSum(__m512i curr, __m512i prev) {
-    return _mm512_add_epi32(curr, _mm512_shuffle_i32x4(prev, prev, 0xff));
-  }
-
-  static __m512i Delta(__m512i curr, __m512i prev) {
-    return _mm512_sub_epi32(curr, _mm512_shuffle_i32x4(prev, prev, 0xff));
-  }
-};
 
 // Modification of code from SIMDCompressionAndIntersection within include/simdbinarypacking.h
 // https://github.com/fast-pack/SIMDCompressionAndIntersection/blob/master/include/simdbinarypacking.h
