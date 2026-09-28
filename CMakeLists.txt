@@ -103,7 +103,7 @@ set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 set(_simd ${SIMD_TARGET})
 
 # check combination possible
-if (_simd STREQUAL "neon" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+if (_simd STREQUAL "avx512bw" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     message(FATAL_ERROR "SIMD_TARGET=neon requested but target is not arm64/aarch64")
 endif()
 if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
@@ -111,10 +111,6 @@ if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES
 endif()
 
 add_library(simd_target INTERFACE)
-
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-    target_compile_options(simd_target INTERFACE -mavx)
-endif()
 
 if (_simd STREQUAL "scalar")
     target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
@@ -130,10 +126,10 @@ elseif (_simd STREQUAL "sse")
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SSE=1)
 elseif (_simd STREQUAL "avx2")
     target_compile_options(simd_target INTERFACE -mavx2)
-    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1 SIMD_TARGET_SSE=1)
 elseif (_simd STREQUAL "avx512bw")
     target_compile_options(simd_target INTERFACE -mavx512bw -mavx512f)
-    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1 SIMD_TARGET_AVX2=1)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1 SIMD_TARGET_AVX2=1 SIMD_TARGET_SSE=1)
 endif()
 
 ###### FASTLANES ######
