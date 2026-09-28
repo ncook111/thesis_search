@@ -17,18 +17,11 @@ protected:
     }
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_csv");
-        std::filesystem::remove_all(index_path+"_gvb");
-        std::filesystem::remove_all(index_path+"_pef");
-        std::filesystem::remove_all(index_path+"_fls");
-        std::filesystem::remove_all(index_path+"s4_bpd1");
-        std::filesystem::remove_all(index_path+"s4_bpd2");
-        std::filesystem::remove_all(index_path+"s4_bpd4");
-        std::filesystem::remove_all(index_path+"s4_bpdm");
-        std::filesystem::remove_all(index_path+"s8_bpd4");
-        std::filesystem::remove_all(index_path+"s8_bpdm");
-        std::filesystem::remove_all(index_path+"s16_bpd4");
-        std::filesystem::remove_all(index_path+"s16_bpdm");
         std::filesystem::remove_all(output_path);
+
+        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
+            std::filesystem::remove_all(entry.path());
+        }
     }
 };
 
@@ -39,18 +32,11 @@ protected:
     }
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_json");
-        std::filesystem::remove_all(index_path+"_gvb");
-        std::filesystem::remove_all(index_path+"_pef");
-        std::filesystem::remove_all(index_path+"_fls");
-        std::filesystem::remove_all(index_path+"s4_bpd1");
-        std::filesystem::remove_all(index_path+"s4_bpd2");
-        std::filesystem::remove_all(index_path+"s4_bpd4");
-        std::filesystem::remove_all(index_path+"s4_bpdm");
-        std::filesystem::remove_all(index_path+"s8_bpd4");
-        std::filesystem::remove_all(index_path+"s8_bpdm");
-        std::filesystem::remove_all(index_path+"s16_bpd4");
-        std::filesystem::remove_all(index_path+"s16_bpdm");
         std::filesystem::remove_all(output_path);
+
+        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
+            std::filesystem::remove_all(entry.path());
+        }
     }
 };
 
@@ -61,15 +47,11 @@ protected:
     }
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_logfmt");
-        std::filesystem::remove_all(index_path+"_gvb");
-        std::filesystem::remove_all(index_path+"_pef");
-        std::filesystem::remove_all(index_path+"_fls");
-        std::filesystem::remove_all(index_path+"_bpd1");
-        std::filesystem::remove_all(index_path+"_bpd2");
-        std::filesystem::remove_all(index_path+"_bpd4");
-        std::filesystem::remove_all(index_path+"_bpdm");
-        std::filesystem::remove_all(index_path+"_bpdm");
         std::filesystem::remove_all(output_path);
+
+        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
+            std::filesystem::remove_all(entry.path());
+        }
     }
 };
 

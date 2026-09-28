@@ -13,18 +13,9 @@ static std::string output_path = "../../tests/test_data/tmp.out";
 class program_test : public ::testing::Test {
 protected:
     void TearDown() {
-        std::filesystem::remove_all(index_path+"index_gvb");
-        std::filesystem::remove_all(index_path+"index_pef");
-        std::filesystem::remove_all(index_path+"index_fls");
-        std::filesystem::remove_all(index_path+"index_s4_bpd1");
-        std::filesystem::remove_all(index_path+"index_s4_bpd2");
-        std::filesystem::remove_all(index_path+"index_s4_bpd4");
-        std::filesystem::remove_all(index_path+"index_s4_bpdm");
-        std::filesystem::remove_all(index_path+"index_s8_bpd4");
-        std::filesystem::remove_all(index_path+"index_s8_bpdm");
-        std::filesystem::remove_all(index_path+"index_s16_bpd4");
-        std::filesystem::remove_all(index_path+"index_s16_bpdm");
-        std::filesystem::remove_all(output_path);
+        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
+            std::filesystem::remove_all(entry.path());
+        }
     }
 };
 
