@@ -41,7 +41,7 @@ struct Max4DeltaAVX512 {
 // Loses data if input size is not a multiple of 16
 // Function only used in benchmarking so the lack of edge case handling
 // is not important here
-template <class DeltaHelper> void s16_delta_encode(const std::vector<uint32_t> &in, std::vector<uint32_t> &out) {
+template <class DeltaHelper, class Vec> void s16_delta_encode(const std::vector<uint32_t> &in, Vec &out) {
   const size_t in_size = in.size();
   __m512i prev = _mm512_setzero_si512();
 
@@ -56,7 +56,7 @@ template <class DeltaHelper> void s16_delta_encode(const std::vector<uint32_t> &
 // Loses data if input size is not a multiple of 16
 // Function only used in benchmarking so the lack of edge case handling
 // is not important here
-template <class DeltaHelper> void s16_delta_decode(const std::vector<uint32_t> &in, std::vector<uint32_t> &out) {
+template <class DeltaHelper, class Vec> void s16_delta_decode(const Vec &in, Vec &out) {
   const size_t in_size = in.size();
   __m512i prev = _mm512_setzero_si512();
   

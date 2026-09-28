@@ -7,9 +7,12 @@
 #include "../src/avx512_delta.h"
 #include "deltatemplates.h"
 #include "cache_flush.h"
+#include <boost/align/aligned_allocator.hpp>
 #include <benchmark/benchmark.h>
 #include <random>
 #include <set>
+
+using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
 constexpr size_t cache_size = 4096 * 1024;
 
@@ -263,10 +266,10 @@ public:
 
 class U32S4D1Decode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<RegularDeltaSIMD>(generate_uint32_t_dist(state.range(0)), input);
+        s4_delta_encode<RegularDeltaSIMD, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -275,10 +278,10 @@ public:
 
 class U32S4D2Decode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<CoarseDelta2SIMD>(generate_uint32_t_dist(state.range(0)), input);
+        s4_delta_encode<CoarseDelta2SIMD, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -287,10 +290,10 @@ public:
 
 class U32S4D4Decode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<CoarseDelta4SIMD>(generate_uint32_t_dist(state.range(0)), input);
+        s4_delta_encode<CoarseDelta4SIMD, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -299,10 +302,10 @@ public:
 
 class U32S4DMDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<Max4DeltaSIMD>(generate_uint32_t_dist(state.range(0)), input);
+        s4_delta_encode<Max4DeltaSIMD, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -341,10 +344,10 @@ public:
 
 class U32S8D4Decode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s8_delta_encode<CoarseDelta4AVX2>(generate_uint32_t_dist(state.range(0)), input);
+        s8_delta_encode<CoarseDelta4AVX2, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -353,10 +356,10 @@ public:
 
 class U32S8DMDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s8_delta_encode<Max4DeltaAVX2>(generate_uint32_t_dist(state.range(0)), input);
+        s8_delta_encode<Max4DeltaAVX2, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -395,10 +398,10 @@ public:
 
 class U32S16D4Decode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s16_delta_encode<CoarseDelta4AVX512>(generate_uint32_t_dist(state.range(0)), input);
+        s16_delta_encode<CoarseDelta4AVX512, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -407,10 +410,10 @@ public:
 
 class U32S16DMDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
+    aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s16_delta_encode<Max4DeltaAVX512>(generate_uint32_t_dist(state.range(0)), input);
+        s16_delta_encode<Max4DeltaAVX512, aligned_vec>(generate_uint32_t_dist(state.range(0)), input);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -530,12 +533,12 @@ BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_DEFINE_F(U32Vec, s4d1_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_encode<RegularDeltaSIMD>(input, encoded);
+        s4_delta_encode<RegularDeltaSIMD, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -548,12 +551,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4d1_encode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, s4d2_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_encode<CoarseDelta2SIMD>(input, encoded);
+        s4_delta_encode<CoarseDelta2SIMD, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -566,12 +569,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4d2_encode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, s4d4_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_encode<CoarseDelta4SIMD>(input, encoded);
+        s4_delta_encode<CoarseDelta4SIMD, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -584,12 +587,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4d4_encode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, s4dm_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_encode<Max4DeltaSIMD>(input, encoded);
+        s4_delta_encode<Max4DeltaSIMD, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -697,7 +700,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s8_delta_encode<CoarseDelta4AVX2>(input, encoded);
+        s8_delta_encode<CoarseDelta4AVX2, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -715,7 +718,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8dm_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s8_delta_encode<Max4DeltaAVX2>(input, encoded);
+        s8_delta_encode<Max4DeltaAVX2, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -779,7 +782,7 @@ BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s16_delta_encode<CoarseDelta4AVX512>(input, encoded);
+        s16_delta_encode<CoarseDelta4AVX512, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -797,7 +800,7 @@ BENCHMARK_DEFINE_F(U32Vec, s16dm_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s16_delta_encode<Max4DeltaAVX512>(input, encoded);
+        s16_delta_encode<Max4DeltaAVX512, aligned_vec>(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -1023,12 +1026,12 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D1Decode, s4d1_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_decode<RegularDeltaSIMD>(input, decoded);
+        s4_delta_decode<RegularDeltaSIMD, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1039,12 +1042,12 @@ BENCHMARK_DEFINE_F(U32S4D1Decode, s4d1_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D2Decode, s4d2_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_decode<CoarseDelta2SIMD>(input, decoded);
+        s4_delta_decode<CoarseDelta2SIMD, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1055,12 +1058,12 @@ BENCHMARK_DEFINE_F(U32S4D2Decode, s4d2_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D4Decode, s4d4_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_decode<CoarseDelta4SIMD>(input, decoded);
+        s4_delta_decode<CoarseDelta4SIMD, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1071,12 +1074,12 @@ BENCHMARK_DEFINE_F(U32S4D4Decode, s4d4_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4DMDecode, s4dm_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s4_delta_decode<Max4DeltaSIMD>(input, decoded);
+        s4_delta_decode<Max4DeltaSIMD, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1127,12 +1130,12 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8D4Decode, s8d4_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s8_delta_decode<CoarseDelta4AVX2>(input, decoded);
+        s8_delta_decode<CoarseDelta4AVX2, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1143,12 +1146,12 @@ BENCHMARK_DEFINE_F(U32S8D4Decode, s8d4_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8DMDecode, s8dm_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s8_delta_decode<Max4DeltaAVX2>(input, decoded);
+        s8_delta_decode<Max4DeltaAVX2, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1199,12 +1202,12 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16D4Decode, s16d4_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s16_delta_decode<CoarseDelta4AVX512>(input, decoded);
+        s16_delta_decode<CoarseDelta4AVX512, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1215,12 +1218,12 @@ BENCHMARK_DEFINE_F(U32S16D4Decode, s16d4_decode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16DMDecode, s16dm_decode)(benchmark::State& state) {
-    std::vector<uint32_t> decoded(state.range(0));
+    aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        s16_delta_decode<Max4DeltaAVX512>(input, decoded);
+        s16_delta_decode<Max4DeltaAVX512, aligned_vec>(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }

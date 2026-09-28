@@ -38,10 +38,10 @@ struct Max4DeltaAVX2 {
   }
 };
 
-// Loses data if input size is not a multiple of 8
+// Looses data if input size is not a multiple of 8
 // Function only used in benchmarking so the lack of edge case handling
 // is not important here
-template <class DeltaHelper> void s8_delta_encode(const std::vector<uint32_t> &in, std::vector<uint32_t> &out) {
+template <class DeltaHelper, class Vec> void s8_delta_encode(const std::vector<uint32_t> &in, Vec &out) {
   const size_t in_size = in.size();
   __m256i prev = _mm256_setzero_si256();
 
@@ -53,10 +53,10 @@ template <class DeltaHelper> void s8_delta_encode(const std::vector<uint32_t> &i
   }
 }
 
-// Loses data if input size is not a multiple of 8
+// Looses data if input size is not a multiple of 8
 // Function only used in benchmarking so the lack of edge case handling
 // is not important here
-template <class DeltaHelper> void s8_delta_decode(const std::vector<uint32_t> &in, std::vector<uint32_t> &out) {
+template <class DeltaHelper, class Vec> void s8_delta_decode(const Vec &in, Vec &out) {
   const size_t in_size = in.size();
   __m256i prev = _mm256_setzero_si256();
   
