@@ -21,25 +21,28 @@ static std::shared_ptr<IntegerCODEC> codec_of() {
 // but related project.
 std::shared_ptr<IntegerCODEC> get_codec(const uint8_t encoding) {
   switch (encoding) {
+#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
     case EncType::S4_BPD1:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<RegularDeltaSIMD>>>();
     case EncType::S4_BPD2:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta2SIMD>>>();
     case EncType::S4_BPD4:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<CoarseDelta4SIMD>>>();
     case EncType::S4_BPDM:  return codec_of<SIMDBinaryPacking<SIMDIntegratedBlockPacker<Max4DeltaSIMD>>>();
+#else
+    case EncType::S4_BPD1: case EncType::S4_BPD2: case EncType::S4_BPD4: case EncType::S4_BPDM:
+      throw std::runtime_error("S4_BPDX encodings need a build with -march=armv8-a+simd or -msse4.2, and require CPU support for SSE or NEON");
+#endif
 #if defined(SIMD_TARGET_AVX2)
     case EncType::S8_BPD4:  return codec_of<SIMDBinaryPackingAVX2<SIMDBlockPackerAVX2<CoarseDelta4AVX2>>>();
     case EncType::S8_BPDM:  return codec_of<SIMDBinaryPackingAVX2<SIMDBlockPackerAVX2<Max4DeltaAVX2>>>();
 #else
-    case EncType::S8_BPD4:
-    case EncType::S8_BPDM:
-      throw std::runtime_error("S8 encodings need a build with -mavx2, and require CPU support for AVX2");
+    case EncType::S8_BPD4: case EncType::S8_BPDM:
+      throw std::runtime_error("S8_BPDX encodings need a build with -mavx2, and require CPU support for AVX2");
 #endif
 #if defined(SIMD_TARGET_AVX512BW)
     case EncType::S16_BPD4: return codec_of<SIMDBinaryPackingAVX512<SIMDBlockPackerAVX512<CoarseDelta4AVX512>>>();
     case EncType::S16_BPDM: return codec_of<SIMDBinaryPackingAVX512<SIMDBlockPackerAVX512<Max4DeltaAVX512>>>();
 #else
-    case EncType::S16_BPD4:
-    case EncType::S16_BPDM:
-      throw std::runtime_error("S16 encodings need a build with -mavx512f, and require CPU support for AVX512");
+    case EncType::S16_BPD4: case EncType::S16_BPDM:
+      throw std::runtime_error("S16_BPDX encodings need a build with -mavx512f, and require CPU support for AVX512");
 #endif
     default:
       throw std::invalid_argument("Encoding type must be a SIMDBP128 variant");
