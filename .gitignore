@@ -5,6 +5,7 @@
 /third_party/
 /build/
 /tests/test_data/all_indexes/*
+!/benchmarks/bench_data/temp_indexes/.gitkeep
 .DS_Store
 /benchmarks/bench_data/*
 !/benchmarks/bench_data/all_input_data/

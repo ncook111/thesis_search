@@ -299,6 +299,7 @@ TEST_F(recreate_mode_test, test_empty_data_path) {
 }
 
 TEST_F(recreate_mode_test, test_index_exists_valid) {
+    create_mode(index_path+"_pef", data_path, {}, EncType::PEF);
     ASSERT_EQ(recreate_mode(index_path+"_pef", data_path, {}, EncType::PEF), 0);
 }
 
@@ -309,8 +310,3 @@ TEST_F(recreate_mode_test, test_invalid_index) {
 TEST_F(recreate_mode_test, test_invalid_data_path) {
     ASSERT_EQ(recreate_mode(index_path+"_pef", "../invalid", {}, EncType::PEF), 1);
 }
-
-TEST_F(recreate_mode_test, test_valid_instantiation) {
-    ASSERT_EQ(recreate_mode(index_path+"_pef", data_path, {}, EncType::PEF), 0);
-}
-
