@@ -61,7 +61,7 @@ target_compile_options(openfst PRIVATE
     -fsized-deallocation
     $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-defaulted-function-deleted>
 )
-target_link_libraries(openfst PUBLIC ${CMAKE_DL_LIBS}) # generic-register.h uses dlopen
+target_link_libraries(openfst PUBLIC ${CMAKE_DL_LIBS})
 
 ###### SIMDJSON ######
 
@@ -79,20 +79,21 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ncook111/ds2i_u64.git
     GIT_TAG        8a00f31448df4d7698d021b9be19eb0a2a4378c0
     GIT_SUBMODULES succinct
+    SOURCE_SUBDIR  succinct
+    EXCLUDE_FROM_ALL
 )
-FetchContent_Populate(ds2i_src)
+FetchContent_MakeAvailable(ds2i_src)
 
-add_subdirectory(${ds2i_src_SOURCE_DIR}/succinct ${ds2i_src_BINARY_DIR}/succinct EXCLUDE_FROM_ALL)
-target_link_libraries(succinct PUBLIC Boost::headers Boost::iostreams) # succinct/util.hpp uses mapped_file
+target_link_libraries(succinct PUBLIC Boost::headers Boost::iostreams)
 
 ###### CSV-PARSER ######
 
 FetchContent_Declare(
     csv_src
     GIT_REPOSITORY https://github.com/vincentlaucsb/csv-parser.git
-    GIT_TAG        5976d7a44df00ac55a6feec28a5e0a11d06f1872  # master @ 2026-09-21
+    GIT_TAG        5976d7a44df00ac55a6feec28a5e0a11d06f1872
 )
-set(CSV_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)   # don't build their example/demo programs
+set(CSV_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
@@ -138,8 +139,9 @@ FetchContent_Declare(
     fastlanes_src
     GIT_REPOSITORY https://github.com/cwida/FastLanes.git
     GIT_TAG        f0edc1020a538f1f8098640fce8347c9ac247a0d
+    SOURCE_SUBDIR  _no_cmake_
 )
-FetchContent_Populate(fastlanes_src)
+FetchContent_MakeAvailable(fastlanes_src)
 
 set(FASTLANES_PUB ${fastlanes_src_SOURCE_DIR}/publications/data_parallelized_encodings)
 
@@ -189,8 +191,9 @@ if (_simd MATCHES "^(avx2|avx512bw)$")
         simdcomp_kernels_src
         GIT_REPOSITORY https://github.com/fast-pack/simdcomp.git
         GIT_TAG        d5301778fe5045ca8099252de5a6ed8016a287df
+        SOURCE_SUBDIR  _no_cmake_
     )
-    FetchContent_Populate(simdcomp_kernels_src)
+    FetchContent_MakeAvailable(simdcomp_kernels_src)
 
     add_library(simdcomp_avx STATIC
         ${simdcomp_kernels_src_SOURCE_DIR}/src/avxbitpacking.c
