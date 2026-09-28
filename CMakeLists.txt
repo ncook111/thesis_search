@@ -97,13 +97,13 @@ FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "avx512bw" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
 
 # check combination possible
-if (_simd STREQUAL "avx512bw" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+if (_simd STREQUAL "neon" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     message(FATAL_ERROR "SIMD_TARGET=neon requested but target is not arm64/aarch64")
 endif()
 if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
@@ -111,10 +111,6 @@ if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES
 endif()
 
 add_library(simd_target INTERFACE)
-
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-    target_compile_options(simd_target INTERFACE -mavx)
-endif()
 
 if (_simd STREQUAL "scalar")
     target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
