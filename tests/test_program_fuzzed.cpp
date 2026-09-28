@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-static std::string index_path = "../../tests/test_data/all_indexes/index_1";
+static std::string index_path = "../../tests/test_data/all_indexes/";
 static std::string data_path = "../../tests/test_data/all_input_data";
 static std::string output_path = "../../tests/test_data/tmp.out";
 
