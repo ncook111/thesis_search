@@ -11,18 +11,24 @@ static std::string data_path = "../../tests/test_data/all_input_data/data_1";
 
 class crc_test : public ::testing::Test {
 protected:
+    void SetUp() {
+        std::filesystem::create_directory(index_path);
+    }
+
     void TearDown() {
-        std::filesystem::remove_all(index_path + "/index_1_crc");
+        std::filesystem::remove_all(index_path);
     }
 };
 
 class crc_test_fuzzed : public ::testing::Test {
 protected:
     void SetUp() {
+        std::filesystem::create_directory(index_path);
         generateFuzzedIndexFolder(index_path + "/index_fuzzed");
     }
+    
     void TearDown() {
-        std::filesystem::remove_all(index_path + "/index_fuzzed");
+        std::filesystem::remove_all(index_path);
     }
 };
 

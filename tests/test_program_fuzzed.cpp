@@ -13,45 +13,42 @@ static std::string output_path = "../../tests/test_data/tmp.out";
 class fuzzed_program_test_csv : public ::testing::Test {
 protected:
     void SetUp() {
+        std::filesystem::create_directory(index_path);
         generateFuzzedDataFile(FileType::CSV, 100000, data_path+"/fuzzed_csv", {"dob", "acc_num", "acc_bal"});
     }
+
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_csv");
         std::filesystem::remove_all(output_path);
-
-        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
-            std::filesystem::remove_all(entry.path());
-        }
+        std::filesystem::remove_all(index_path);
     }
 };
 
 class fuzzed_program_test_json : public ::testing::Test {
 protected:
     void SetUp() {
+        std::filesystem::create_directory(index_path);
         generateFuzzedDataFile(FileType::JSON, 100000, data_path+"/fuzzed_json", {"dob", "acc_num", "acc_bal"});
     }
+
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_json");
         std::filesystem::remove_all(output_path);
-
-        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
-            std::filesystem::remove_all(entry.path());
-        }
+        std::filesystem::remove_all(index_path);
     }
 };
 
 class fuzzed_program_test_logfmt : public ::testing::Test {
 protected:
     void SetUp() {
+        std::filesystem::create_directory(index_path);
         generateFuzzedDataFile(FileType::LOGFMT, 100000, data_path+"/fuzzed_logfmt", {"dob", "acc_num", "acc_bal"});
     }
+
     void TearDown() {
         std::filesystem::remove_all(data_path+"/fuzzed_logfmt");
         std::filesystem::remove_all(output_path);
-
-        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
-            std::filesystem::remove_all(entry.path());
-        }
+        std::filesystem::remove_all(index_path);
     }
 };
 

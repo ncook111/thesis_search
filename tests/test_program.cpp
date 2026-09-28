@@ -12,10 +12,12 @@ static std::string output_path = "../../tests/test_data/tmp.out";
 
 class program_test : public ::testing::Test {
 protected:
+    void SetUp() {
+        std::filesystem::create_directory(index_path);
+    }
+
     void TearDown() {
-        for (const auto &entry : std::filesystem::directory_iterator(index_path)) {
-            std::filesystem::remove_all(entry.path());
-        }
+        std::filesystem::remove_all(index_path);
     }
 };
 
