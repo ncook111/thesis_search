@@ -112,6 +112,10 @@ endif()
 
 add_library(simd_target INTERFACE)
 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    target_compile_options(simd_target INTERFACE -mavx)
+endif()
+
 if (_simd STREQUAL "scalar")
     target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
     target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SCALAR=1)
