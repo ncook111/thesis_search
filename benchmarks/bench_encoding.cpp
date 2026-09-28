@@ -270,7 +270,7 @@ public:
 };
 #endif
 
-#if defined(SIMD_TARGET_AVX512)
+#if defined(SIMD_TARGET_AVX512BW)
 class U32S16BPD4Decode : public benchmark::Fixture {
 public:
     std::vector<uint32_t> input;
