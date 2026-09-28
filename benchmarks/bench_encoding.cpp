@@ -695,7 +695,7 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpdm_encode)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX2)
 BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -713,7 +713,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, s8dm_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -777,7 +777,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8_bpdm_encode)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX512BW)
 BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -795,7 +795,7 @@ BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, s16dm_encode)(benchmark::State& state) {
-    std::vector<uint32_t> encoded(state.range(0));
+    aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);

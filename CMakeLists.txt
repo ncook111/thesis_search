@@ -104,7 +104,7 @@ set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 set(_simd ${SIMD_TARGET})
 
 # check combination possible
-if (_simd STREQUAL "neon" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+if (_simd STREQUAL "avx2" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     message(FATAL_ERROR "SIMD_TARGET=neon requested but target is not arm64/aarch64")
 endif()
 if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
