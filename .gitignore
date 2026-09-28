@@ -5,7 +5,8 @@ index/
 third_party/
 build/
 benchmarks/bench_data/
-!benchmarks/bench_data/small_data/*
+!benchmarks/bench_data/all_input_data/csv/small_data/*
+!benchmarks/bench_data/all_input_data/json/small_data/*
 tests/test_data/all_indexes/*
 !tests/test_data/all_indexes/.gitkeep
 .DS_Store
