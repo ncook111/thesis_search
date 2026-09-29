@@ -13,7 +13,12 @@ static std::string index_path = "../benchmarks/bench_data/temp_indexes/index_sea
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-static const std::vector<std::string> bench_paths = {/*"small_data/data_1","small_data/data_2", "small_data/data_3", "small_data/data_4", */"medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", /*"large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4"*/};
+static const std::vector<std::string> bench_paths = {"small_data/data_1","small_data/data_2", "small_data/data_3", "small_data/data_4", /*"medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", /*"large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4"*/};
+
+static double get_percentile(std::vector<double> timings, double percentile) {
+  std::sort(timings.begin(), timings.end());
+  return timings[static_cast<size_t>(percentile * (timings.size() - 1))];
+}
 
 static const std::vector<std::vector<std::string>> queries = {
         // simple_search
@@ -82,10 +87,20 @@ public:
                 create_mode(index_path + bench_path + "_gvb", csv_data_path + bench_path, {}, EncType::GVB);
                 create_mode(index_path + bench_path + "_pef", csv_data_path + bench_path, {}, EncType::PEF);
                 create_mode(index_path + bench_path + "_fls", csv_data_path + bench_path, {}, EncType::FLS);
+            #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
                 create_mode(index_path + bench_path + "_bpd1", csv_data_path + bench_path, {}, EncType::S4_BPD1);
                 create_mode(index_path + bench_path + "_bpd2", csv_data_path + bench_path, {}, EncType::S4_BPD2);
                 create_mode(index_path + bench_path + "_bpd4", csv_data_path + bench_path, {}, EncType::S4_BPD4);
                 create_mode(index_path + bench_path + "_bpdm", csv_data_path + bench_path, {}, EncType::S4_BPDM);
+            #endif
+            #if defined(SIMD_TARGET_AVX2)
+                create_mode(index_path + bench_path + "_bpd4", csv_data_path + bench_path, {}, EncType::S8_BPD4);
+                create_mode(index_path + bench_path + "_bpdm", csv_data_path + bench_path, {}, EncType::S8_BPDM);
+            #endif
+            #if defined(SIMD_TARGET_AVX512BW)
+                create_mode(index_path + bench_path + "_bpd4", csv_data_path + bench_path, {}, EncType::S16_BPD4);
+                create_mode(index_path + bench_path + "_bpdm", csv_data_path + bench_path, {}, EncType::S16_BPDM);
+            #endif
             }
         });
     }
@@ -209,7 +224,11 @@ BENCHMARK_REGISTER_F(IndexSearch, simple_search)
     ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
     ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
 #endif
-    ->Iterations(50);
+    ->Iterations(1)
+    ->Repetitions(100)
+    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 
 BENCHMARK_REGISTER_F(IndexSearch, union_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
@@ -262,7 +281,11 @@ BENCHMARK_REGISTER_F(IndexSearch, union_search)
     ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
     ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
 #endif
-    ->Iterations(50);
+    ->Iterations(1)
+    ->Repetitions(100)
+    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
@@ -315,7 +338,11 @@ BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
     ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
     ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
 #endif
-    ->Iterations(50);
+    ->Iterations(1)
+    ->Repetitions(100)
+    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
@@ -368,7 +395,11 @@ BENCHMARK_REGISTER_F(IndexSearch, combination_search)
     ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
     ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
 #endif
-    ->Iterations(50);
+    ->Iterations(1)
+    ->Repetitions(100)
+    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)
     ->Args({0, 0, FileType::CSV, EncType::GVB})
@@ -421,4 +452,8 @@ BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)
     ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
     ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
 #endif
-    ->Iterations(50);
+    ->Iterations(1)
+    ->Repetitions(100)
+    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
