@@ -72,6 +72,9 @@ void create_index(const std::vector<std::string> &fields,
 
 void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id) {
     std::cout << "Creating Alpha FST" << std::endl;
+    for (auto a : tokenizer.getAlphaTokens()) {
+      std::cout << a << "\n";
+    }
     create_fst<std::string>(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
     check_fst(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
     tokenizer.alpha_tokens.clear();

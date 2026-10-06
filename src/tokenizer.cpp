@@ -239,10 +239,12 @@ void Tokenizer::tokenize_json() {
 
   using namespace simdjson;
 
+  int BATCH_SIZE = 16 << 20; // Use a 16MB batch size
   ondemand::parser parser;
   simdjson::ondemand::document_stream stream;
   padded_string json = padded_string::load(file_path);
-  auto error = parser.iterate_many(json).get(stream);
+  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
+  if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
   uint64_t doc_id = 1; // Doc_id's 1-indexed
   for (auto j = stream.begin(); j != stream.end(); ++j) {
@@ -263,8 +265,8 @@ void Tokenizer::tokenize_json() {
 
     for (uint64_t field_id = 0; field_id < fields.size(); ++field_id) {
       std::string_view text;
-      if (obj[fields[field_id]].value().get(text) == 0) 
-        tokenize_field(text, doc_id, field_id);
+      if (obj[fields[field_id]].get(text) == SUCCESS)
+          tokenize_field(text, doc_id, field_id);
     }
 
     entry_offsets.push_back(j.current_index() + 1);
@@ -326,7 +328,7 @@ void Tokenizer::tokenize_field(const std::string_view field_str,
                                const uint64_t doc_id, const uint64_t field_id) {
   std::string curr_token;
   for (const char c : field_str) {
-    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
+    if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
       curr_token.push_back(c);
     } else if (curr_token.size()) {
       processToken(curr_token, doc_id, field_id);
@@ -343,7 +345,7 @@ void Tokenizer::tokenize_string(const std::string &input) {
   std::string curr_token;
 
   for (const char c : input) {
-    if (isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
+    if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
       curr_token.push_back(c);
     } else if (curr_token.size()) {
       processToken(curr_token);
@@ -530,9 +532,29 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
       break;
   }
 
-  if (!processed) {
-    std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
-    alpha_tokens[std::move(curr_token)][field_id].push_back(offset);
+  if (processed) return;
+
+  std::string curr;
+  bool has_separator = false;
+  for (const char c : curr_token) {
+    if (std::isalnum(c)) {
+      curr.push_back(c);
+    } else {
+      has_separator = true;
+      if (!curr.empty()) {
+        processToken(curr, offset, field_id);
+        curr.clear();
+      }
+    }
+  }
+
+  if (curr.empty()) return;
+
+  if (has_separator) {
+    processToken(curr, offset, field_id);
+  } else {
+    std::ranges::transform(curr, curr.begin(), [](unsigned char c) { return std::tolower(c); });
+    alpha_tokens[std::move(curr)][field_id].push_back(offset);
   }
 }
 
@@ -565,9 +587,29 @@ void Tokenizer::processToken(std::string &curr_token) {
       break;
   }
 
-  if (!processed) {
-    std::ranges::transform(curr_token.begin(), curr_token.end(), curr_token.begin(), [](unsigned char c) { return std::tolower(c); });
-    alpha_tokens_q.insert(std::move(curr_token));
+  if (processed) return;
+
+  std::string curr;
+  bool has_separator = false;
+  for (const char c : curr_token) {
+    if (std::isalnum(c)) {
+      curr.push_back(c);
+    } else {
+      has_separator = true;
+      if (!curr.empty()) {
+        processToken(curr);
+        curr.clear();
+      }
+    }
+  }
+
+  if (curr.empty()) return;
+
+  if (has_separator) {
+    processToken(curr);
+  } else {
+    std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](unsigned char c) { return std::tolower(c); });
+    alpha_tokens_q.insert(std::move(curr));
   }
 }
 

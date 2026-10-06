@@ -1,80 +1,81 @@
 #!/bin/bash
 
-# ######## Dataset_1 ########
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c ",Male," bench_data/all_input_data/csv/large_data/data_1/1_large.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_1 Large Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+######## Compress Data ########
+setup_compress_data() {
+  mkdir -p bench_data/tmp_compressed/{csv,json,logfmt}/{large,medium,small}_data/data_{1..4}
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c ",Male," bench_data/all_input_data/csv/medium_data/data_1/1_medium.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_1 Medium Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  # csv
+  compress_loop "large" "csv"
+  compress_loop "medium" "csv"
+  compress_loop "small" "csv"
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c ",Male," bench_data/all_input_data/csv/small_data/data_1/1_small.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_1 Small Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  # json
+  compress_loop "large" "json"
+  compress_loop "medium" "json"
+  compress_loop "small" "json"
 
-# ######## Dataset_2 ########
+  # # logfmt
+  # compress_loop "large" "logfmt"
+  # compress_loop "medium" "logfmt"
+  # compress_loop "small" "logfmt"
+}
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "1994-01-01," bench_data/all_input_data/csv/large_data/data_2/2_large.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_2 Large Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+compress_loop() {
+  local size="$1"
+  local file_type="$2"
+  local in="bench_data/all_input_data/${file_type}/${size}_data"
+  local out="bench_data/tmp_compressed/${file_type}/${size}_data"
+  
+  for i in {1..3}; do
+    ratio=$(lz4 -f "${in}/data_${i}/${i}_${size}.${file_type}" \
+                   "${out}/data_${i}/${i}_${size}.lz4" 2>&1 | grep -o '[0-9.]*%' | tail -1)
+    echo "${file_type} ${size} data_${i}: ${ratio}" >> ratios.txt
+  done
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "1994-01-01," bench_data/all_input_data/csv/medium_data/data_2/2_medium.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_2 Medium Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  local ratios=()
+  for i in {1..4}; do
+    ratio=$(lz4 -f "${in}/data_4/4_${size}_${i}.${file_type}" \
+                  "${out}/data_4/4_${size}_${i}.lz4" 2>&1 | grep -o '[0-9.]*%' | tail -1 | tr -d '%')
+    ratios+=("$ratio")
+  done
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "1994-01-01," bench_data/all_input_data/csv/small_data/data_2/2_small.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_2 Small Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  avg=$(printf '%s\n' "${ratios[@]}" | awk '{s+=$1} END {printf "%.2f", s/NR}')
+  echo "${file_type} ${size} data_4 average: ${avg}%" >> ratios.txt
+}
 
-# ######## Dataset_3 ########
+run_bench() {
+  local size="$1"
+  local file_type="$2"
+  local data_set="$3"
+  local query="$4"
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "Pavel" bench_data/all_input_data/csv/large_data/data_3/3_large.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_3 Large Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  if [[ $data_set -ne 4 ]]; then
+    local file_path="bench_data/tmp_compressed/${file_type}/${size}_data/data_${data_set}/${data_set}_${size}.lz4"
+    for i in $(seq 1 15); do
+      gtime -a -o times.txt -f "%e" bash -c "lz4 -dc '${file_path}' | grep -c '${query}' > /dev/null || true"
+    done
+  else
+    local file_path="bench_data/tmp_compressed/${file_type}/${size}_data/data_4"
+    for i in $(seq 1 15); do
+      gtime -a -o times.txt -f "%e" bash -c "for f in '${file_path}'/4_${size}_{1..4}.lz4; do lz4 -dc \"\$f\"; done | grep -c '${query}' > /dev/null || true"
+    done
+  fi
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "Pavel" bench_data/all_input_data/csv/medium_data/data_3/3_medium.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_3 Medium Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+  echo "Data_${data_set} ${size} Average Time: $(awk '{s+=$1} END {print s/NR}' times.txt) seconds" >> bench_output.txt
+  rm times.txt
+}
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "Pavel" bench_data/all_input_data/csv/small_data/data_3/3_small.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_3 Small Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
+rm -f ratios.txt
+rm -f times.txt
+rm -f bench_output.txt
 
-######## Dataset_4 ########
+setup_compress_data
 
-# for i in $(seq 1 15); do
-#   { gtime -f "%e" grep -c "2025-09-30 " bench_data/all_input_data/csv/large_data/data_4/4_large_1.csv bench_data/all_input_data/csv/large_data/data_4/4_large_2.csv bench_data/all_input_data/csv/large_data/data_4/4_large_3.csv bench_data/all_input_data/csv/large_data/data_4/4_large_4.csv > /dev/null; } 2>> times.txt
-# done
-# awk '{sum+=$1; count++} END {print "Data_4 Large Average time:", sum/count, "seconds"}' times.txt
-# rm times.txt
-
-for i in $(seq 1 15); do
-  { gtime -f "%e" grep -c "2025-09-30 " bench_data/all_input_data/csv/medium_data/data_4/4_medium_1.csv bench_data/all_input_data/csv/medium_data/data_4/4_medium_2.csv bench_data/all_input_data/csv/medium_data/data_4/4_medium_3.csv bench_data/all_input_data/csv/medium_data/data_4/4_medium_4.csv > /dev/null; } 2>> times.txt
+queries=(",Male," "1994-01-01," "Pavel" "2025-09-30 ")
+for data_set in {1..4}; do 
+  for size in large medium small; do
+      run_bench "${size}" "csv" "${data_set}" "${queries[data_set-1]}"
+  done
 done
-awk '{sum+=$1; count++} END {print "Data_4 Medium Average time:", sum/count, "seconds"}' times.txt
-rm times.txt
 
-for i in $(seq 1 15); do
-  { gtime -f "%e" grep -c "2025-09-30 " bench_data/all_input_data/csv/smalldata/data_4/4_small_1.csv bench_data/all_input_data/csv/small_data/data_4/4_small_2.csv bench_data/all_input_data/csv/small_data/data_4/4_small_3.csv bench_data/all_input_data/csv/small_data/data_4/4_small_4.csv > /dev/null; } 2>> times.txt
-done
-awk '{sum+=$1; count++} END {print "Data_4 Small Average time:", sum/count, "seconds"}' times.txt
-rm times.txt
+rm -rf bench_data/tmp_compressed

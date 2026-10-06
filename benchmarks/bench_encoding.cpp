@@ -16,6 +16,13 @@ using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<ui
 
 constexpr size_t cache_size = 4096 * 1024;
 
+static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
+    args->RangeMultiplier(10)
+     ->Range(1000, 10000000)   // 1k, 10k, 100k, 1M, 10M
+     ->Unit(benchmark::kMicrosecond)
+     ->Iterations(50);
+}
+
 std::vector<uint64_t> generate_int_dist(size_t size) {
     std::mt19937_64 eng(42);
     std::uniform_int_distribution<uint64_t> distr_64;
@@ -110,13 +117,6 @@ std::vector<uint32_t> generate_uint32_t_dist(size_t size) {
     }
 
     return std::vector<uint32_t>(input_set.begin(), input_set.end());
-}
-
-static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
-    args->RangeMultiplier(10)
-     ->Range(1000, 10000000)   // 1k, 10k, 100k, 1M, 10M
-     ->Unit(benchmark::kMicrosecond)
-     ->Iterations(50);
 }
 
 class U32Vec : public benchmark::Fixture {

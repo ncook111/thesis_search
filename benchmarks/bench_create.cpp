@@ -8,10 +8,74 @@ constexpr size_t cache_size = 4096 * 1024;
 
 static std::string csv_data_path = "../benchmarks/bench_data/all_input_data/csv/";
 static std::string json_data_path = "../benchmarks/bench_data/all_input_data/json/";
+static std::string logfmt_data_path = "../benchmarks/bench_data/all_input_data/logfmt/";
 static std::string index_path = "../benchmarks/bench_data/temp_indexes/index_1/";
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
+namespace FileSize {
+enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2 };
+}
+
+/*
+    Arg1: dataset size
+    Arg2: dataset number
+    Arg3: file type
+    Arg4: encoding
+*/
+template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
+    args->Args({FileSize, 0, FileType, EncType::GVB})
+        ->Args({FileSize, 1, FileType, EncType::GVB})
+        ->Args({FileSize, 2, FileType, EncType::GVB})
+        ->Args({FileSize, 3, FileType, EncType::GVB})
+        ->Args({FileSize, 0, FileType, EncType::PEF})
+        ->Args({FileSize, 1, FileType, EncType::PEF})
+        ->Args({FileSize, 2, FileType, EncType::PEF})
+        ->Args({FileSize, 3, FileType, EncType::PEF})
+        ->Args({FileSize, 0, FileType, EncType::FLS})
+        ->Args({FileSize, 1, FileType, EncType::FLS})
+        ->Args({FileSize, 2, FileType, EncType::FLS})
+        ->Args({FileSize, 3, FileType, EncType::FLS})
+    #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+        ->Args({FileSize, 0, FileType, EncType::S4_BPD1})
+        ->Args({FileSize, 1, FileType, EncType::S4_BPD1})
+        ->Args({FileSize, 2, FileType, EncType::S4_BPD1})
+        ->Args({FileSize, 3, FileType, EncType::S4_BPD1})
+        ->Args({FileSize, 0, FileType, EncType::S4_BPD2})
+        ->Args({FileSize, 1, FileType, EncType::S4_BPD2})
+        ->Args({FileSize, 2, FileType, EncType::S4_BPD2})
+        ->Args({FileSize, 3, FileType, EncType::S4_BPD2})
+        ->Args({FileSize, 0, FileType, EncType::S4_BPD4})
+        ->Args({FileSize, 1, FileType, EncType::S4_BPD4})
+        ->Args({FileSize, 2, FileType, EncType::S4_BPD4})
+        ->Args({FileSize, 3, FileType, EncType::S4_BPD4})
+        ->Args({FileSize, 0, FileType, EncType::S4_BPDM})
+        ->Args({FileSize, 1, FileType, EncType::S4_BPDM})
+        ->Args({FileSize, 2, FileType, EncType::S4_BPDM})
+        ->Args({FileSize, 3, FileType, EncType::S4_BPDM})
+    #endif
+    #if defined(SIMD_TARGET_AVX2)
+        ->Args({FileSize, 0, FileType, EncType::S8_BPD4})
+        ->Args({FileSize, 1, FileType, EncType::S8_BPD4})
+        ->Args({FileSize, 2, FileType, EncType::S8_BPD4})
+        ->Args({FileSize, 3, FileType, EncType::S8_BPD4})
+        ->Args({FileSize, 0, FileType, EncType::S8_BPDM})
+        ->Args({FileSize, 1, FileType, EncType::S8_BPDM})
+        ->Args({FileSize, 2, FileType, EncType::S8_BPDM})
+        ->Args({FileSize, 3, FileType, EncType::S8_BPDM})
+    #endif
+    #if defined(SIMD_TARGET_AVX512BW)
+        ->Args({FileSize, 0, FileType, EncType::S16_BPD4})
+        ->Args({FileSize, 1, FileType, EncType::S16_BPD4})
+        ->Args({FileSize, 2, FileType, EncType::S16_BPD4})
+        ->Args({FileSize, 3, FileType, EncType::S16_BPD4})
+        ->Args({FileSize, 0, FileType, EncType::S16_BPDM})
+        ->Args({FileSize, 1, FileType, EncType::S16_BPDM})
+        ->Args({FileSize, 2, FileType, EncType::S16_BPDM})
+        ->Args({FileSize, 3, FileType, EncType::S16_BPDM})
+    #endif
+        ->Iterations(1);
+}
 class IndexCreate : public benchmark::Fixture {
 public:
     std::string bench_path;
@@ -26,7 +90,18 @@ public:
         std::string dataset = datasets[dataset_size];
         state.SetLabel(std::to_string(dataset_number+1) + "_" + dataset + "/" + enc_type_to_str(enc_type));
         bench_path = dataset + "_data/data_" + std::to_string(dataset_number+1);
-        (file_type == FileType::CSV) ? data_path = csv_data_path : data_path = json_data_path;
+        
+        switch (file_type) {
+            case FileType::CSV:
+                data_path = csv_data_path;
+                break;
+            case FileType::JSON:
+                data_path = json_data_path;
+                break;
+            case FileType::LOGFMT:
+                data_path = logfmt_data_path;
+                break;
+        }
     }
 };
 
@@ -60,432 +135,16 @@ BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
     }
 }
 
+
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
+// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON>);
+
 /*
-    Arg1: dataset size
-    Arg2: dataset number
-    Arg3: file type
-    Arg4: encoding
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);
 */
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 1, FileType::CSV, EncType::GVB})
-    ->Args({1, 2, FileType::CSV, EncType::GVB})
-    ->Args({1, 3, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 1, FileType::CSV, EncType::PEF})
-    ->Args({1, 2, FileType::CSV, EncType::PEF})
-    ->Args({1, 3, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::FLS})
-    ->Args({1, 1, FileType::CSV, EncType::FLS})
-    ->Args({1, 2, FileType::CSV, EncType::FLS})
-    ->Args({1, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({1, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({1, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({2, 0, FileType::CSV, EncType::GVB})
-    ->Args({2, 1, FileType::CSV, EncType::GVB})
-    ->Args({2, 2, FileType::CSV, EncType::GVB})
-    ->Args({2, 3, FileType::CSV, EncType::GVB})
-    ->Args({2, 0, FileType::CSV, EncType::PEF})
-    ->Args({2, 1, FileType::CSV, EncType::PEF})
-    ->Args({2, 2, FileType::CSV, EncType::PEF})
-    ->Args({2, 3, FileType::CSV, EncType::PEF})
-    ->Args({2, 0, FileType::CSV, EncType::FLS})
-    ->Args({2, 1, FileType::CSV, EncType::FLS})
-    ->Args({2, 2, FileType::CSV, EncType::FLS})
-    ->Args({2, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({2, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({2, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({2, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({2, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({2, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({2, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({2, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({2, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({2, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({2, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({2, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({2, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({2, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({2, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({2, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({2, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({2, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({2, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({2, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({2, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({2, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({2, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({2, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({2, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({2, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({2, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({2, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({2, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({2, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({2, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({2, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({2, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({3, 0, FileType::CSV, EncType::GVB})
-    ->Args({3, 1, FileType::CSV, EncType::GVB})
-    ->Args({3, 2, FileType::CSV, EncType::GVB})
-    ->Args({3, 3, FileType::CSV, EncType::GVB})
-    ->Args({3, 0, FileType::CSV, EncType::PEF})
-    ->Args({3, 1, FileType::CSV, EncType::PEF})
-    ->Args({3, 2, FileType::CSV, EncType::PEF})
-    ->Args({3, 3, FileType::CSV, EncType::PEF})
-    ->Args({3, 0, FileType::CSV, EncType::FLS})
-    ->Args({3, 1, FileType::CSV, EncType::FLS})
-    ->Args({3, 2, FileType::CSV, EncType::FLS})
-    ->Args({3, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({3, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({3, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({3, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({3, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({3, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({3, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({3, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({3, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({3, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({3, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({3, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({3, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({3, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({3, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({3, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({3, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({3, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({3, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({3, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({3, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({3, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({3, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({3, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({3, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({3, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({3, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({3, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({3, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({3, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({3, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({3, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({3, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({1, 0, FileType::CSV, EncType::GVB})
-    ->Args({1, 1, FileType::CSV, EncType::GVB})
-    ->Args({1, 2, FileType::CSV, EncType::GVB})
-    ->Args({1, 3, FileType::CSV, EncType::GVB})
-    ->Args({1, 0, FileType::CSV, EncType::PEF})
-    ->Args({1, 1, FileType::CSV, EncType::PEF})
-    ->Args({1, 2, FileType::CSV, EncType::PEF})
-    ->Args({1, 3, FileType::CSV, EncType::PEF})
-    ->Args({1, 0, FileType::CSV, EncType::FLS})
-    ->Args({1, 1, FileType::CSV, EncType::FLS})
-    ->Args({1, 2, FileType::CSV, EncType::FLS})
-    ->Args({1, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({1, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({1, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({1, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({1, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({2, 0, FileType::JSON, EncType::GVB})
-    ->Args({2, 1, FileType::JSON, EncType::GVB})
-    ->Args({2, 2, FileType::JSON, EncType::GVB})
-    ->Args({2, 3, FileType::JSON, EncType::GVB})
-    ->Args({2, 0, FileType::JSON, EncType::PEF})
-    ->Args({2, 1, FileType::JSON, EncType::PEF})
-    ->Args({2, 2, FileType::JSON, EncType::PEF})
-    ->Args({2, 3, FileType::JSON, EncType::PEF})
-    ->Args({2, 0, FileType::JSON, EncType::FLS})
-    ->Args({2, 1, FileType::JSON, EncType::FLS})
-    ->Args({2, 2, FileType::JSON, EncType::FLS})
-    ->Args({2, 3, FileType::JSON, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({2, 0, FileType::JSON, EncType::S4_BPD1})
-    ->Args({2, 1, FileType::JSON, EncType::S4_BPD1})
-    ->Args({2, 2, FileType::JSON, EncType::S4_BPD1})
-    ->Args({2, 3, FileType::JSON, EncType::S4_BPD1})
-    ->Args({2, 0, FileType::JSON, EncType::S4_BPD2})
-    ->Args({2, 1, FileType::JSON, EncType::S4_BPD2})
-    ->Args({2, 2, FileType::JSON, EncType::S4_BPD2})
-    ->Args({2, 3, FileType::JSON, EncType::S4_BPD2})
-    ->Args({2, 0, FileType::JSON, EncType::S4_BPD4})
-    ->Args({2, 1, FileType::JSON, EncType::S4_BPD4})
-    ->Args({2, 2, FileType::JSON, EncType::S4_BPD4})
-    ->Args({2, 3, FileType::JSON, EncType::S4_BPD4})
-    ->Args({2, 0, FileType::JSON, EncType::S4_BPDM})
-    ->Args({2, 1, FileType::JSON, EncType::S4_BPDM})
-    ->Args({2, 2, FileType::JSON, EncType::S4_BPDM})
-    ->Args({2, 3, FileType::JSON, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({2, 0, FileType::JSON, EncType::S8_BPD4})
-    ->Args({2, 1, FileType::JSON, EncType::S8_BPD4})
-    ->Args({2, 2, FileType::JSON, EncType::S8_BPD4})
-    ->Args({2, 3, FileType::JSON, EncType::S8_BPD4})
-    ->Args({2, 0, FileType::JSON, EncType::S8_BPDM})
-    ->Args({2, 1, FileType::JSON, EncType::S8_BPDM})
-    ->Args({2, 2, FileType::JSON, EncType::S8_BPDM})
-    ->Args({2, 3, FileType::JSON, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({2, 0, FileType::JSON, EncType::S16_BPD4})
-    ->Args({2, 1, FileType::JSON, EncType::S16_BPD4})
-    ->Args({2, 2, FileType::JSON, EncType::S16_BPD4})
-    ->Args({2, 3, FileType::JSON, EncType::S16_BPD4})
-    ->Args({2, 0, FileType::JSON, EncType::S16_BPDM})
-    ->Args({2, 1, FileType::JSON, EncType::S16_BPDM})
-    ->Args({2, 2, FileType::JSON, EncType::S16_BPDM})
-    ->Args({2, 3, FileType::JSON, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);
-
-BENCHMARK_REGISTER_F(IndexCreate, index_create)
-    ->Args({3, 0, FileType::JSON, EncType::GVB})
-    ->Args({3, 1, FileType::JSON, EncType::GVB})
-    ->Args({3, 2, FileType::JSON, EncType::GVB})
-    ->Args({3, 3, FileType::JSON, EncType::GVB})
-    ->Args({3, 0, FileType::JSON, EncType::PEF})
-    ->Args({3, 1, FileType::JSON, EncType::PEF})
-    ->Args({3, 2, FileType::JSON, EncType::PEF})
-    ->Args({3, 3, FileType::JSON, EncType::PEF})
-    ->Args({3, 0, FileType::JSON, EncType::FLS})
-    ->Args({3, 1, FileType::JSON, EncType::FLS})
-    ->Args({3, 2, FileType::JSON, EncType::FLS})
-    ->Args({3, 3, FileType::JSON, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({3, 0, FileType::JSON, EncType::S4_BPD1})
-    ->Args({3, 1, FileType::JSON, EncType::S4_BPD1})
-    ->Args({3, 2, FileType::JSON, EncType::S4_BPD1})
-    ->Args({3, 3, FileType::JSON, EncType::S4_BPD1})
-    ->Args({3, 0, FileType::JSON, EncType::S4_BPD2})
-    ->Args({3, 1, FileType::JSON, EncType::S4_BPD2})
-    ->Args({3, 2, FileType::JSON, EncType::S4_BPD2})
-    ->Args({3, 3, FileType::JSON, EncType::S4_BPD2})
-    ->Args({3, 0, FileType::JSON, EncType::S4_BPD4})
-    ->Args({3, 1, FileType::JSON, EncType::S4_BPD4})
-    ->Args({3, 2, FileType::JSON, EncType::S4_BPD4})
-    ->Args({3, 3, FileType::JSON, EncType::S4_BPD4})
-    ->Args({3, 0, FileType::JSON, EncType::S4_BPDM})
-    ->Args({3, 1, FileType::JSON, EncType::S4_BPDM})
-    ->Args({3, 2, FileType::JSON, EncType::S4_BPDM})
-    ->Args({3, 3, FileType::JSON, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({3, 0, FileType::JSON, EncType::S8_BPD4})
-    ->Args({3, 1, FileType::JSON, EncType::S8_BPD4})
-    ->Args({3, 2, FileType::JSON, EncType::S8_BPD4})
-    ->Args({3, 3, FileType::JSON, EncType::S8_BPD4})
-    ->Args({3, 0, FileType::JSON, EncType::S8_BPDM})
-    ->Args({3, 1, FileType::JSON, EncType::S8_BPDM})
-    ->Args({3, 2, FileType::JSON, EncType::S8_BPDM})
-    ->Args({3, 3, FileType::JSON, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({3, 0, FileType::JSON, EncType::S16_BPD4})
-    ->Args({3, 1, FileType::JSON, EncType::S16_BPD4})
-    ->Args({3, 2, FileType::JSON, EncType::S16_BPD4})
-    ->Args({3, 3, FileType::JSON, EncType::S16_BPD4})
-    ->Args({3, 0, FileType::JSON, EncType::S16_BPDM})
-    ->Args({3, 1, FileType::JSON, EncType::S16_BPDM})
-    ->Args({3, 2, FileType::JSON, EncType::S16_BPDM})
-    ->Args({3, 3, FileType::JSON, EncType::S16_BPDM})
-#endif
-    ->Iterations(1);

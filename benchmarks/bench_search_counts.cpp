@@ -5,6 +5,7 @@
 #include "../src/ingest.h"
 #include "../src/helper.h"
 
+#define NUM_REPETITIONS 100
 constexpr size_t cache_size = 4096 * 1024;
 
 static std::string csv_data_path = "../benchmarks/bench_data/all_input_data/csv/";
@@ -20,12 +21,77 @@ static double get_percentile(std::vector<double> timings, double percentile) {
   return timings[static_cast<size_t>(percentile * (timings.size() - 1))];
 }
 
+// /*
+//     Arg1: dataset size
+//     Arg2: dataset number
+//     Arg3: file type
+//     Arg4: encoding
+// */
+static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
+    args->Args({0, 0, FileType::CSV, EncType::GVB})
+        ->Args({0, 1, FileType::CSV, EncType::GVB})
+        ->Args({0, 2, FileType::CSV, EncType::GVB})
+        ->Args({0, 3, FileType::CSV, EncType::GVB})
+        ->Args({0, 0, FileType::CSV, EncType::PEF})
+        ->Args({0, 1, FileType::CSV, EncType::PEF})
+        ->Args({0, 2, FileType::CSV, EncType::PEF})
+        ->Args({0, 3, FileType::CSV, EncType::PEF})
+        ->Args({0, 0, FileType::CSV, EncType::FLS})
+        ->Args({0, 1, FileType::CSV, EncType::FLS})
+        ->Args({0, 2, FileType::CSV, EncType::FLS})
+        ->Args({0, 3, FileType::CSV, EncType::FLS})
+    #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+        ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
+        ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
+        ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
+        ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
+        ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
+        ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
+        ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
+        ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
+        ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
+        ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
+        ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
+        ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
+        ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
+        ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
+        ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
+        ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
+    #endif
+    #if defined(SIMD_TARGET_AVX2)
+        ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
+        ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
+        ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
+        ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
+        ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
+        ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
+        ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
+        ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
+    #endif
+    #if defined(SIMD_TARGET_AVX512BW)
+        ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
+        ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
+        ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
+        ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
+        ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
+        ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
+        ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
+        ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
+    #endif
+        ->Iterations(1)
+        ->Unit(benchmark::kMicrosecond)
+        ->Repetitions(NUM_REPETITIONS)
+        ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+        ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+        ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
+}
+
 static const std::vector<std::vector<std::string>> queries = {
         // simple_search
         {
             "[*] = \"male\"", 
             "[*] = \"1994-01-01\"", 
-            "[*] = \"Pavel \"", 
+            "[*] = \"Pavel\"", 
             "[*] = \"53\""
         },
 
@@ -58,7 +124,7 @@ static const std::vector<std::vector<std::string>> queries = {
             "([sex] = \"male\" & [first_name] = \"bob\") | ([sex] = \"female\" & [first_name] = \"Gloria\" & ![city] = \"Kingsport\")",
             "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1} & ![acc_num] = \"74578716\"",
             "([authors] = \"Pavel\" | [authors] = \"Dimitry\" | [authors] = \"Alejandro\") & ([title] = \"Graph Decompositions\" | [title] = \"prompt diphoton\") & ![authors] = \"Berger\"",
-            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07::00::00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}"
+            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}"
         }
 }; 
 
@@ -167,293 +233,8 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
     }
 }
 
-// /*
-//     Arg1: dataset size
-//     Arg2: dataset number
-//     Arg3: file type
-//     Arg4: encoding
-// */
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1)
-    ->Repetitions(100)
-    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
-    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
-
-BENCHMARK_REGISTER_F(IndexSearch, union_search)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1)
-    ->Repetitions(100)
-    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
-    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
-
-BENCHMARK_REGISTER_F(IndexSearch, intersection_search)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1)
-    ->Repetitions(100)
-    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
-    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
-
-BENCHMARK_REGISTER_F(IndexSearch, combination_search)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1)
-    ->Repetitions(100)
-    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
-    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
-
-BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)
-    ->Args({0, 0, FileType::CSV, EncType::GVB})
-    ->Args({0, 1, FileType::CSV, EncType::GVB})
-    ->Args({0, 2, FileType::CSV, EncType::GVB})
-    ->Args({0, 3, FileType::CSV, EncType::GVB})
-    ->Args({0, 0, FileType::CSV, EncType::PEF})
-    ->Args({0, 1, FileType::CSV, EncType::PEF})
-    ->Args({0, 2, FileType::CSV, EncType::PEF})
-    ->Args({0, 3, FileType::CSV, EncType::PEF})
-    ->Args({0, 0, FileType::CSV, EncType::FLS})
-    ->Args({0, 1, FileType::CSV, EncType::FLS})
-    ->Args({0, 2, FileType::CSV, EncType::FLS})
-    ->Args({0, 3, FileType::CSV, EncType::FLS})
-#if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD1})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD2})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S4_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S4_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX2)
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S8_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S8_BPDM})
-#endif
-#if defined(SIMD_TARGET_AVX512BW)
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPD4})
-    ->Args({0, 0, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 1, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 2, FileType::CSV, EncType::S16_BPDM})
-    ->Args({0, 3, FileType::CSV, EncType::S16_BPDM})
-#endif
-    ->Iterations(1)
-    ->Repetitions(100)
-    ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-    ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
-    ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
+BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs);

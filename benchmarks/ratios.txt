@@ -1,0 +1,24 @@
+csv large data_1: 64.45%
+csv large data_2: 77.89%
+csv large data_3: 55.15%
+csv large data_4 average: 55.82%
+csv medium data_1: 64.44%
+csv medium data_2: 77.89%
+csv medium data_3: 54.92%
+csv medium data_4 average: 56.05%
+csv small data_1: 64.48%
+csv small data_2: 77.88%
+csv small data_3: 56.87%
+csv small data_4 average: 56.39%
+json large data_1: 36.14%
+json large data_2: 37.71%
+json large data_3: 51.39%
+json large data_4 average: 28.56%
+json medium data_1: 36.14%
+json medium data_2: 37.71%
+json medium data_3: 50.90%
+json medium data_4 average: 28.65%
+json small data_1: 36.15%
+json small data_2: 37.70%
+json small data_3: 52.20%
+json small data_4 average: 28.89%
