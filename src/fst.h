@@ -229,10 +229,11 @@ void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
 template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
   std::cout << "read in filename: " << file_name << std::endl;
+  std::cout << "here0" << std::endl;
   std::unique_ptr<fst::StdConstFst> fst = read_from_disk(file_name);
 
   std::set<M> set;
-
+  std::cout << "here1" << std::endl;
   if constexpr (std::is_same_v<M, std::string>) {
     set = get_strings_from_fst(*fst);
   } else {
@@ -244,23 +245,26 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
     }
   }
 
+  std::cout << "here2" << std::endl;
   std::vector<M> out;
 
   for (const auto i : set) {
     out.push_back(i);
   }
 
+  std::cout << "here3" << std::endl;
   std::vector<M> tokens_sorted = tokens;
 
   std::sort(tokens_sorted.begin(), tokens_sorted.end());
 
+  std::cout << "here4" << std::endl;
   if (out == tokens_sorted) {
     std::cout << "correct" << std::endl;
   } else {
     std::cout << "incorrect" << std::endl;
   }
 
-  return out == tokens;
+  return out == tokens_sorted;
 }
 
 template <class G>

@@ -13,19 +13,21 @@
 #include <sys/stat.h>
 #include <time.h>
 
+constexpr uint32_t MAX_TOK_LENGTH = 256;
+
 namespace TokenType {
-enum Value : uint8_t {
-  ALPHA = 0,
-  PINT = 1,
-  NINT = 2,
-  FLOAT = 3,
-  DATE = 4,
-  TIME = 5,
-  IPV4 = 6,
-  IPV6 = 7,
-  BOOLEAN = 8,
-  INVALID = 9,
-};
+  enum Value : uint8_t {
+    ALPHA = 0,
+    PINT = 1,
+    NINT = 2,
+    FLOAT = 3,
+    DATE = 4,
+    TIME = 5,
+    IPV4 = 6,
+    IPV6 = 7,
+    BOOLEAN = 8,
+    INVALID = 9,
+  };
 }
 
 class Tokenizer {
@@ -111,6 +113,7 @@ private:
   const bool is_pint(const std::string &s) const;
   const bool is_nint(const std::string &s) const;
   const bool is_bool(const std::string &s) const;
+  const bool contains_alpha(const std::string &s) const;
   bool handle_pint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   bool handle_nint(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   bool handle_float(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);

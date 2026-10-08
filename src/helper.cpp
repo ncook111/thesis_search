@@ -183,10 +183,26 @@ const uint32_t ip_str_to_int(const int domain, const std::string ip_addr) {
 
   if (s <= 0) {
       if (s == 0)
-        throw std::invalid_argument("IP not in presentation format");
+
+        throw std::invalid_argument("IP not in presentation format: " + ip_addr);
       else
         throw std::invalid_argument("IP domain family not valid");
   }
 
   return ntohl(addr.s_addr);
+}
+
+bool is_digit(const char c) { 
+  return c >= '0' && c <= '9'; 
+}
+bool is_alpha(const char c) { 
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool is_alnum(const char c) {
+  return is_digit(c) || is_alpha(c);
+}
+
+char to_lower(const char c) {
+  return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
 }

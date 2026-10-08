@@ -53,6 +53,10 @@ const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec);
 const uint8_t get_query_mode(const std::string &mode);
 const std::string trim(const std::string& str);
 const uint32_t ip_str_to_int(const int domain, const std::string ip_addr);
+bool is_digit(const char c);
+bool is_alpha(const char c);
+bool is_alnum(const char c);
+char to_lower(const char c);
 
 template <class F> const std::vector<uint8_t> to_bytes(const F &input) {
   std::vector<uint8_t> bytes(sizeof(input));

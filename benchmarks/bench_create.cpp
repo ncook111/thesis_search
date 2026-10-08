@@ -28,51 +28,62 @@ template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benc
         ->Args({FileSize, 1, FileType, EncType::GVB})
         ->Args({FileSize, 2, FileType, EncType::GVB})
         ->Args({FileSize, 3, FileType, EncType::GVB})
+        ->Args({FileSize, 4, FileType, EncType::GVB})
         ->Args({FileSize, 0, FileType, EncType::PEF})
         ->Args({FileSize, 1, FileType, EncType::PEF})
         ->Args({FileSize, 2, FileType, EncType::PEF})
         ->Args({FileSize, 3, FileType, EncType::PEF})
+        ->Args({FileSize, 4, FileType, EncType::PEF})
         ->Args({FileSize, 0, FileType, EncType::FLS})
         ->Args({FileSize, 1, FileType, EncType::FLS})
         ->Args({FileSize, 2, FileType, EncType::FLS})
         ->Args({FileSize, 3, FileType, EncType::FLS})
+        ->Args({FileSize, 4, FileType, EncType::FLS})
     #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
         ->Args({FileSize, 0, FileType, EncType::S4_BPD1})
         ->Args({FileSize, 1, FileType, EncType::S4_BPD1})
         ->Args({FileSize, 2, FileType, EncType::S4_BPD1})
         ->Args({FileSize, 3, FileType, EncType::S4_BPD1})
+        ->Args({FileSize, 4, FileType, EncType::S4_BPD1})
         ->Args({FileSize, 0, FileType, EncType::S4_BPD2})
         ->Args({FileSize, 1, FileType, EncType::S4_BPD2})
         ->Args({FileSize, 2, FileType, EncType::S4_BPD2})
         ->Args({FileSize, 3, FileType, EncType::S4_BPD2})
+        ->Args({FileSize, 4, FileType, EncType::S4_BPD2})
         ->Args({FileSize, 0, FileType, EncType::S4_BPD4})
         ->Args({FileSize, 1, FileType, EncType::S4_BPD4})
         ->Args({FileSize, 2, FileType, EncType::S4_BPD4})
         ->Args({FileSize, 3, FileType, EncType::S4_BPD4})
+        ->Args({FileSize, 4, FileType, EncType::S4_BPD4})
         ->Args({FileSize, 0, FileType, EncType::S4_BPDM})
         ->Args({FileSize, 1, FileType, EncType::S4_BPDM})
         ->Args({FileSize, 2, FileType, EncType::S4_BPDM})
         ->Args({FileSize, 3, FileType, EncType::S4_BPDM})
+        ->Args({FileSize, 4, FileType, EncType::S4_BPDM})
     #endif
     #if defined(SIMD_TARGET_AVX2)
         ->Args({FileSize, 0, FileType, EncType::S8_BPD4})
         ->Args({FileSize, 1, FileType, EncType::S8_BPD4})
         ->Args({FileSize, 2, FileType, EncType::S8_BPD4})
         ->Args({FileSize, 3, FileType, EncType::S8_BPD4})
+        ->Args({FileSize, 4, FileType, EncType::S8_BPD4})
         ->Args({FileSize, 0, FileType, EncType::S8_BPDM})
         ->Args({FileSize, 1, FileType, EncType::S8_BPDM})
         ->Args({FileSize, 2, FileType, EncType::S8_BPDM})
         ->Args({FileSize, 3, FileType, EncType::S8_BPDM})
+        ->Args({FileSize, 4, FileType, EncType::S8_BPDM})
     #endif
     #if defined(SIMD_TARGET_AVX512BW)
         ->Args({FileSize, 0, FileType, EncType::S16_BPD4})
         ->Args({FileSize, 1, FileType, EncType::S16_BPD4})
         ->Args({FileSize, 2, FileType, EncType::S16_BPD4})
         ->Args({FileSize, 3, FileType, EncType::S16_BPD4})
+        ->Args({FileSize, 4, FileType, EncType::S16_BPD4})
         ->Args({FileSize, 0, FileType, EncType::S16_BPDM})
         ->Args({FileSize, 1, FileType, EncType::S16_BPDM})
         ->Args({FileSize, 2, FileType, EncType::S16_BPDM})
         ->Args({FileSize, 3, FileType, EncType::S16_BPDM})
+        ->Args({FileSize, 4, FileType, EncType::S16_BPDM})
     #endif
         ->Iterations(1);
 }
@@ -137,14 +148,11 @@ BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
 
 
 BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
-// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV>);
 BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
-// BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON>);
-
-/*
 BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
-BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
-BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);
-*/
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);

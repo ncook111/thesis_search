@@ -20,6 +20,13 @@
 #include <filesystem>
 #include "logfmt_parser.h"
 
+const bool Tokenizer::contains_alpha(const std::string &s) const {
+  for (size_t i = 0; i < s.size(); ++i) {
+    if (is_alpha(s[i])) return true;
+  }
+
+  return false;
+}
 const bool Tokenizer::is_pint(const std::string &s) const {
   size_t i = s.front() == '+' ? 1 : 0;
 
@@ -142,10 +149,9 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
 
   for (const auto curr : parts) {
     std::uint64_t res_int;
-    fast_float::from_chars_result res_err =
-        fast_float::from_chars(curr.data(), curr.data() + curr.size(), res_int);
+    fast_float::from_chars_result res_err = fast_float::from_chars(curr.data(), curr.data() + curr.size(), res_int);
     if (res_err.ec == std::errc()) {
-      if (res_int > 256)
+      if (res_int > 255)
         return false;
     } else if (res_err.ec == std::errc::invalid_argument) {
       return false;
@@ -162,6 +168,10 @@ const bool Tokenizer::is_bool(const std::string &s) const {
 }
 
 inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
+  if (contains_alpha(s)) {
+    return TokenType::ALPHA;
+  }
+
   if (is_pint(s)) {
     return TokenType::PINT;
   }
@@ -535,26 +545,36 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
   if (processed) return;
 
   std::string curr;
-  bool has_separator = false;
+  bool split = false;
   for (const char c : curr_token) {
-    if (std::isalnum(c)) {
+    if (curr.size() == 0 && is_alnum(c)) {
+      curr.push_back(c);
+    } else if (curr.size() && is_digit(c) && is_digit(curr.back())) {
+      curr.push_back(c);
+    } else if (curr.size() && is_alpha(c) && is_alpha(curr.back())) {
       curr.push_back(c);
     } else {
-      has_separator = true;
+      split = true;
       if (!curr.empty()) {
         processToken(curr, offset, field_id);
         curr.clear();
+      }
+
+      if (is_alnum(c)) {
+        curr.push_back(c);
       }
     }
   }
 
   if (curr.empty()) return;
 
-  if (has_separator) {
+  if (split) {
     processToken(curr, offset, field_id);
   } else {
-    std::ranges::transform(curr, curr.begin(), [](unsigned char c) { return std::tolower(c); });
-    alpha_tokens[std::move(curr)][field_id].push_back(offset);
+    if (curr.size() <= MAX_TOK_LENGTH) {
+      std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
+      alpha_tokens[std::move(curr)][field_id].push_back(offset);
+    }
   }
 }
 
@@ -590,26 +610,36 @@ void Tokenizer::processToken(std::string &curr_token) {
   if (processed) return;
 
   std::string curr;
-  bool has_separator = false;
+  bool split = false;
   for (const char c : curr_token) {
-    if (std::isalnum(c)) {
+    if (curr.size() == 0 && is_alnum(c)) {
+      curr.push_back(c);
+    } else if (curr.size() && is_digit(c) && is_digit(curr.back())) {
+      curr.push_back(c);
+    } else if (curr.size() && is_alpha(c) && is_alpha(curr.back())) {
       curr.push_back(c);
     } else {
-      has_separator = true;
+      split = true;
       if (!curr.empty()) {
         processToken(curr);
         curr.clear();
+      }
+
+      if (is_alnum(c)) {
+        curr.push_back(c);
       }
     }
   }
 
   if (curr.empty()) return;
 
-  if (has_separator) {
+  if (split) {
     processToken(curr);
   } else {
-    std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](unsigned char c) { return std::tolower(c); });
-    alpha_tokens_q.insert(std::move(curr));
+    if (curr.size() <= MAX_TOK_LENGTH) {
+      std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
+      alpha_tokens_q.insert(std::move(curr));
+    }
   }
 }
 
