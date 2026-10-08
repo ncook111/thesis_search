@@ -347,8 +347,9 @@ bool check_offsets_file_by_type(
           }
           const std::vector<uint32_t> enc_data = encode_simdbp128(vec32, enc_type);
           const uint64_t enc_data_size = enc_data.size() * sizeof(uint32_t);
+          const uint64_t enc_orig_size_size = vb_encode_num_uint64_t(orig_size).size();
 
-          local_offset += enc_data_size + sizeof(orig_size);
+          local_offset += enc_data_size + enc_orig_size_size;
           break;
         }
         default:
