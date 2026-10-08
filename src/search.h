@@ -48,7 +48,7 @@ std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::ve
 template <QueryType Q>
 const std::optional<uint64_t> get_id_fst(const Q &query,
                                          const std::string &fst_file_name) {
-  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(fst_file_name);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(fst_file_name);
   int id = get_id_from_fst(*fst, query);
 
   return (id >= 0) ? std::make_optional(id) : std::nullopt;
@@ -149,7 +149,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
     if constexpr (std::is_same_v<Q, Range>) {
       ids = get_range_id_pef(range, offset_file_name, type);
     } else {
-      std::unique_ptr<fst::StdConstFst> fst = read_from_disk(index_path + "/fsts/" + std::to_string(i) + "_float.fst");
+      std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/fsts/" + std::to_string(i) + "_float.fst");
       ids = get_id_range_from_fst(*fst, range);
     }
 

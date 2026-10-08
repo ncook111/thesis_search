@@ -21,7 +21,9 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
-                  const std::string &data_dir_str, const uint8_t enc_type) {
+                  const std::string &data_dir_str, 
+                  const uint8_t enc_type,
+                  const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
   const std::filesystem::path fst_dir = index_dir_str + "/fsts";
@@ -65,34 +67,46 @@ void create_index(const std::vector<std::string> &fields,
   }
 
   create_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
-  check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
+
+  if (run_checks)
+    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst");
 
   create_checksum_file(index_dir_str);
 }
 
-void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id) {
+void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id, const bool run_checks) {
     std::cout << "Creating Alpha FST" << std::endl;
     create_fst<std::string>(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
-    check_fst(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
-    tokenizer.alpha_tokens.clear();
+    
+    if (run_checks)
+      check_fst(tokenizer.getAlphaTokens(), fst_dir + "/" + file_id + "_alpha.fst");
+    
+      tokenizer.alpha_tokens.clear();
     std::cout << "Finished" << std::endl;
 
     std::cout << "Creating Float FST" << std::endl;
     create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens),
         fst_dir + "/" + file_id + "_float.fst");
-    check_fst(tokenizer.getFloatTokens(), fst_dir + "/" + file_id + "_float.fst");
-    tokenizer.float_tokens.clear();
+    
+    if (run_checks)
+      check_fst(tokenizer.getFloatTokens(), fst_dir + "/" + file_id + "_float.fst");
+    
+      tokenizer.float_tokens.clear();
     std::cout << "Finished" << std::endl;
     
     create_fst<std::string>(tokenizer.fields, fst_dir + "/" + file_id + "_fields.fst");
-    check_fst(tokenizer.fields, fst_dir + "/" + file_id + "_fields.fst");
+
+    if (run_checks)
+      check_fst(tokenizer.fields, fst_dir + "/" + file_id + "_fields.fst");
+
     tokenizer.fields.clear();
     std::cout << "Finished" << std::endl;
 }
 
 void generate_offsets_file(const Tokenizer &tokenizer,
                            const std::string &file_name,
-                           const uint8_t enc_type) {
+                           const uint8_t enc_type,
+                           const bool run_checks) {
   std::ofstream file;
   file.open(file_name + ".off", std::ios::binary);
 
@@ -160,8 +174,10 @@ void generate_offsets_file(const Tokenizer &tokenizer,
 
   file.close();
 
-  // check_offsets_file(tokenizer, file_name + ".off", enc_type);
-  // check_all_pef_tokens(tokenizer, file_name + ".off");
+  if (run_checks) {
+    check_offsets_file(tokenizer, file_name + ".off", enc_type);
+    check_all_pef_tokens(tokenizer, file_name + ".off");
+  }
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,

@@ -25,7 +25,7 @@ const FieldMap search_index(const std::vector<std::string> &fields,
 
   check_index_dir_valid(index_path);
   // Read in file_mappings fst
-  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(index_path + "/file_mappings.fst");
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/file_mappings.fst");
   const size_t names_size = get_strings_from_fst(*fst).size();
 
   FieldMap offsets;
@@ -301,7 +301,7 @@ const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, con
 
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std::string &index_path, const uint8_t enc_type) {
   FieldMap compliment_offsets;
-  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(index_path + "/file_mappings.fst");
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/file_mappings.fst");
   const uint64_t num_files = get_vec_strings_from_fst(*fst).size();
 
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
@@ -476,7 +476,7 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
 }
 
 std::vector<uint64_t> get_field_ids(const std::string &field_path, const std::vector<std::string> &fields) {
-  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(field_path);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(field_path);
   
   std::vector<uint64_t> field_ids;
   

@@ -46,7 +46,9 @@ struct Write_pos {
 
 void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
-                  const std::string &data_dir_str, const uint8_t enc_type);
+                  const std::string &data_dir_str,
+                  const uint8_t enc_type,
+                  const bool run_checks = false);
 const std::vector<uint64_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type);
 const std::vector<uint64_t> get_tok_offsets_from_file(
@@ -66,10 +68,11 @@ get_tok_offsets(const uint64_t token_id,
                 const uint8_t *file, const uint8_t enc_type);
 void generate_offsets_file(const Tokenizer &tokenizer,
                            const std::string &file_name,
-                           const uint8_t enc_type);
+                           const uint8_t enc_type,
+                          const bool run_checks = false);
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type);
-void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id);
+void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const std::string &file_id, const bool run_checks = false);
 const uint64_t
 write_entry_offsets_to_file(const std::vector<uint64_t> &entry_offsets,
                             std::ofstream &file, const uint8_t enc_type);

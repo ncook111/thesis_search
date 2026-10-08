@@ -5,9 +5,12 @@
 #include "helper.h"
 #include "pef.h"
 #include <fst/fstlib.h>
+#include <fst/compact-fst.h>
 #include <optional>
 
-std::unique_ptr<fst::StdConstFst> read_from_disk(const std::string &file_name);
+using StdCompactFst = fst::CompactUnweightedFst<fst::StdArc>;
+
+std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name);
 
 template <FstQueryType Q>
 fst::StdVectorFst create_trie(const std::vector<Q> &sequences) {
@@ -216,21 +219,26 @@ template <FstQueryType Q>
 void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
   fst::StdVectorFst trie = create_trie(tokens);
 
-  fst::RmEpsilon(&trie);
   fst::StdVectorFst det;
   fst::Determinize(trie, &det);
-  fst::ArcSort(&det, fst::ILabelCompare<fst::StdArc>());
+  trie.DeleteStates();
   fst::Minimize(&det);
-  fst::StdConstFst compact(det);
+  fst::ArcSort(&det, fst::ILabelCompare<fst::StdArc>());
+  
+  StdCompactFst compact(det);
+  det.DeleteStates();
 
-  compact.Write(file_name);
+  std::ofstream out(file_name, std::ios::binary);
+  fst::FstWriteOptions opts(file_name);
+  opts.align = true;
+  compact.Write(out, opts);
 }
 
 template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
   std::cout << "read in filename: " << file_name << std::endl;
   std::cout << "here0" << std::endl;
-  std::unique_ptr<fst::StdConstFst> fst = read_from_disk(file_name);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name);
 
   std::set<M> set;
   std::cout << "here1" << std::endl;
