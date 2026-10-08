@@ -52,7 +52,7 @@ const std::vector<uint64_t> remove_dups_sorted(const std::vector<uint64_t> &vec)
 const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec);
 const uint8_t get_query_mode(const std::string &mode);
 const std::string trim(const std::string& str);
-const uint32_t ip_str_to_int(const int domain, const std::string ip_addr);
+const uint32_t ip_str_to_int(const int domain, const std::string ip_addr, bool &fail);
 bool is_digit(const char c);
 bool is_alpha(const char c);
 bool is_alnum(const char c);

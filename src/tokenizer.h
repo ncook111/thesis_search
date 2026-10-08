@@ -39,7 +39,7 @@ public:
   
   // A map containing an entry for each token
   // E.g. "Wooden Table" would have an entry for "wooden" and "table"
-  // Each entry contains a vector for each field tokenized, with each vector containing
+  // Each entry contains a map for each field tokenized, with each vector containing
   // Another vector of docids in which that token is found
   std::map<std::string, std::map<uint64_t, std::vector<uint64_t>>> alpha_tokens;
   std::map<uint64_t, std::map<uint64_t, std::vector<uint64_t>>> num_tokens;
@@ -105,7 +105,6 @@ private:
   void tokenize_json();
   void tokenize_logfmt();
   void tokenize_field(const std::string_view field_str, const uint64_t doc_id, const uint64_t field_id);
-  inline const uint8_t numeric_type(const std::string &s) const;
   const bool is_ipv4(const std::string &s) const;
   const bool is_time(const std::string &s) const;
   const bool is_date(const std::string &s) const;
@@ -121,6 +120,8 @@ private:
   bool handle_time(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   bool handle_ipv4(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
   bool handle_bool(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  void handle_alpha(std::string &curr_token, const uint64_t offset = 0, const uint64_t field_id = 0);
+  inline void vector_inserter(std::vector<uint64_t> &vec, const uint64_t value);
 
   std::string file_path;
   uint8_t type;

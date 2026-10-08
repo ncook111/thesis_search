@@ -175,19 +175,14 @@ const std::string trim(const std::string& str) {
     return str.substr(start, end - start + 1);
 }
 
-const uint32_t ip_str_to_int(const int domain, const std::string ip_addr) {
+const uint32_t ip_str_to_int(const int domain, const std::string ip_addr, bool &fail) {
   struct in_addr addr;
   int s;
 
   s = inet_pton(domain, ip_addr.data(), &addr);
 
-  if (s <= 0) {
-      if (s == 0)
+  fail = (s <= 0);
 
-        throw std::invalid_argument("IP not in presentation format: " + ip_addr);
-      else
-        throw std::invalid_argument("IP domain family not valid");
-  }
 
   return ntohl(addr.s_addr);
 }

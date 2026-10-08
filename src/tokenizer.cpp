@@ -34,7 +34,7 @@ const bool Tokenizer::is_pint(const std::string &s) const {
     return false;
 
   for (; i < s.size(); ++i) {
-    if (!std::isdigit(s[i]))
+    if (!is_digit(s[i]))
       return false;
   }
 
@@ -42,13 +42,11 @@ const bool Tokenizer::is_pint(const std::string &s) const {
 }
 
 const bool Tokenizer::is_nint(const std::string &s) const {
-  size_t i = s.front() == '-' ? 1 : 0;
-
-  if (i == s.size())
+  if (s.size() < 2 || s[0] != '-') 
     return false;
 
-  for (; i < s.size(); ++i) {
-    if (!std::isdigit(s[i]))
+  for (size_t i = 1; i < s.size(); ++i) {
+    if (!is_digit(s[i]))
       return false;
   }
 
@@ -58,40 +56,39 @@ const bool Tokenizer::is_nint(const std::string &s) const {
 const bool Tokenizer::is_float(const std::string &s) const {
   // Preprocess string for float compliance
   for (const auto c : s) {
-    if (!std::isdigit(c) && c != '+' && c != '-' && c != '.') {
+    if (!is_digit(c) && c != '+' && c != '-' && c != '.') {
       return false;
     }
   }
 
-  float res_float;
-  fast_float::from_chars_result res_err;
-  fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
-  res_err = fast_float::from_chars_advanced(s.data(), s.data() + s.size(), res_float, options);
-  return res_err.ec == std::errc() && res_err.ptr == s.data() + s.size();
+  if (s.find_first_of(".eEnN") == std::string_view::npos)
+    return false;
+
+  return true;
 }
 
 const bool Tokenizer::is_date(const std::string &s) const {
   if (s.size() != 10)
     return false;
-  if (!std::isdigit(s.at(0)))
+  if (!is_digit(s.at(0)))
     return false;
-  if (!std::isdigit(s.at(1)))
+  if (!is_digit(s.at(1)))
     return false;
-  if (!std::isdigit(s.at(2)))
+  if (!is_digit(s.at(2)))
     return false;
-  if (!std::isdigit(s.at(3)))
+  if (!is_digit(s.at(3)))
     return false;
   if (s.at(4) != '-')
     return false;
-  if (!std::isdigit(s.at(5)))
+  if (!is_digit(s.at(5)))
     return false;
-  if (!std::isdigit(s.at(6)))
+  if (!is_digit(s.at(6)))
     return false;
   if (s.at(7) != '-')
     return false;
-  if (!std::isdigit(s.at(8)))
+  if (!is_digit(s.at(8)))
     return false;
-  if (!std::isdigit(s.at(9)))
+  if (!is_digit(s.at(9)))
     return false;
   // Must be YYYY-MM-DD format
   return true;
@@ -101,21 +98,21 @@ const bool Tokenizer::is_time(const std::string &s) const {
   // Determine if time present
   if (s.size() != 8)
     return false;
-  if (!std::isdigit(s.at(0)))
+  if (!is_digit(s.at(0)))
     return false;
-  if (!std::isdigit(s.at(1)))
+  if (!is_digit(s.at(1)))
     return false;
   if (s.at(2) != ':')
     return false;
-  if (!std::isdigit(s.at(3)))
+  if (!is_digit(s.at(3)))
     return false;
-  if (!std::isdigit(s.at(4)))
+  if (!is_digit(s.at(4)))
     return false;
   if (s.at(5) != ':')
     return false;
-  if (!std::isdigit(s.at(6)))
+  if (!is_digit(s.at(6)))
     return false;
-  if (!std::isdigit(s.at(7)))
+  if (!is_digit(s.at(7)))
     return false;
 
   return true;
@@ -133,73 +130,11 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
       return false;
   }
 
-  // Check valid format
-  std::vector<std::string> parts;
-  std::string s1 = s;
-  size_t pos = s.find('.');
-  while (pos != std::string::npos) {
-    parts.emplace_back(s1.substr(0, pos));
-    s1.erase(0, pos + 1);
-    pos = s1.find('.');
-  }
-  parts.emplace_back(s1.substr(0, pos));
-
-  if (parts.size() != 4)
-    return false;
-
-  for (const auto curr : parts) {
-    std::uint64_t res_int;
-    fast_float::from_chars_result res_err = fast_float::from_chars(curr.data(), curr.data() + curr.size(), res_int);
-    if (res_err.ec == std::errc()) {
-      if (res_int > 255)
-        return false;
-    } else if (res_err.ec == std::errc::invalid_argument) {
-      return false;
-    } else if (res_err.ec == std::errc::result_out_of_range) {
-      return false;
-    }
-  }
-
   return true;
 }
 
 const bool Tokenizer::is_bool(const std::string &s) const {
   return (s == "true" || s == "false");
-}
-
-inline const uint8_t Tokenizer::numeric_type(const std::string &s) const {
-  if (contains_alpha(s)) {
-    return TokenType::ALPHA;
-  }
-
-  if (is_pint(s)) {
-    return TokenType::PINT;
-  }
-
-  if (is_nint(s)) {
-    return TokenType::NINT;
-  }
-
-  if (is_float(s)) {
-    return TokenType::FLOAT;
-  }
-
-  if (is_date(s)) {
-    return TokenType::DATE;
-  }
-  if (is_time(s)) {
-    return TokenType::TIME;
-  }
-
-  if (is_ipv4(s)) {
-    return TokenType::IPV4;
-  }
-
-  if (is_bool(s)) {
-    return TokenType::BOOLEAN;
-  }
-  
-  return TokenType::ALPHA;
 }
 
 void Tokenizer::tokenize_file() {
@@ -271,12 +206,29 @@ void Tokenizer::tokenize_json() {
         std::string_view f = field.escaped_key();
         fields.push_back(std::string(f));
       }
+      
+      if (obj.reset().error()) throw std::runtime_error("JSON reset failed");
     }
 
-    for (uint64_t field_id = 0; field_id < fields.size(); ++field_id) {
+    for (auto field : obj) {
+      std::string_view key = field.escaped_key();
+
+      uint64_t field_id = 0;
+      while (field_id < fields.size() && fields[field_id] != key) ++field_id;
+      
+      if (field_id == fields.size()) continue;
+
+      ondemand::value v = field.value();
+      ondemand::json_type type = v.type();
+
       std::string_view text;
-      if (obj[fields[field_id]].get(text) == SUCCESS)
-          tokenize_field(text, doc_id, field_id);
+      if (type == ondemand::json_type::string) {
+        text = v.get_string();
+      } else {
+        text = v.raw_json();
+      }
+
+      tokenize_field(text, doc_id, field_id);
     }
 
     entry_offsets.push_back(j.current_index() + 1);
@@ -302,7 +254,6 @@ void Tokenizer::tokenize_logfmt() {
   for (auto it = parser.begin(); it != parser.end(); ++it) {
     std::unordered_map<std::string, std::string> doc = (*it).current_row();
     int64_t offset = (*it).current_offset();
-    std::cout << doc_id << std::endl;
 
     // If no fields add all fields
     // This assumes fields for every json object will be the same
@@ -369,6 +320,9 @@ void Tokenizer::tokenize_string(const std::string &input) {
 }
 
 bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_pint(curr_token)) 
+    return false;
+
   std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
@@ -379,7 +333,7 @@ bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
       return false; // Didnt read the whole string
     // File tokenization
     if (offset) {
-        num_tokens[res_int][field_id].push_back(offset);
+        vector_inserter(num_tokens[res_int][field_id], offset);
     // String tokenization
     } else {
         num_tokens_q.insert(res_int);
@@ -394,6 +348,9 @@ bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
 }
 
 bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_nint(curr_token)) 
+    return false;
+
   std::uint64_t res_int;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
@@ -403,12 +360,11 @@ bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
     if (res_err.ptr != curr_token.data() + curr_token.size())
       return false; // Didnt read the whole string
     // File tokenization
-    if (offset) {
-        neg_num_tokens[res_int][field_id].push_back(offset);
+    if (offset)
+        vector_inserter(neg_num_tokens[res_int][field_id], offset);
     // String tokenization
-    } else {
+    else
         neg_num_tokens_q.insert(res_int);
-    }
   } else if (res_err.ec == std::errc::invalid_argument) {
     throw std::invalid_argument("Malformed number: \"" + curr_token);
   } else if (res_err.ec == std::errc::result_out_of_range) {
@@ -419,6 +375,9 @@ bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
 }
 
 bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_float(curr_token)) 
+    return false;
+
   float res_float;
   fast_float::from_chars_result res_err;
   fast_float::parse_options options{fast_float::chars_format::allow_leading_plus};
@@ -428,13 +387,11 @@ bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
       return false; // Didnt read the whole string
     // File tokenization
     if (offset)
-      float_tokens[std::move(res_float)][field_id].push_back(offset);
+      vector_inserter(float_tokens[std::move(res_float)][field_id], offset);
     // String tokenization
     else
       float_tokens_q.insert(res_float);
-  } else if (res_err.ec == std::errc::invalid_argument) {
-    throw std::invalid_argument("Malformed number: \"" + curr_token);
-  } else if (res_err.ec == std::errc::result_out_of_range) {
+  } else {
     return false;
   }
 
@@ -442,6 +399,9 @@ bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
 }
 
 bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_date(curr_token)) 
+    return false;
+  
   std::istringstream in(curr_token);
   date::sys_time<std::chrono::seconds> dateTimePoint;
 
@@ -453,7 +413,7 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
   } else {
     // File tokenization
     if (offset)
-      d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id].push_back(offset);
+      vector_inserter(d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id], offset);
     // String tokenization
     else
       d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
@@ -463,31 +423,39 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
 }
 
 bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
-  std::istringstream in(curr_token);
-  std::chrono::seconds timeTimePoint;
+  if (!is_time(curr_token)) 
+    return false;
 
-  // Check "HH-MM-SS format"
-  date::from_stream(in, "%T", timeTimePoint);
+  std::istringstream in("1970-01-01 " + curr_token);
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> tp;
+  date::from_stream(in, "%F %T", tp);
+
   // Check if parsable
   if (in.fail() || in.peek() != EOF) {
     return false;
   } else {
     // File tokenization
     if (offset)
-      t_tokens[static_cast<uint64_t>(timeTimePoint.count())][field_id].push_back(offset);
+      vector_inserter(t_tokens[static_cast<uint64_t>(tp.time_since_epoch().count())][field_id], offset);
     // String tokenization
     else
-      t_tokens_q.insert(static_cast<uint64_t>(timeTimePoint.count()));
+      t_tokens_q.insert(static_cast<uint64_t>(tp.time_since_epoch().count()));
   }
 
   return true;
 }
 
 bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_ipv4(curr_token)) 
+    return false;
+
   // File tokenization
-  uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token);
+  bool fail;
+  uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token, fail);
+
+  if (fail) return false;
   if (offset)
-    ipv4_tokens[ip_addr][field_id].push_back(offset);
+    vector_inserter(ipv4_tokens[ip_addr][field_id], offset);
   // String tokenization
   else
     ipv4_tokens_q.insert(ip_addr);
@@ -496,12 +464,16 @@ bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, cons
 }
 
 bool Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (!is_bool(curr_token)) 
+    return false;
+
   // File tokenization
   if (offset) {
-    if (curr_token == "true")
-      t_bool_tokens[field_id].push_back(offset);
-    if (curr_token == "false")
-      f_bool_tokens[field_id].push_back(offset);
+    if (curr_token == "true") {
+      vector_inserter(t_bool_tokens[field_id], offset);
+    } else if (curr_token == "false") {
+       vector_inserter(f_bool_tokens[field_id], offset);
+    }
   // String tokenization
   } else {
     if (curr_token == "true")
@@ -513,36 +485,19 @@ bool Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, con
   return true;
 };
 
-void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
-  bool processed = false;
+void Tokenizer::handle_alpha(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
+  // Fast path
+  if (std::ranges::all_of(curr_token, is_alpha)) {
+    if (curr_token.size() <= MAX_TOK_LENGTH) {
+      std::ranges::transform(curr_token, curr_token.begin(), to_lower);
+      if (offset)
+        vector_inserter(alpha_tokens[std::move(curr_token)][field_id], offset);
+      else
+        alpha_tokens_q.insert(std::move(curr_token));
+    }
 
-  switch (numeric_type(curr_token)) {
-    case TokenType::PINT:
-      processed = handle_pint(curr_token, offset, field_id);
-      break;
-    case TokenType::NINT:
-      processed = handle_nint(curr_token, offset, field_id);
-      break;
-    case TokenType::FLOAT:
-      processed = handle_float(curr_token, offset, field_id);
-      break;
-    case TokenType::DATE:
-      processed = handle_date(curr_token, offset, field_id);
-      break;
-    case TokenType::TIME:
-      processed = handle_time(curr_token, offset, field_id);
-      break;
-    case TokenType::IPV4:
-      processed = handle_ipv4(curr_token, offset, field_id);
-      break;
-    case TokenType::BOOLEAN:
-      processed = handle_bool(curr_token, offset, field_id);
-      break;
-    default:
-      break;
+    return;
   }
-
-  if (processed) return;
 
   std::string curr;
   bool split = false;
@@ -556,7 +511,10 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
     } else {
       split = true;
       if (!curr.empty()) {
-        processToken(curr, offset, field_id);
+        if (offset)
+          processToken(curr, offset, field_id);
+        else
+          processToken(curr);
         curr.clear();
       }
 
@@ -569,78 +527,63 @@ void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, con
   if (curr.empty()) return;
 
   if (split) {
-    processToken(curr, offset, field_id);
+    if (offset)
+      processToken(curr, offset, field_id);
+    else
+      processToken(curr);
   } else {
     if (curr.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
-      alpha_tokens[std::move(curr)][field_id].push_back(offset);
+      if (offset)
+        vector_inserter(alpha_tokens[std::move(curr)][field_id], offset);
+      else
+        alpha_tokens_q.insert(std::move(curr));
     }
   }
 }
 
+void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+  if (handle_bool(curr_token, offset, field_id)) return;
+
+  // Simple way to prevent other more expensive type checking in the below handle_x fuctions
+  if (contains_alpha(curr_token)) {
+    handle_alpha(curr_token, offset, field_id);
+    return;
+  }
+
+  if (handle_pint(curr_token, offset, field_id)) return;
+  if (handle_nint(curr_token, offset, field_id)) return;
+  if (handle_float(curr_token, offset, field_id)) return;
+  if (handle_date(curr_token, offset, field_id)) return;
+  if (handle_time(curr_token, offset, field_id)) return;
+  if (handle_ipv4(curr_token, offset, field_id)) return;
+
+  // Second handle_alpha call needed as some of these above handle_x functions can fail due to type size limits
+  handle_alpha(curr_token, offset, field_id);
+}
+
 void Tokenizer::processToken(std::string &curr_token) {
-  bool processed = false;
-
-  switch (numeric_type(curr_token)) {
-    case TokenType::PINT:
-      processed = handle_pint(curr_token);
-      break;
-    case TokenType::NINT:
-      processed = handle_nint(curr_token);
-      break;
-    case TokenType::FLOAT:
-      processed = handle_float(curr_token);
-      break;
-    case TokenType::DATE:
-      processed = handle_date(curr_token);
-      break;
-    case TokenType::TIME:
-      processed = handle_time(curr_token);
-      break;
-    case TokenType::IPV4:
-      processed = handle_ipv4(curr_token);
-      break;
-    case TokenType::BOOLEAN:
-      processed = handle_bool(curr_token);
-      break;
-    default:
-      break;
+  if (handle_bool(curr_token)) return;
+  
+  // Simple way to prevent other more expensive type checking in the below handle_x fuctions
+  if (contains_alpha(curr_token)) {
+    handle_alpha(curr_token);
+    return;
   }
 
-  if (processed) return;
+  if (handle_pint(curr_token)) return;
+  if (handle_nint(curr_token)) return;
+  if (handle_float(curr_token)) return;
+  if (handle_date(curr_token)) return;
+  if (handle_time(curr_token)) return;
+  if (handle_ipv4(curr_token)) return;
 
-  std::string curr;
-  bool split = false;
-  for (const char c : curr_token) {
-    if (curr.size() == 0 && is_alnum(c)) {
-      curr.push_back(c);
-    } else if (curr.size() && is_digit(c) && is_digit(curr.back())) {
-      curr.push_back(c);
-    } else if (curr.size() && is_alpha(c) && is_alpha(curr.back())) {
-      curr.push_back(c);
-    } else {
-      split = true;
-      if (!curr.empty()) {
-        processToken(curr);
-        curr.clear();
-      }
+  // Second handle_alpha call needed as some of these above handle_x functions can fail due to type size limits
+  handle_alpha(curr_token);
+}
 
-      if (is_alnum(c)) {
-        curr.push_back(c);
-      }
-    }
-  }
-
-  if (curr.empty()) return;
-
-  if (split) {
-    processToken(curr);
-  } else {
-    if (curr.size() <= MAX_TOK_LENGTH) {
-      std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
-      alpha_tokens_q.insert(std::move(curr));
-    }
-  }
+void Tokenizer::vector_inserter(std::vector<uint64_t> &vec, const uint64_t value) {
+  if (vec.empty() || vec.back() != value) vec.push_back(value);
 }
 
 void Tokenizer::printAlphaTokens() const {

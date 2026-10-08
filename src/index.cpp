@@ -55,9 +55,9 @@ void create_index(const std::vector<std::string> &fields,
   for (const auto &f : files) {
     file_mappings_vec.push_back(f.filename().string());
     const uint8_t type = get_file_type(f.extension());
-    std::cout << "here" << std::endl;
     Tokenizer tokenizer = Tokenizer::from_file(data_dir_str + '/' + f.filename().string(), type, fields);
     tokenizer.printStatistics();
+
     const std::string file_id = std::to_string(i++);
 
     generate_offsets_file(tokenizer, offsets_dir.string() + '/' + file_id, enc_type);
