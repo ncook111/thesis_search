@@ -166,7 +166,7 @@ void Tokenizer::tokenize_csv() {
   for (const csv::CSVRow &row : reader) { // Input iterator
     entry_offsets.push_back(row.byte_offset() + 1);
 
-    for (uint64_t field_id = 0; field_id < fields.size(); ++field_id )
+    for (uint32_t field_id = 0; field_id < fields.size(); ++field_id )
       tokenize_field(row[fields[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
 
     if (entry_offsets.size() % 10000 == 0)
@@ -213,7 +213,7 @@ void Tokenizer::tokenize_json() {
     for (auto field : obj) {
       std::string_view key = field.escaped_key();
 
-      uint64_t field_id = 0;
+      uint32_t field_id = 0;
       while (field_id < fields.size() && fields[field_id] != key) ++field_id;
       
       if (field_id == fields.size()) continue;
@@ -263,7 +263,7 @@ void Tokenizer::tokenize_logfmt() {
       }
     }
 
-    for (uint64_t field_id = 0; field_id < fields.size(); ++field_id) {
+    for (uint32_t field_id = 0; field_id < fields.size(); ++field_id) {
       if (doc.contains(fields[field_id])) {
         tokenize_field(doc[fields[field_id]], doc_id, field_id);
       } 
@@ -286,7 +286,7 @@ void Tokenizer::tokenize_logfmt() {
 }
 
 void Tokenizer::tokenize_field(const std::string_view field_str,
-                               const uint64_t doc_id, const uint64_t field_id) {
+                               const uint32_t doc_id, const uint32_t field_id) {
   std::string curr_token;
   for (const char c : field_str) {
     if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
@@ -319,7 +319,7 @@ void Tokenizer::tokenize_string(const std::string &input) {
     processToken(curr_token);
 }
 
-bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_pint(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_pint(curr_token)) 
     return false;
 
@@ -331,9 +331,12 @@ bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
   if (res_err.ec == std::errc()) {
     if (res_err.ptr != curr_token.data() + curr_token.size())
       return false; // Didnt read the whole string
+
+    if (res_int > UINT64_MAX - 1)
+      return false;
     // File tokenization
-    if (offset) {
-        vector_inserter(num_tokens[res_int][field_id], offset);
+    if (doc_id) {
+        vector_inserter(num_tokens[res_int][field_id], doc_id);
     // String tokenization
     } else {
         num_tokens_q.insert(res_int);
@@ -347,7 +350,7 @@ bool Tokenizer::handle_pint(std::string &curr_token, const uint64_t offset, cons
   return true;
 }
 
-bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_nint(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_nint(curr_token)) 
     return false;
 
@@ -359,9 +362,13 @@ bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
   if (res_err.ec == std::errc()) {
     if (res_err.ptr != curr_token.data() + curr_token.size())
       return false; // Didnt read the whole string
+    
+    if (res_int > UINT64_MAX - 1)
+      return false;
+      
     // File tokenization
-    if (offset)
-        vector_inserter(neg_num_tokens[res_int][field_id], offset);
+    if (doc_id)
+        vector_inserter(neg_num_tokens[res_int][field_id], doc_id);
     // String tokenization
     else
         neg_num_tokens_q.insert(res_int);
@@ -374,7 +381,7 @@ bool Tokenizer::handle_nint(std::string &curr_token, const uint64_t offset, cons
   return true;
 }
 
-bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_float(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_float(curr_token)) 
     return false;
 
@@ -386,8 +393,8 @@ bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
     if (res_err.ptr != curr_token.data() + curr_token.size())
       return false; // Didnt read the whole string
     // File tokenization
-    if (offset)
-      vector_inserter(float_tokens[std::move(res_float)][field_id], offset);
+    if (doc_id)
+      vector_inserter(float_tokens[std::move(res_float)][field_id], doc_id);
     // String tokenization
     else
       float_tokens_q.insert(res_float);
@@ -398,7 +405,7 @@ bool Tokenizer::handle_float(std::string &curr_token, const uint64_t offset, con
   return true;
 }
 
-bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_date(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_date(curr_token)) 
     return false;
   
@@ -412,8 +419,8 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
     return false;
   } else {
     // File tokenization
-    if (offset)
-      vector_inserter(d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id], offset);
+    if (doc_id)
+      vector_inserter(d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id], doc_id);
     // String tokenization
     else
       d_tokens_q.insert(static_cast<uint64_t>(dateTimePoint.time_since_epoch().count()));
@@ -422,7 +429,7 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint64_t offset, cons
   return true;
 }
 
-bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_time(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_time(curr_token)) 
     return false;
 
@@ -435,8 +442,8 @@ bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
     return false;
   } else {
     // File tokenization
-    if (offset)
-      vector_inserter(t_tokens[static_cast<uint64_t>(tp.time_since_epoch().count())][field_id], offset);
+    if (doc_id)
+      vector_inserter(t_tokens[static_cast<uint64_t>(tp.time_since_epoch().count())][field_id], doc_id);
     // String tokenization
     else
       t_tokens_q.insert(static_cast<uint64_t>(tp.time_since_epoch().count()));
@@ -445,7 +452,7 @@ bool Tokenizer::handle_time(std::string &curr_token, const uint64_t offset, cons
   return true;
 }
 
-bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_ipv4(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_ipv4(curr_token)) 
     return false;
 
@@ -454,8 +461,8 @@ bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, cons
   uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token, fail);
 
   if (fail) return false;
-  if (offset)
-    vector_inserter(ipv4_tokens[ip_addr][field_id], offset);
+  if (doc_id)
+    vector_inserter(ipv4_tokens[ip_addr][field_id], doc_id);
   // String tokenization
   else
     ipv4_tokens_q.insert(ip_addr);
@@ -463,16 +470,16 @@ bool Tokenizer::handle_ipv4(std::string &curr_token, const uint64_t offset, cons
   return true;
 }
 
-bool Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
+bool Tokenizer::handle_bool(std::string  &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   if (!is_bool(curr_token)) 
     return false;
 
   // File tokenization
-  if (offset) {
+  if (doc_id) {
     if (curr_token == "true") {
-      vector_inserter(t_bool_tokens[field_id], offset);
+      vector_inserter(t_bool_tokens[field_id], doc_id);
     } else if (curr_token == "false") {
-       vector_inserter(f_bool_tokens[field_id], offset);
+       vector_inserter(f_bool_tokens[field_id], doc_id);
     }
   // String tokenization
   } else {
@@ -485,13 +492,13 @@ bool Tokenizer::handle_bool(std::string  &curr_token, const uint64_t offset, con
   return true;
 };
 
-void Tokenizer::handle_alpha(std::string  &curr_token, const uint64_t offset, const uint64_t field_id) {
+void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   // Fast path
   if (std::ranges::all_of(curr_token, is_alpha)) {
     if (curr_token.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr_token, curr_token.begin(), to_lower);
-      if (offset)
-        vector_inserter(alpha_tokens[std::move(curr_token)][field_id], offset);
+      if (doc_id)
+        vector_inserter(alpha_tokens[std::move(curr_token)][field_id], doc_id);
       else
         alpha_tokens_q.insert(std::move(curr_token));
     }
@@ -511,8 +518,8 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint64_t offset, co
     } else {
       split = true;
       if (!curr.empty()) {
-        if (offset)
-          processToken(curr, offset, field_id);
+        if (doc_id)
+          processToken(curr, doc_id, field_id);
         else
           processToken(curr);
         curr.clear();
@@ -527,39 +534,39 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint64_t offset, co
   if (curr.empty()) return;
 
   if (split) {
-    if (offset)
-      processToken(curr, offset, field_id);
+    if (doc_id)
+      processToken(curr, doc_id, field_id);
     else
       processToken(curr);
   } else {
     if (curr.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
-      if (offset)
-        vector_inserter(alpha_tokens[std::move(curr)][field_id], offset);
+      if (doc_id)
+        vector_inserter(alpha_tokens[std::move(curr)][field_id], doc_id);
       else
         alpha_tokens_q.insert(std::move(curr));
     }
   }
 }
 
-void Tokenizer::processToken(std::string &curr_token, const uint64_t offset, const uint64_t field_id) {
-  if (handle_bool(curr_token, offset, field_id)) return;
+void Tokenizer::processToken(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
+  if (handle_bool(curr_token, doc_id, field_id)) return;
 
   // Simple way to prevent other more expensive type checking in the below handle_x fuctions
   if (contains_alpha(curr_token)) {
-    handle_alpha(curr_token, offset, field_id);
+    handle_alpha(curr_token, doc_id, field_id);
     return;
   }
 
-  if (handle_pint(curr_token, offset, field_id)) return;
-  if (handle_nint(curr_token, offset, field_id)) return;
-  if (handle_float(curr_token, offset, field_id)) return;
-  if (handle_date(curr_token, offset, field_id)) return;
-  if (handle_time(curr_token, offset, field_id)) return;
-  if (handle_ipv4(curr_token, offset, field_id)) return;
+  if (handle_pint(curr_token, doc_id, field_id)) return;
+  if (handle_nint(curr_token, doc_id, field_id)) return;
+  if (handle_float(curr_token, doc_id, field_id)) return;
+  if (handle_date(curr_token, doc_id, field_id)) return;
+  if (handle_time(curr_token, doc_id, field_id)) return;
+  if (handle_ipv4(curr_token, doc_id, field_id)) return;
 
   // Second handle_alpha call needed as some of these above handle_x functions can fail due to type size limits
-  handle_alpha(curr_token, offset, field_id);
+  handle_alpha(curr_token, doc_id, field_id);
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
@@ -582,7 +589,7 @@ void Tokenizer::processToken(std::string &curr_token) {
   handle_alpha(curr_token);
 }
 
-void Tokenizer::vector_inserter(std::vector<uint64_t> &vec, const uint64_t value) {
+void Tokenizer::vector_inserter(std::vector<uint32_t> &vec, const uint32_t value) {
   if (vec.empty() || vec.back() != value) vec.push_back(value);
 }
 

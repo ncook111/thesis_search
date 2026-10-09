@@ -8,7 +8,7 @@ TEST(fls_u64_t_encode_decode_test_small, test1) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;
-    size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+    size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     const std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded, num_blocks);
 
     ASSERT_TRUE(input == decoded);
@@ -19,7 +19,7 @@ TEST(fls_u64_t_encode_decode_test_small, test2) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;
-    size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+    size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     const std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded, num_blocks);
 
     ASSERT_TRUE(input == decoded);
@@ -30,7 +30,7 @@ TEST(fls_u64_t_encode_decode_test_small, test3) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;
-    size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+    size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     const std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded, num_blocks);
 
     ASSERT_TRUE(input == decoded);
@@ -41,7 +41,7 @@ TEST(fls_u64_t_encode_decode_test_small, test4) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;
-    size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+    size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     const std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded, num_blocks);
 
     ASSERT_TRUE(input == decoded);
@@ -52,7 +52,7 @@ TEST(fls_u64_t_encode_decode_test_fuzzed, test1) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(input, encoded);
     size_t num_consumed;
-    size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+    size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     const std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded, num_blocks);
 
     ASSERT_TRUE(input == decoded);

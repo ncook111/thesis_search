@@ -1,10 +1,21 @@
 #ifndef CODER_H
 #define CODER_H
 
+#include <concepts>
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
+
+constexpr uint8_t BYTE_FST = 0x80; // Byte with most significant bit set
+constexpr uint8_t BYTE_RST = 0x7F; // Byte with last 7 bits set
+constexpr uint32_t UINT24_MAX = 0xFFFFFF;
+constexpr long UINT40_MAX = 0xFFFFFFFFFF;
+constexpr long UINT48_MAX = 0xFFFFFFFFFFFF;
+constexpr long UINT56_MAX = 0xFFFFFFFFFFFFFF;
+
 const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num);
 const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed);
+static inline void put_value(std::vector<uint8_t> &out, const uint32_t v, const uint8_t len);
+static inline void put_value(std::vector<uint8_t> &out, const uint64_t v, const uint8_t len);
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums);
 const std::vector<uint32_t>
@@ -15,8 +26,8 @@ const std::vector<uint64_t>
 gvb_decode_uint64_t(const std::vector<uint8_t> &bytes);
 inline const uint8_t get_length(const uint64_t num);
 inline const uint8_t get_length(const uint32_t num);
-uint64_t write_gvb_to_file(const std::vector<uint64_t> &vec, std::ofstream &file);
-std::vector<uint64_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read);
+uint64_t write_gvb_to_file(const std::vector<uint32_t> &vec, std::ofstream &file);
+std::vector<uint32_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read);
 void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 
@@ -42,6 +53,45 @@ template <class F> std::vector<F> delta_decode(const std::vector<F> &nums) {
   }
 
   return decoded;
+}
+
+template <std::unsigned_integral T>
+std::vector<uint8_t> vb_encode_num(T num) {
+  std::vector<uint8_t> bytes;
+
+  while(true) {
+    bytes.push_back(num & BYTE_RST); // Get least sig 7 bits
+
+    if (num < BYTE_FST) {
+      bytes.front() |= BYTE_FST; // Set continuation bit
+      break;
+    }
+
+    num >>= 7;
+  }
+
+  std::reverse(bytes.begin(), bytes.end());
+
+  return bytes;
+}
+
+template <std::unsigned_integral T>
+T vb_decode_num(const std::vector<uint8_t> &bytes, size_t &bytes_consumed) {
+  T num = 0;
+  bytes_consumed = 0;
+
+  for (auto it = bytes.begin(); it != bytes.end(); ++it) {
+    ++bytes_consumed;
+
+    if (!(*it & BYTE_FST)) { // More bytes for num
+      num = (num << 7) + *it;
+    } else {
+      num = (num << 7) + (*it & BYTE_RST); // Last byte of num
+      break;
+    }
+  }
+
+  return num;
 }
 
 #endif

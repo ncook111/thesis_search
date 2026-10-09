@@ -219,14 +219,11 @@ template <FstQueryType Q>
 void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
   fst::StdVectorFst trie = create_trie(tokens);
 
-  fst::StdVectorFst det;
-  fst::Determinize(trie, &det);
-  trie.DeleteStates();
-  fst::Minimize(&det);
-  fst::ArcSort(&det, fst::ILabelCompare<fst::StdArc>());
+  fst::Minimize(&trie);
+  fst::ArcSort(&trie, fst::ILabelCompare<fst::StdArc>());
   
-  StdCompactFst compact(det);
-  det.DeleteStates();
+  StdCompactFst compact(trie);
+  trie.DeleteStates();
 
   std::ofstream out(file_name, std::ios::binary);
   fst::FstWriteOptions opts(file_name);
@@ -237,11 +234,9 @@ void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
 template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
   std::cout << "read in filename: " << file_name << std::endl;
-  std::cout << "here0" << std::endl;
   std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name);
 
   std::set<M> set;
-  std::cout << "here1" << std::endl;
   if constexpr (std::is_same_v<M, std::string>) {
     set = get_strings_from_fst(*fst);
   } else {
@@ -253,19 +248,16 @@ bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
     }
   }
 
-  std::cout << "here2" << std::endl;
   std::vector<M> out;
 
   for (const auto i : set) {
     out.push_back(i);
   }
 
-  std::cout << "here3" << std::endl;
   std::vector<M> tokens_sorted = tokens;
 
   std::sort(tokens_sorted.begin(), tokens_sorted.end());
 
-  std::cout << "here4" << std::endl;
   if (out == tokens_sorted) {
     std::cout << "correct" << std::endl;
   } else {

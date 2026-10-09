@@ -224,7 +224,7 @@ TEST_F(parse_queries_basic_test, test1) {
     std::string in = "[*] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -235,7 +235,7 @@ TEST_F(parse_queries_basic_test, test2) {
     std::string in = "[*] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,3};
+    std::vector<uint32_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -246,7 +246,7 @@ TEST_F(parse_queries_basic_test, test3) {
     std::string in = "[head] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,2};
+    std::vector<uint32_t> expected = {0,2};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -257,7 +257,7 @@ TEST_F(parse_queries_basic_test, test4) {
     std::string in = "[head] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {1,3};
+    std::vector<uint32_t> expected = {1,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -268,7 +268,7 @@ TEST_F(parse_queries_basic_test, test5) {
     std::string in = "[tail] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {1,2,3};
+    std::vector<uint32_t> expected = {1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -279,7 +279,7 @@ TEST_F(parse_queries_basic_test, test6) {
     std::string in = "[tail] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0};
+    std::vector<uint32_t> expected = {0};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -290,7 +290,7 @@ TEST_F(parse_queries_basic_test, test7) {
     std::string in = "[head,tail] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -301,7 +301,7 @@ TEST_F(parse_queries_basic_test, test8) {
     std::string in = "[head,tail] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,3};
+    std::vector<uint32_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -313,7 +313,7 @@ TEST_F(parse_queries_compliment_test, test1) {
     std::string in = "[*] = \"here\" & ![*] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {2};
+    std::vector<uint32_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -324,7 +324,7 @@ TEST_F(parse_queries_compliment_test, test2) {
     std::string in = "![*] = \"here\" & ![*] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {};
+    std::vector<uint32_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -335,7 +335,7 @@ TEST_F(parse_queries_compliment_test, test3) {
     std::string in = "![*] = \"here\" | ![*] = \"not\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {2};
+    std::vector<uint32_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -346,7 +346,7 @@ TEST_F(parse_queries_compliment_test, test4) {
     std::string in = "!([*] = \"here\" | [*] = \"not\")";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {};
+    std::vector<uint32_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -357,7 +357,7 @@ TEST_F(parse_queries_compliment_test, test5) {
     std::string in = "[*] = \"here\" & !([*] = \"a\" | [*] = \"b\")";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -368,7 +368,7 @@ TEST_F(parse_queries_union_test, test1) {
     std::string in = "[*] = \"not\" | [*] = \"b\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,3};
+    std::vector<uint32_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -379,7 +379,7 @@ TEST_F(parse_queries_union_test, test2) {
     std::string in = "[*] = \"b\" | !([*] = \"c\")";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -390,7 +390,7 @@ TEST_F(parse_queries_union_test, test3) {
     std::string in = "!([*] = \"b\" | [tail] = \"not\")";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {1,2,3};
+    std::vector<uint32_t> expected = {1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -401,7 +401,7 @@ TEST_F(parse_queries_intersection_test, test1) {
     std::string in = "[head] = \"not\" & [tail] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {1,3};
+    std::vector<uint32_t> expected = {1,3};
         ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -412,7 +412,7 @@ TEST_F(parse_queries_intersection_test, test2) {
     std::string in = "[head] = \"here\" & [tail] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {2};
+    std::vector<uint32_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -423,7 +423,7 @@ TEST_F(parse_queries_intersection_test, test3) {
     std::string in = "[head] = \"here\" & ![tail] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0};
+    std::vector<uint32_t> expected = {0};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -434,7 +434,7 @@ TEST_F(parse_queries_diff_test, test1) {
     std::string in = "[*] = \"here\" - ![*] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -445,7 +445,7 @@ TEST_F(parse_queries_sym_diff_test, test1) {
     std::string in = "[*] = \"here\" / [*] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {};
+    std::vector<uint32_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);
@@ -456,7 +456,7 @@ TEST_F(parse_queries_sym_diff_test, test2) {
     std::string in = "[*] = \"here\" / ![*] = \"here\"";
     FieldMap out_pef = parse_queries(in, "../../tests/test_data/all_indexes/index_1_pef", EncType::PEF);
     FieldMap out_gvb = parse_queries(in, "../../tests/test_data/all_indexes/index_1_gvb", EncType::GVB);
-    std::vector<uint64_t> expected = {0,1,2,3};
+    std::vector<uint32_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
     ASSERT_EQ(out_pef.at(0), expected);
     ASSERT_EQ(out_gvb.size(), 1);

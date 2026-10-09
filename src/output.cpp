@@ -38,7 +38,7 @@ void output_counts(const FieldMap &matches, const std::string &index_path, const
 }
 
 
-void entries_to_cout(const std::string &file_name, const std::vector<uint64_t> &entries, const char *data_file) {
+void entries_to_cout(const std::string &file_name, const std::vector<uint32_t> &entries, const char *data_file) {
   std::cout << "File: " << file_name << '\n';
   if (!entries.empty()) {
     for (auto it = entries.begin(); it < entries.end() - 1; it += 2) {
@@ -49,7 +49,7 @@ void entries_to_cout(const std::string &file_name, const std::vector<uint64_t> &
   }
 }
 
-void entries_to_file(const std::string &output_path, const std::string &file_name, const std::vector<uint64_t> &entries, const char *data_file) {
+void entries_to_file(const std::string &output_path, const std::string &file_name, const std::vector<uint32_t> &entries, const char *data_file) {
   std::ofstream output_file;
   output_file.open(output_path);
 

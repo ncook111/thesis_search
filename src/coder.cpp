@@ -5,13 +5,6 @@
 #include <succinct/bit_vector.hpp>
 #include <sys/resource.h>
 
-constexpr uint8_t BYTE_FST = 0x80; // Byte with most significant bit set
-constexpr uint8_t BYTE_RST = 0x7F; // Byte with last 7 bits set
-constexpr uint32_t UINT24_MAX = 0xFFFFFF;
-constexpr long UINT40_MAX = 0xFFFFFFFFFF;
-constexpr long UINT48_MAX = 0xFFFFFFFFFFFF;
-constexpr long UINT56_MAX = 0xFFFFFFFFFFFFFF;
-
 const long get_memory_usage() {
   struct rusage usage;
   if (0 == getrusage(RUSAGE_SELF, &usage))
@@ -52,47 +45,50 @@ inline const uint8_t get_length(const uint64_t num) {
   }
 }
 
-const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num) {
-    std::vector<uint8_t> bytes;
-
-    while(true) {
-        bytes.push_back(num & BYTE_RST); // Get least sig 7 bits
-
-        if (num < BYTE_FST) {
-            bytes.front() |= BYTE_FST; // Set continuation bit
-            break;
-        }
-
-        num >>= 7;
-    }
-
-    std::reverse(bytes.begin(), bytes.end());
-
-    return bytes;
+static inline void put_value(std::vector<uint8_t> &out, const uint32_t v, const uint8_t len) {
+  switch (len) {
+    case 3: out.push_back(v >> 24);
+    [[fallthrough]];
+    case 2: out.push_back(v >> 16);
+    [[fallthrough]];
+    case 1: out.push_back(v >> 8); 
+    [[fallthrough]];
+    case 0: out.push_back(v);
+  }
 }
 
-const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed) {
-    uint64_t num = 0;
-    bytes_consumed = 0;
-
-    for (auto it = bytes.begin(); it != bytes.end(); ++it) {
-        ++bytes_consumed;
-        
-        if (!(*it & BYTE_FST)) { // More bytes for num
-            num = (num << 7) + *it;
-        } else {
-            num = (num << 7) + (*it & BYTE_RST); // Last byte of num
-            break;
-        }
-    }
-
-    return num;
+static inline void put_value(std::vector<uint8_t> &out, const uint64_t v, const uint8_t len) {
+  switch (len) {
+    case 7:
+      out.emplace_back(v >> 56);
+      [[fallthrough]];
+    case 6:
+      out.emplace_back(v >> 48);
+      [[fallthrough]];
+    case 5:
+      out.emplace_back(v >> 40);
+      [[fallthrough]];
+    case 4:
+      out.emplace_back(v >> 32);
+      [[fallthrough]];
+    case 3:
+      out.emplace_back(v >> 24);
+      [[fallthrough]];
+    case 2:
+      out.emplace_back(v >> 16);
+      [[fallthrough]];
+    case 1:
+      out.emplace_back(v >> 8);
+      [[fallthrough]];
+    case 0:
+      out.emplace_back(v);
+  }
 }
 
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums) {
   std::vector<uint8_t> encoded;
-  encoded.reserve((nums.size() / 4) * 17); // Maximum size of encoded
+  encoded.reserve(((nums.size() + 3) / 4) * 17 + 3); // Maximum size of encoded
 
   size_t i;
   for (i = 0; i + 3 < nums.size(); i += 4) {
@@ -111,139 +107,62 @@ gvb_encode_uint32_t(const std::vector<uint32_t> &nums) {
                          length_d);
 
     // Process a
-    switch (length_a) {
-    case 3:
-      encoded.push_back(a >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.push_back(a >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.push_back(a >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.push_back(a);
-    }
+    put_value(encoded, a, length_a);
 
     // Process b
-    switch (length_b) {
-    case 3:
-      encoded.push_back(b >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.push_back(b >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.push_back(b >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.push_back(b);
-    }
+    put_value(encoded, b, length_b);
 
     // Process c
-    switch (length_c) {
-    case 3:
-      encoded.push_back(c >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.push_back(c >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.push_back(c >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.push_back(c);
-    }
+    put_value(encoded, c, length_c);
 
     // Process d
-    switch (length_d) {
-    case 3:
-      encoded.push_back(d >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.push_back(d >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.push_back(d >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.push_back(d);
-    }
+    put_value(encoded, d, length_d);
   }
 
   // If input is not divisible by 4, process last few ints and pad output so it
   // is divisible by 4
   if (uint8_t r = nums.size() % 4) {
-    uint32_t a, b, c, d;
+    uint32_t a, b, c;
     uint8_t length_a, length_b, length_c;
-    uint8_t header;
+    uint8_t header = 0;
 
     switch (r) {
     case 3:
       c = nums[i + 2];
       length_c = get_length(c);
-      header = length_c << 2;
+      header |= length_c << 2;
+      [[fallthrough]];
     case 2:
       b = nums[i + 1];
       length_b = get_length(b);
-      header = length_b << 4;
+      header |= length_b << 4;
+      [[fallthrough]];
     case 1:
       a = nums[i];
-      length_c = get_length(a);
-      header = length_c << 6;
+      length_a = get_length(a);
+      header |= length_a << 6;
     }
 
     encoded.emplace_back(header);
 
     // Process a
-    switch (length_a) {
-    case 3:
-      encoded.emplace_back(a >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.emplace_back(a >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.emplace_back(a >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.emplace_back(a);
-    }
+    put_value(encoded, a, length_a);
 
     // Process b
     if (r > 1) {
-      switch (length_b) {
-      case 3:
-        encoded.emplace_back(b >> 24);
-        [[fallthrough]];
-      case 2:
-        encoded.emplace_back(b >> 16);
-        [[fallthrough]];
-      case 1:
-        encoded.emplace_back(b >> 8);
-        [[fallthrough]];
-      case 0:
-        encoded.emplace_back(b);
-      }
+      put_value(encoded, b, length_b);
     }
 
     // Process c
     if (r > 2) {
-      switch (length_c) {
-      case 3:
-        encoded.emplace_back(c >> 24);
-        [[fallthrough]];
-      case 2:
-        encoded.emplace_back(c >> 16);
-        [[fallthrough]];
-      case 1:
-        encoded.emplace_back(c >> 8);
-        [[fallthrough]];
-      case 0:
-        encoded.emplace_back(c);
-      }
+      put_value(encoded, c, length_c);
     }
+
+    // Pad remaining values
+    for (uint8_t k = r; k < 4; ++k)
+      encoded.emplace_back(0);
   }
+
 
   return encoded;
 }
@@ -264,59 +183,10 @@ gvb_encode_uint64_t(const std::vector<uint64_t> &nums) {
     encoded.emplace_back(length_a << 4 | length_b);
 
     // Process a
-    switch (length_a) {
-    case 7:
-      encoded.emplace_back(a >> 56);
-      [[fallthrough]];
-    case 6:
-      encoded.emplace_back(a >> 48);
-      [[fallthrough]];
-    case 5:
-      encoded.emplace_back(a >> 40);
-      [[fallthrough]];
-    case 4:
-      encoded.emplace_back(a >> 32);
-      [[fallthrough]];
-    case 3:
-      encoded.emplace_back(a >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.emplace_back(a >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.emplace_back(a >> 8);
-      [[fallthrough]];
-      ;
-    case 0:
-      encoded.emplace_back(a);
-    }
+    put_value(encoded, a, length_a);
 
     // Process b
-    switch (length_b) {
-    case 7:
-      encoded.emplace_back(b >> 56);
-      [[fallthrough]];
-    case 6:
-      encoded.emplace_back(b >> 48);
-      [[fallthrough]];
-    case 5:
-      encoded.emplace_back(b >> 40);
-      [[fallthrough]];
-    case 4:
-      encoded.emplace_back(b >> 32);
-      [[fallthrough]];
-    case 3:
-      encoded.emplace_back(b >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.emplace_back(b >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.emplace_back(b >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.emplace_back(b);
-    }
+    put_value(encoded, b, length_b);
   }
 
   // If input is not even, process last int and pad output by 1
@@ -325,31 +195,7 @@ gvb_encode_uint64_t(const std::vector<uint64_t> &nums) {
     const uint8_t length_a = get_length(a);
     encoded.emplace_back(length_a << 4);
 
-    switch (length_a) {
-    case 7:
-      encoded.emplace_back(a >> 56);
-      [[fallthrough]];
-    case 6:
-      encoded.emplace_back(a >> 48);
-      [[fallthrough]];
-    case 5:
-      encoded.emplace_back(a >> 40);
-      [[fallthrough]];
-    case 4:
-      encoded.emplace_back(a >> 32);
-      [[fallthrough]];
-    case 3:
-      encoded.emplace_back(a >> 24);
-      [[fallthrough]];
-    case 2:
-      encoded.emplace_back(a >> 16);
-      [[fallthrough]];
-    case 1:
-      encoded.emplace_back(a >> 8);
-      [[fallthrough]];
-    case 0:
-      encoded.emplace_back(a);
-    }
+    put_value(encoded, a, length_a);
 
     encoded.emplace_back(0);
   }
@@ -526,16 +372,16 @@ gvb_decode_uint64_t(const std::vector<uint8_t> &bytes) {
   return decoded;
 }
 
-uint64_t write_gvb_to_file(const std::vector<uint64_t> &vec, std::ofstream &file) {
-  const std::vector<uint8_t> enc = gvb_encode_uint64_t(delta_encode(vec));
+uint64_t write_gvb_to_file(const std::vector<uint32_t> &vec, std::ofstream &file) {
+  const std::vector<uint8_t> enc = gvb_encode_uint32_t(delta_encode(vec));
   const uint64_t enc_size = enc.size();
   file.write(reinterpret_cast<const char *>(enc.data()), enc_size);
 
   return enc_size;
 }
 
-std::vector<uint64_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read) {
+std::vector<uint32_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read) {
   std::vector<uint8_t> decoded_gvb(size_to_read);
   std::memcpy(reinterpret_cast<char *>(decoded_gvb.data()), file, size_to_read);                                             
-  return  delta_decode(gvb_decode_uint64_t(decoded_gvb));
+  return delta_decode(gvb_decode_uint32_t(decoded_gvb));
 }

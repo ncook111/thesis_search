@@ -50,7 +50,7 @@ const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &inpu
         output.insert(output.end(), std::make_move_iterator(remainder.begin()), std::make_move_iterator(remainder.end()));
     }
 
-    std::vector<uint8_t> var_byte_nb = vb_encode_num_uint64_t(num_blocks);
+    std::vector<uint8_t> var_byte_nb = vb_encode_num<uint64_t>(num_blocks);
 
     return var_byte_nb;
 }
@@ -165,9 +165,10 @@ const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &en
     return decoded;
 }
 
-uint64_t write_fls_to_file(const std::vector<uint64_t> &vec, std::ofstream &file) {
+uint64_t write_fls_to_file(const std::vector<uint32_t> &vec, std::ofstream &file) {
+  std::vector<uint64_t> vec64(vec.begin(), vec.end());
   std::vector<uint8_t> enc_data;
-  std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec, enc_data);
+  std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec64, enc_data);
   const uint64_t enc_data_size = enc_data.size();
   const uint64_t enc_num_blocks_size = enc_num_blocks.size();
   
@@ -177,15 +178,17 @@ uint64_t write_fls_to_file(const std::vector<uint64_t> &vec, std::ofstream &file
   return enc_data_size + enc_num_blocks_size;
 }
 
-std::vector<uint64_t> read_fls_from_file(const uint8_t *file, const size_t size_to_read) {
+std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_to_read) {
   size_t enb_size_to_read = std::min({size_to_read, (size_t)10}); // num_blocks can be up to 10 bytes, get lesser of size_to_read or 10
   std::vector<uint8_t> enc_num_blocks(file, file + enb_size_to_read); 
   size_t num_bytes;
-  size_t num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_bytes);
+  size_t num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_bytes);
 
   std::vector<uint8_t> encoded_fls(size_to_read - num_bytes);
 
   std::memcpy(reinterpret_cast<char *>(encoded_fls.data()), file + num_bytes, size_to_read - num_bytes);
 
-  return fls_decode_uint64_t(encoded_fls, num_blocks);
+  std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded_fls, num_blocks);
+
+  return std::vector<uint32_t>(decoded.begin(), decoded.end());
 }

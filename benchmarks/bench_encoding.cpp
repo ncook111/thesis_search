@@ -184,7 +184,7 @@ public:
     Pef_Header header;
 
     void SetUp(::benchmark::State& state) {
-        header = partitioned_ef_encode_u64(input, generate_int_dist(state.range(0)));
+        header = partitioned_ef_encode<uint64_t>(input, generate_int_dist(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -200,7 +200,7 @@ public:
     void SetUp(::benchmark::State& state) {
         input.clear();
         std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(generate_int_dist(state.range(0)), input);
-        num_blocks = vb_decode_num_uint64_t(enc_num_blocks, num_consumed);
+        num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     }
 
     void TearDown(::benchmark::State& state) {
@@ -490,7 +490,7 @@ BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        header = partitioned_ef_encode_u64(encoded, input);
+        header = partitioned_ef_encode<uint64_t>(encoded, input);
         benchmark::DoNotOptimize(encoded);
         benchmark::DoNotOptimize(header);
         benchmark::ClobberMemory();
@@ -915,7 +915,7 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        std::vector<uint64_t> decoded = partitioned_ef_decode_u64(input, header.universe, header.n);
+        std::vector<uint64_t> decoded = partitioned_ef_decode<uint64_t>(input, header.universe, header.n);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }

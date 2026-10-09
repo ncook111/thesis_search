@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "../search.h"
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
+using FieldMap = std::unordered_map<size_t, std::vector<uint32_t>>;
 
 class ASTNode {
   public:

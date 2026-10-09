@@ -145,8 +145,8 @@ const uint8_t str_to_token_type(const std::string &type_str) {
   return TokenType::INVALID;
 }
 
-const std::vector<uint64_t> remove_dups_sorted(const std::vector<uint64_t> &vec) {
-  std::vector<uint64_t> dedup;
+const std::vector<uint32_t> remove_dups_sorted(const std::vector<uint32_t> &vec) {
+  std::vector<uint32_t> dedup;
   for (const auto &v : vec) {
     if (dedup.size() && dedup.back() == v)
       continue;
@@ -156,7 +156,7 @@ const std::vector<uint64_t> remove_dups_sorted(const std::vector<uint64_t> &vec)
   return dedup;
 }
 
-const std::vector<uint64_t> remove_dups_unsorted(std::vector<uint64_t> &vec) {
+const std::vector<uint32_t> remove_dups_unsorted(std::vector<uint32_t> &vec) {
   // Sort before removing dups
   std::sort(vec.begin(), vec.end());
   return remove_dups_sorted(vec);

@@ -494,6 +494,18 @@ TEST(large_pint_string, test1) {
 TEST(large_pint_string, test2) {
     std::string input = "18446744073709551615";
     const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(large_pint_string, test3) {
+    std::string input = "18446744073709551614";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
     ASSERT_EQ(tokens.getNumTokensQ().size(), 1);
@@ -517,6 +529,18 @@ TEST(large_nint_string, test1) {
 
 TEST(large_nint_string, test2) {
     std::string input = "-18446744073709551615";
+    const Tokenizer tokens = Tokenizer::from_string(input); 
+    ASSERT_EQ(tokens.getAlphaTokensQ().size(), 1);
+    ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getNegNumTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getDateTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getTimeTokensQ().size(), 0);
+    ASSERT_EQ(tokens.getIPTokensQ().size(), 0);
+}
+
+TEST(large_nint_string, test3) {
+    std::string input = "-18446744073709551614";
     const Tokenizer tokens = Tokenizer::from_string(input); 
     ASSERT_EQ(tokens.getAlphaTokensQ().size(), 0);
     ASSERT_EQ(tokens.getFloatTokensQ().size(), 0);
