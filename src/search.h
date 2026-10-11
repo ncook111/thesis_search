@@ -47,8 +47,29 @@ std::vector<uint32_t> get_field_ids(const std::string &field_path, const std::ve
 
 template <QueryType Q>
 const std::optional<uint64_t> get_id_fst(const Q &query,
-                                         const std::string &fst_file_name) {
-  std::unique_ptr<StdCompactFst> fst = read_from_disk(fst_file_name);
+                                         const std::string &fst_file_name, const uint8_t fst_type) {
+    // Read in header
+  Fst_header fst_header = get_header_from_fst(fst_file_name);
+
+  size_t read_pos;
+  switch (fst_type) {
+    case FstType::ALPHA:
+      read_pos = fst_header.alpha_pos;
+      break;
+    case FstType::FLOAT:
+      read_pos = fst_header.float_pos;
+      break;
+    case FstType::FIELDS:
+      read_pos = fst_header.fields_pos;
+      break;
+    case FstType::OTHER:
+      read_pos = 0;
+      break;
+    default:
+      throw std::runtime_error("Fst_type not valid: " + std::to_string(fst_type));
+  }
+
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(fst_file_name, read_pos);
   int id = get_id_from_fst(*fst, query);
 
   return (id >= 0) ? std::make_optional(id) : std::nullopt;
@@ -79,7 +100,7 @@ get_id(const Q &query, const std::string &offset_file_name,
       std::cout << fst_file_name << std::endl;
       throw std::invalid_argument("Fst file does not exist");
     }
-    return get_id_fst(query, fst_file_name);
+    return get_id_fst(query, fst_file_name, type);
   } else {
     return get_id_pef(query, offset_file_name, type);
   }
@@ -117,7 +138,7 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
         }
 
         // Defer check for file existence until it will be used within get_id
-        const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + '_' + type_str + ".fst";
+        const std::string fst_file_name = index_path + "/fsts/" + std::to_string(i) + ".fst";
         const std::optional<uint64_t> id = get_id(token, offset_file_name, fst_file_name, type);
         // // No token id found for current token, clear list of offsets and continue
         if (!id) {
@@ -126,7 +147,7 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
         }
 
         // Read in field ids from fst
-        const std::vector<uint32_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + "_fields.fst", fields);
+        const std::vector<uint32_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + ".fst", fields);
 
         const std::vector<uint32_t> id_offsets_map = get_id_offsets_from_file(offset_file_name, type, enc_type);
         if (id_offsets_map.size()) {
@@ -170,7 +191,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
     std::cout << "Range: " << range.first << " : " << range.second << std::endl;
   }
 
-    const size_t n_threads = std::min<size_t>(files_indexed, std::max(1u, std::thread::hardware_concurrency()));
+  const size_t n_threads = std::min<size_t>(files_indexed, std::max(1u, std::thread::hardware_concurrency()));
 
   std::cout << "number of threads used: " << n_threads << std::endl;
 
@@ -196,7 +217,8 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
         if constexpr (std::is_same_v<Q, Range>) {
           ids = get_range_id_pef(range, offset_file_name, type);
         } else {
-          std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/fsts/" + std::to_string(i) + "_float.fst");
+          Fst_header fst_header = get_header_from_fst(index_path + "/fsts/" + std::to_string(i) + ".fst");
+          std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/fsts/" + std::to_string(i) + ".fst", fst_header.float_pos);
           ids = get_id_range_from_fst(*fst, range);
         }
         
@@ -207,7 +229,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
         }
 
         // Read in field ids from fst
-        const std::vector<uint32_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + "_fields.fst", fields);
+        const std::vector<uint32_t> field_ids = get_field_ids(index_path + "/fsts/" + std::to_string(i) + ".fst", fields);
 
         const std::vector<uint32_t> id_offsets_map =
             get_id_offsets_from_file(offset_file_name, type, enc_type);

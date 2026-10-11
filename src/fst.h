@@ -4,54 +4,55 @@
 #include "custom_types.h"
 #include "helper.h"
 #include "pef.h"
+#include "index.h"
 #include <fst/fstlib.h>
 #include <fst/compact-fst.h>
 #include <optional>
 
 using StdCompactFst = fst::CompactUnweightedFst<fst::StdArc>;
 
-std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name);
+struct Fst_header {
+  uint64_t alpha_pos;
+  uint64_t float_pos;
+  uint64_t fields_pos;
+};
+
+std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, const size_t read_pos = 0);
+size_t write_to_disk(std::unique_ptr<StdCompactFst> fst, std::ofstream &file);
+Fst_header get_header_from_fst(const std::string &file_name);
 
 template <FstQueryType Q>
 fst::StdVectorFst create_trie(const std::vector<Q> &sequences) {
-  fst::StdVectorFst fst;
-  fst.AddState();
-  fst.SetStart(0);
+  fst::StdVectorFst f;
+  f.SetStart(f.AddState());
 
-  const uint32_t sequences_size = static_cast<uint32_t>(sequences.size());
-
-  for (uint32_t i = 0; i < sequences_size; ++i) {
+  for (uint32_t i = 0; i < sequences.size(); ++i) {
     const Q &seq = sequences[i];
-    const uint32_t seq_size = static_cast<uint32_t>(seq.size());
-    long state = 0;
-
-    for (uint32_t j = 0; j < seq_size; ++j) {
-      const int64_t label = static_cast<uint8_t>(seq[j]) + 1;
-      const int64_t olabel = (j == seq_size - 1) ? i + 1 : 0;
-
-      long next = -1;
-      if (j < seq_size - 1) {
-        for (fst::ArcIterator<fst::StdVectorFst> aiter(fst, state);
-             !aiter.Done(); aiter.Next()) {
-          if (aiter.Value().ilabel == label) {
-            next = aiter.Value().nextstate;
-            break;
+    fst::StdArc::StateId s = 0;
+    for (size_t j = 0; j < seq.size(); ++j) {
+      const int label = static_cast<uint8_t>(seq[j]) + 1;
+      const bool last = (j + 1 == seq.size());
+      fst::StdArc::StateId next = fst::kNoStateId;
+      for (fst::MutableArcIterator<fst::StdVectorFst> it(&f, s); !it.Done(); it.Next()) {
+        fst::StdArc a = it.Value();
+        if (a.ilabel == label) {
+          if (last) { 
+            a.olabel = i + 1; 
+            it.SetValue(a); 
           }
+          next = a.nextstate;
+          break;
         }
       }
-
-      if (next == -1) {
-        next = fst.AddState();
-        fst.AddArc(state, fst::StdArc(label, olabel, 0.0, next));
+      if (next == fst::kNoStateId) {
+        next = f.AddState();
+        f.AddArc(s, fst::StdArc(label, last ? i + 1 : 0, fst::TropicalWeight::One(), next));
       }
-
-      state = next;
+      s = next;
     }
-
-    fst.SetFinal(state, fst::TropicalWeight::One());
+    f.SetFinal(s, fst::TropicalWeight::One());
   }
-
-  return fst;
+  return f;
 }
 
 template <class G>
@@ -216,25 +217,40 @@ get_id_range_from_fst(const G &fst, const std::pair<float, float> &range) {
 }
 
 template <FstQueryType Q>
-void create_fst(const std::vector<Q> &tokens, const std::string &file_name) {
+std::unique_ptr<StdCompactFst> create_fst(const std::vector<Q> &tokens) {
   fst::StdVectorFst trie = create_trie(tokens);
 
   fst::Minimize(&trie);
   fst::ArcSort(&trie, fst::ILabelCompare<fst::StdArc>());
   
-  StdCompactFst compact(trie);
-  trie.DeleteStates();
-
-  std::ofstream out(file_name, std::ios::binary);
-  fst::FstWriteOptions opts(file_name);
-  opts.align = true;
-  compact.Write(out, opts);
+  return std::make_unique<StdCompactFst>(trie);
 }
 
 template <MapType M>
-bool check_fst(const std::vector<M> &tokens, const std::string &file_name) {
-  std::cout << "read in filename: " << file_name << std::endl;
-  std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name);
+bool check_fst(const std::vector<M> &tokens, const std::string &file_name, const uint8_t fst_type) {
+  // Read in header
+  Fst_header fst_header = get_header_from_fst(file_name);
+
+  size_t read_pos;
+  switch (fst_type) {
+    case FstType::ALPHA:
+      read_pos = fst_header.alpha_pos;
+      break;
+    case FstType::FLOAT:
+      read_pos = fst_header.float_pos;
+      break;
+    case FstType::FIELDS:
+      read_pos = fst_header.fields_pos;
+      break;
+    case FstType::OTHER:
+      read_pos = 0;
+      break;
+    default:
+      throw std::runtime_error("Fst_type not valid: " + std::to_string(fst_type));
+  }
+
+  std::cout << "read in fst: " << fst_type << std::endl;
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name, read_pos);
 
   std::set<M> set;
   if constexpr (std::is_same_v<M, std::string>) {

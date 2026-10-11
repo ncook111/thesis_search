@@ -476,7 +476,8 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
 }
 
 std::vector<uint32_t> get_field_ids(const std::string &field_path, const std::vector<std::string> &fields) {
-  std::unique_ptr<StdCompactFst> fst = read_from_disk(field_path);
+  Fst_header fst_header = get_header_from_fst(field_path);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(field_path, fst_header.fields_pos);
   
   std::vector<uint32_t> field_ids;
   
