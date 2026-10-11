@@ -85,6 +85,58 @@ static inline void put_value(std::vector<uint8_t> &out, const uint64_t v, const 
   }
 }
 
+static inline void get_value_u32(const uint8_t header,const uint8_t *&b_off, std::vector<uint32_t> &decoded) {
+  uint32_t back = 0;
+  ++b_off;
+
+  switch (header) { // a length
+    case 3:
+      back |= (uint32_t)*b_off++ << 24;
+      [[fallthrough]];
+    case 2:
+      back |= (uint32_t)*b_off++ << 16;
+      [[fallthrough]];
+    case 1:
+      back |= (uint32_t)*b_off++ << 8;
+      [[fallthrough]];
+    case 0:
+      if (back | *b_off)
+        decoded.emplace_back(back | *b_off);
+  }
+}
+
+static inline void get_value_u64(const uint8_t header, const uint8_t *&b_off, std::vector<uint64_t> &decoded) {
+  uint64_t back = 0;
+  ++b_off;
+
+    switch (header) { // a length
+      case 7:
+        back |= (uint64_t)*b_off++ << 56;
+        [[fallthrough]];
+      case 6:
+        back |= (uint64_t)*b_off++ << 48;
+        [[fallthrough]];
+      case 5:
+        back |= (uint64_t)*b_off++ << 40;
+        [[fallthrough]];
+      case 4:
+        back |= (uint64_t)*b_off++ << 32;
+        [[fallthrough]];
+      case 3:
+        back |= (uint64_t)*b_off++ << 24;
+        [[fallthrough]];
+      case 2:
+        back |= (uint64_t)*b_off++ << 16;
+        [[fallthrough]];
+      case 1:
+        back |= (uint64_t)*b_off++ << 8;
+        [[fallthrough]];
+      case 0:
+        if (back | *b_off)
+          decoded.emplace_back(back | *b_off);
+    }
+}
+
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums) {
   std::vector<uint8_t> encoded;
@@ -208,86 +260,22 @@ gvb_decode_uint32_t(const std::vector<uint8_t> &bytes) {
   std::vector<uint32_t> decoded;
   decoded.reserve(bytes.size() * 4); // Maximum size
 
-  uint32_t back;
   const uint8_t *b_off = bytes.data();
 
   while (b_off < bytes.data() + bytes.size()) {
     const uint8_t header = b_off[0];
 
     // Decode a
-    ++b_off;
-    back = 0;
-    switch (header >> 6) { // a length
-    case 3:
-      back |= (uint32_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint32_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint32_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u32(header >> 6, b_off, decoded);
 
     // Decode b
-    ++b_off;
-    back = 0;
-
-    switch ((header & 48) >> 4) { // b length
-    case 3:
-      back |= (uint32_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint32_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint32_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u32((header & 48) >> 4, b_off, decoded);
 
     // Decode c
-    ++b_off;
-    back = 0;
-
-    switch ((header & 12) >> 2) { // c length
-    case 3:
-      back |= (uint32_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint32_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint32_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u32((header & 12) >> 2, b_off, decoded);
 
     // Deocde d
-    ++b_off;
-    back = 0;
-
-    switch ((header & 3)) { // d length
-    case 3:
-      back |= (uint32_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint32_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint32_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u32((header & 3), b_off, decoded);
 
     ++b_off;
   }
@@ -300,71 +288,16 @@ gvb_decode_uint64_t(const std::vector<uint8_t> &bytes) {
   std::vector<uint64_t> decoded;
   decoded.reserve(bytes.size() * 4); // Maximum size
 
-  uint64_t back = 0;
   const uint8_t *b_off = bytes.data();
 
   while (b_off < bytes.data() + bytes.size()) {
     const uint8_t header = b_off[0];
 
     // Decode a
-    ++b_off;
-    back = 0;
-    switch (header >> 4) { // a length
-    case 7:
-      back |= (uint64_t)*b_off++ << 56;
-      [[fallthrough]];
-    case 6:
-      back |= (uint64_t)*b_off++ << 48;
-      [[fallthrough]];
-    case 5:
-      back |= (uint64_t)*b_off++ << 40;
-      [[fallthrough]];
-    case 4:
-      back |= (uint64_t)*b_off++ << 32;
-      [[fallthrough]];
-    case 3:
-      back |= (uint64_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint64_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint64_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u64((header >> 4), b_off, decoded);
 
     // Decode b
-    ++b_off;
-    back = 0;
-    switch ((header & 15)) { // b length
-    case 7:
-      back |= (uint64_t)*b_off++ << 56;
-      [[fallthrough]];
-    case 6:
-      back |= (uint64_t)*b_off++ << 48;
-      [[fallthrough]];
-    case 5:
-      back |= (uint64_t)*b_off++ << 40;
-      [[fallthrough]];
-    case 4:
-      back |= (uint64_t)*b_off++ << 32;
-      [[fallthrough]];
-    case 3:
-      back |= (uint64_t)*b_off++ << 24;
-      [[fallthrough]];
-    case 2:
-      back |= (uint64_t)*b_off++ << 16;
-      [[fallthrough]];
-    case 1:
-      back |= (uint64_t)*b_off++ << 8;
-      [[fallthrough]];
-    case 0:
-      if (back | *b_off)
-        decoded.emplace_back(back | *b_off);
-    }
+    get_value_u64((header & 15), b_off, decoded);
 
     ++b_off;
   }

@@ -14,8 +14,6 @@ constexpr long UINT56_MAX = 0xFFFFFFFFFFFFFF;
 
 const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num);
 const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed);
-static inline void put_value(std::vector<uint8_t> &out, const uint32_t v, const uint8_t len);
-static inline void put_value(std::vector<uint8_t> &out, const uint64_t v, const uint8_t len);
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums);
 const std::vector<uint32_t>
