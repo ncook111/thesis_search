@@ -5,7 +5,7 @@
 void output_entries(const FieldMap &matches, const std::string &index_path,
                    const std::string &data_path, const std::string &output_path, const uint8_t enc_type) {
   std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/file_mappings.fst");
-  const std::vector<std::string> names = get_vec_strings_from_fst(*fst);
+  const std::vector<std::string> names = get_strings_from_fst(*fst);
   const EntryMap result = get_entries_offsets(matches, names, data_path, index_path, enc_type);
   for (const auto &[file_id, entries] : result) {
     const std::string file_name = id_to_string(*fst, file_id);

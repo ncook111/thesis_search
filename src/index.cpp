@@ -101,9 +101,9 @@ void create_index(const std::vector<std::string> &fields,
 
   if (first_error) std::rethrow_exception(first_error);
 
-  std::unique_ptr<StdCompactFst> mappings_fst = create_fst<std::string>(file_mappings_vec);
+  StdCompactFst mappings_fst = create_fst<std::string>(file_mappings_vec);
   std::ofstream out(index_dir.string() + "/" + "file_mappings.fst", std::ios::binary);
-  write_to_disk(std::move(mappings_fst), out); 
+  write_to_disk(mappings_fst, out); 
   out.close();
 
   if (run_checks)
@@ -120,23 +120,23 @@ void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_path, const
     out.write(reinterpret_cast<const char*>(&fst_header), sizeof(fst_header));
 
     std::cout << "Creating Alpha FST" << std::endl;
-    std::unique_ptr<StdCompactFst> alpha_fst = create_fst<std::string>(tokenizer.getAlphaTokens());
-    fst_header.alpha_pos = write_to_disk(std::move(alpha_fst), out);
+    StdCompactFst alpha_fst = create_fst<std::string>(tokenizer.getAlphaTokens());
+    fst_header.alpha_pos = write_to_disk(alpha_fst, out);
     
     if (!run_checks)
       tokenizer.alpha_tokens.clear();
     std::cout << "Finished" << std::endl;
 
     std::cout << "Creating Float FST" << std::endl;
-    std::unique_ptr<StdCompactFst> float_fst = create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens));
-    fst_header.float_pos =  write_to_disk(std::move(float_fst), out);
+    StdCompactFst float_fst = create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens));
+    fst_header.float_pos =  write_to_disk(float_fst, out);
     
     if (!run_checks)
       tokenizer.float_tokens.clear();
     std::cout << "Finished" << std::endl;
     
-    std::unique_ptr<StdCompactFst> fields_fst = create_fst<std::string>(tokenizer.fields);
-    fst_header.fields_pos = write_to_disk(std::move(fields_fst), out);   
+    StdCompactFst fields_fst = create_fst<std::string>(tokenizer.fields);
+    fst_header.fields_pos = write_to_disk(fields_fst, out);   
 
     if (!run_checks)
       tokenizer.fields.clear();

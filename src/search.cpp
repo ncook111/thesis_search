@@ -302,7 +302,7 @@ const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, con
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std::string &index_path, const uint8_t enc_type) {
   FieldMap compliment_offsets;
   std::unique_ptr<StdCompactFst> fst = read_from_disk(index_path + "/file_mappings.fst");
-  const uint64_t num_files = get_vec_strings_from_fst(*fst).size();
+  const uint64_t num_files = get_strings_from_fst(*fst).size();
 
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
     std::vector<uint32_t> entries_cmp;
@@ -483,7 +483,7 @@ std::vector<uint32_t> get_field_ids(const std::string &field_path, const std::ve
   
   if (!fields.empty()) {
     for (const auto &field : fields) {
-      uint32_t field_id = get_id_from_fst(*fst, field);
+      int64_t field_id = get_id_from_fst(*fst, field);
       if (field_id != -1)
         field_ids.push_back(field_id);
       else

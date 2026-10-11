@@ -17,12 +17,12 @@ std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, cons
   return std::unique_ptr<StdCompactFst>(fst);
 }
 
-size_t write_to_disk(std::unique_ptr<StdCompactFst> fst, std::ofstream &file) {
+size_t write_to_disk(const StdCompactFst &fst, std::ofstream &file) {
   file.seekp(0, std::ios::end);
   size_t write_pos = file.tellp();
   fst::FstWriteOptions opts;
   opts.align = true;
-  (*fst).Write(file, opts);
+  fst.Write(file, opts);
 
 
   return write_pos;
