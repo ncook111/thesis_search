@@ -61,6 +61,7 @@ void create_index(const std::vector<std::string> &fields,
   std::mutex print_mtx;
   std::mutex err_mtx;
   std::exception_ptr first_error;
+  std::stop_source stop;
 
   auto worker = [&] {
     while (true) {
@@ -87,7 +88,7 @@ void create_index(const std::vector<std::string> &fields,
       } catch (...) {
         std::lock_guard lk(err_mtx);
         if (!first_error) first_error = std::current_exception();
-        next.store(files.size());
+        stop.request_stop();
       }
     }
   };

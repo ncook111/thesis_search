@@ -92,13 +92,14 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
                           const uint8_t enc_type) {
   const std::string type_str = token_type_to_str(type);
 
-  const size_t n_threads = std::min<size_t>(files_indexed, std::max(1u, std::thread::hardware_concurrency()));
+  const size_t n_threads = 1; //std::min<size_t>(files_indexed, std::max(1u, std::thread::hardware_concurrency()));
 
   std::cout << "number of threads used: " << n_threads << std::endl;
 
   std::atomic<size_t> next{0};
   std::mutex err_mtx;
   std::exception_ptr first_error;
+  std::stop_source stop;
   
   std::vector<std::optional<std::vector<uint32_t>>> results(files_indexed);
 
@@ -140,7 +141,7 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
       } catch (...) {
         std::lock_guard lk(err_mtx);
         if (!first_error) first_error = std::current_exception();
-        next.store(files_indexed);
+        stop.request_stop();
       } 
     }
   };
@@ -176,6 +177,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
   std::atomic<size_t> next{0};
   std::mutex err_mtx;
   std::exception_ptr first_error;
+  std::stop_source stop;
   
   std::vector<std::optional<std::vector<uint32_t>>> results(files_indexed);
 
@@ -213,7 +215,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
       } catch (...) {
         std::lock_guard lk(err_mtx);
         if (!first_error) first_error = std::current_exception();
-        next.store(files_indexed);
+        stop.request_stop();
       } 
     }
   };
