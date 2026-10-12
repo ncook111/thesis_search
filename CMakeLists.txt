@@ -216,6 +216,7 @@ add_library(indexer_lib
     src/pef.cpp
     src/fls.cpp
     src/simdbp128.cpp
+    src/segment.cpp
     src/search.cpp
     src/output.cpp
     src/crc.cpp

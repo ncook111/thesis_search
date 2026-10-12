@@ -37,7 +37,7 @@ TEST_F(crc_test, simple_index_checksum_valid) {
     ASSERT_NO_THROW(ret = create_mode(index_path + "/index_1_crc", data_path, {}, EncType::GVB));
     ASSERT_EQ(ret, 0);
     
-    ASSERT_TRUE(check_checksum_file(index_path + "/index_1_crc/checksum.crc", index_path + "/index_1_crc"));
+    ASSERT_TRUE(check_checksum_file(index_path + "/index_1_crc"));
 }
 
 TEST_F(crc_test, simple_index_checksum_invalid) {
@@ -47,24 +47,24 @@ TEST_F(crc_test, simple_index_checksum_invalid) {
     
     // Modify an index file
     std::ofstream file;
-    file.open(index_path + "/index_1_crc/offsets/0.off", std::ios::binary);
+    file.open(index_path + "/index_1_crc/segments/segment_0.seg", std::ios::binary);
     uint32_t zero = 0;
     file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
     file.close();
 
-    ASSERT_FALSE(check_checksum_file(index_path + "/index_1_crc/checksum.crc", index_path + "/index_1_crc"));
+    ASSERT_FALSE(check_checksum_file(index_path + "/index_1_crc"));
 }
 
 TEST_F(crc_test_fuzzed, checksum_valid) {
     create_checksum_file(index_path + "/index_fuzzed");
     
-    ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed/checksum.crc", index_path + "/index_fuzzed"));
+    ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed"));
 }
 
 TEST_F(crc_test_fuzzed, checksum_invalid) {
     create_checksum_file(index_path + "/index_fuzzed");
 
-    ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed/checksum.crc", index_path + "/index_fuzzed"));
+    ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed"));
     
     // Flip a random bit in a random file, then verify the checksum doesn't match the original
     std::mt19937_64 eng(42);
@@ -102,7 +102,7 @@ TEST_F(crc_test_fuzzed, checksum_invalid) {
         file.flush();
 
         // Verify checksum is invalid
-        ASSERT_FALSE(check_checksum_file(index_path + "/index_fuzzed/checksum.crc", index_path + "/index_fuzzed"));
+        ASSERT_FALSE(check_checksum_file(index_path + "/index_fuzzed"));
 
         // Write original byte back to file
         file.seekp(r_offset);
@@ -110,7 +110,7 @@ TEST_F(crc_test_fuzzed, checksum_invalid) {
         file.flush();
 
         // Verify checksum is now valid
-        ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed/checksum.crc", index_path + "/index_fuzzed"));
+        ASSERT_TRUE(check_checksum_file(index_path + "/index_fuzzed"));
 
         file.close();
     }

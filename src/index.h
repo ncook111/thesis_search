@@ -8,27 +8,11 @@
 #include "fst.h"
 #include "fls.h"
 #include "helper.h"
+#include "segment.h"
 #include "pef.h"
 #include <fstream>
 #include <map>
 #include <vector>
-
-// Saved to the front of the file
-struct Offsets_header {
-  uint64_t alpha_offsets_header, alpha_id_map_header; // Docids
-  uint64_t num_offsets_header, num_id_map_header; // Docids
-  uint64_t neg_num_offsets_header, neg_num_id_map_header; // Docids
-  uint64_t float_offsets_header, float_id_map_header; // Docids
-  uint64_t date_offsets_header, date_id_map_header; // Docids
-  uint64_t time_offsets_header, time_id_map_header; // Docids
-  uint64_t ipv4_offsets_header, ipv4_id_map_header; // Docids
-  uint64_t entry_offsets_header; // File offsets for each document
-  uint64_t int_toks_header; // PEF encoded lexicon values
-  uint64_t neg_int_toks_header; // PEF encoded lexicon values
-  uint64_t date_toks_header; // PEF encoded lexicon values
-  uint64_t time_toks_header; // PEF encoded lexicon values
-  uint64_t ipv4_toks_header; // PEF encoded lexicon values
-};
 
 struct Fields_header {
   uint16_t num_fields; // Number of fields that will contain docids
@@ -63,13 +47,13 @@ get_tok_offsets(const uint64_t token_id,
                 const std::vector<uint32_t> &req_field_ids,
                 const uint64_t tok_offsets_length,
                 const uint8_t *file, const uint8_t enc_type);
-void generate_offsets_file(const Tokenizer &tokenizer,
-                           const std::string &file_name,
+void generate_offsets(const Tokenizer &tokenizer,
+                           std::ofstream &file,
                            const uint8_t enc_type,
                           const bool run_checks = false);
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type);
-void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_dir, const bool run_checks = false);
+void generate_fsts(Tokenizer &tokenizer, std::ofstream &file, const bool run_checks = false);
 const uint64_t
 write_entry_offsets_to_file(const std::vector<uint32_t> &entry_offsets,
                             std::ofstream &file, const uint8_t enc_type);
@@ -236,7 +220,7 @@ write_offsets_to_file(const std::map<M, std::map<uint32_t, std::vector<uint32_t>
     }
 
     // Replace dummy field_offsets with updated version
-    std::streampos current_pos = file.tellp();
+    const std::streampos current_pos = file.tellp();
     file.seekp(field_offsets_write_pos);
     file.write(reinterpret_cast<const char*>(field_offsets.data()), num_fields * sizeof(uint32_t));
     file.seekp(current_pos);

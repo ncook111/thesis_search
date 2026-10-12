@@ -136,12 +136,11 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map,
   EntryMap all_line_offsets;
   // Offsets is a map of file_id's to offsets
   for (const auto &[file_id, token_offsets] : offsets_map) {
-    const std::string index_file_path =
-        index_path + "/offsets/" + std::to_string(file_id) + ".off";
+    const std::string segment_path = index_path + "/segments/segment_" + std::to_string(file_id) + ".seg";
 
     // All entry offsets for current data file:
     const std::vector<uint32_t> entry_offsets =
-        get_entry_offsets_from_file(index_file_path, enc_type);
+        get_entry_offsets_from_file(segment_path, enc_type);
 
     // For each token_offset, get closest prev newline and match in file to get
     // offset to end of line
@@ -309,7 +308,8 @@ const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const std
     if (entries.contains(file_id))
       entries_cmp = entries.at(file_id);
 
-    const uint64_t total_num_entries = get_entry_offsets_from_file(index_path + "/offsets/" + std::to_string(file_id) + ".off", enc_type).size() - 1;
+    const std::string segment_path = index_path + "/segments/segment_" + std::to_string(file_id) + ".seg";
+    const uint64_t total_num_entries = get_entry_offsets_from_file(segment_path, enc_type).size() - 1;
     std::vector<uint32_t> all_entries;
     all_entries.reserve(total_num_entries);
 
@@ -476,8 +476,7 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens,
 }
 
 std::vector<uint32_t> get_field_ids(const std::string &field_path, const std::vector<std::string> &fields) {
-  Fst_header fst_header = get_header_from_fst(field_path);
-  std::unique_ptr<StdCompactFst> fst = read_from_disk(field_path, fst_header.fields_pos);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(field_path, get_fields_fst_pos(field_path));
   
   std::vector<uint32_t> field_ids;
   

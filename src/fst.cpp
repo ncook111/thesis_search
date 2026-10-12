@@ -1,4 +1,5 @@
 #include "fst.h"
+#include "segment.h"
 #include <fst/fstlib.h>
 
 std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, const size_t read_pos) {
@@ -28,12 +29,18 @@ size_t write_to_disk(const StdCompactFst &fst, std::ofstream &file) {
   return write_pos;
 }
 
-Fst_header get_header_from_fst(const std::string &file_name) {
-  // Read in header
-  std::ifstream in(file_name, std::ios::binary);
-  Fst_header fst_header = {};
-  in.read(reinterpret_cast<char*>(&fst_header), sizeof(fst_header));
-  in.close();
-
-  return fst_header;
+size_t get_fst_pos(const std::string &file_name, const uint8_t fst_type) {
+  switch (fst_type) {
+    case FstType::ALPHA:
+      return get_alpha_fst_pos(file_name);
+    case FstType::FLOAT:
+      return get_float_fst_pos(file_name);
+    case FstType::FIELDS:
+      return get_fields_fst_pos(file_name);
+    case FstType::OTHER:
+      return 0;
+    default:
+      throw std::runtime_error("Fst_type not valid: " + std::to_string(fst_type));
+  }
 }
+

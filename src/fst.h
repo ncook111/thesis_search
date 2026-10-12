@@ -5,6 +5,7 @@
 #include "helper.h"
 #include "pef.h"
 #include "index.h"
+#include "segment.h"
 #include <fst/vector-fst.h>
 #include <fst/minimize.h>
 #include <fst/arcsort.h>
@@ -14,15 +15,9 @@
 
 using StdCompactFst = fst::CompactUnweightedFst<fst::StdArc>;
 
-struct Fst_header {
-  uint64_t alpha_pos;
-  uint64_t float_pos;
-  uint64_t fields_pos;
-};
-
 std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, const size_t read_pos = 0);
 size_t write_to_disk(const StdCompactFst &fst, std::ofstream &file);
-Fst_header get_header_from_fst(const std::string &file_name);
+size_t get_fst_pos(const std::string &file_name, const uint8_t fst_type);
 
 template <class G, class S>
 void get_paths(const G &fst, const int state, S &current,
@@ -177,28 +172,8 @@ StdCompactFst create_fst(const std::vector<Q> &tokens) {
 
 template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name, const uint8_t fst_type) {
-  // Read in header
-  Fst_header fst_header = get_header_from_fst(file_name);
-
-  size_t read_pos;
-  switch (fst_type) {
-    case FstType::ALPHA:
-      read_pos = fst_header.alpha_pos;
-      break;
-    case FstType::FLOAT:
-      read_pos = fst_header.float_pos;
-      break;
-    case FstType::FIELDS:
-      read_pos = fst_header.fields_pos;
-      break;
-    case FstType::OTHER:
-      read_pos = 0;
-      break;
-    default:
-      throw std::runtime_error("Fst_type not valid: " + std::to_string(fst_type));
-  }
-
   std::cout << "read in fst: " << +fst_type << std::endl;
+  size_t read_pos = get_fst_pos(file_name, fst_type);
   std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name, read_pos);
 
   std::vector<M> out;

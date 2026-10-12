@@ -77,7 +77,7 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
 }
 
 int verify_mode(const std::string &index_path) {
-  bool res = check_checksum_file(index_path + "/checksum.crc", index_path);
+  bool res = check_checksum_file(index_path);
   if (res) {
     std::cout << "Checksum Correct\n";
   } else {

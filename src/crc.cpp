@@ -27,8 +27,9 @@ const std::vector<uint32_t> checksum_folder(std::string path) {
             files.push_back(entry.path());
     }
 
-    std::vector<uint32_t> checksums;
+    std::sort(files.begin(), files.end());
 
+    std::vector<uint32_t> checksums;
     for (auto &file : files) {
         checksums.push_back(create_checksum(file));
     }
@@ -41,7 +42,7 @@ void create_checksum_file(const std::string &index_dir) {
     write_checksum_to_file(index_dir, checksums);
 }
 
-const bool check_checksum_file(const std::string &file_path, const std::string &index_dir) {
+const bool check_checksum_file(const std::string &index_dir) {
     std::vector<uint32_t> curr_checksums = checksum_folder(index_dir);
     std::vector<uint32_t> orig_checksums = read_checksum_from_file(index_dir);
 

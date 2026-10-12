@@ -7,6 +7,7 @@
 #include "crc.h"
 #include "fls.h"
 #include "pef.h"
+#include "segment.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -26,14 +27,12 @@ void create_index(const std::vector<std::string> &fields,
                   const uint8_t enc_type,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
-  const std::filesystem::path offsets_dir = index_dir_str + "/offsets";
-  const std::filesystem::path fst_dir = index_dir_str + "/fsts";
+  const std::filesystem::path segments_dir = index_dir_str + "/segments";
   const std::filesystem::path data_dir = data_dir_str;
 
-  // Create index directories, fails gracefully if directory already exists
+  // Create index directory, fails gracefully if directory already exists
   std::filesystem::create_directory(index_dir);
-  std::filesystem::create_directory(offsets_dir);
-  std::filesystem::create_directory(fst_dir);
+  std::filesystem::create_directory(segments_dir);
 
   // Check data directory exists
   if (!std::filesystem::exists(data_dir)) {
@@ -72,8 +71,13 @@ void create_index(const std::vector<std::string> &fields,
         const std::filesystem::path &f = files[i];
         file_mappings_vec[i] = f.filename().string();
         const std::string data_path = data_dir_str + '/' + f.filename().string();
-        const std::string offsets_path = offsets_dir.string() + '/' + std::to_string(i); // File_id;
-        const std::string fst_path = fst_dir.string() + "/" + std::to_string(i) /*File_id*/ + ".fst";
+        const std::string segment_path = segments_dir.string() + "/segment_" + std::to_string(i) + ".seg"; // File_id;
+
+        std::ofstream segment_file(segment_path, std::ios::binary);
+        if (!segment_file.is_open()) {
+          throw std::runtime_error("Failed to open file: " + segment_path);
+        }
+
         const uint8_t type = get_file_type(f.extension());
 
         Tokenizer tokenizer = Tokenizer::from_file(data_path, type, fields);
@@ -83,8 +87,22 @@ void create_index(const std::vector<std::string> &fields,
           tokenizer.printStatistics();
         }
 
-        generate_offsets_file(tokenizer, offsets_path, enc_type, run_checks);
-        generate_fst_files(tokenizer, fst_path);
+        // Leave room at start of file for fst offset positions
+        Segment_header segment_header = {0,0,0,0};
+        segment_file.write(reinterpret_cast<const char*>(&segment_header), sizeof(segment_header));
+
+        generate_offsets(tokenizer, segment_file, enc_type, run_checks);
+        generate_fsts(tokenizer, segment_file, run_checks);
+
+        segment_file.close();
+
+        if (run_checks) {
+          check_fst(tokenizer.getAlphaTokens(), segment_path, FstType::ALPHA);
+          check_fst(tokenizer.getFloatTokens(), segment_path, FstType::FLOAT);
+          check_fst(tokenizer.fields, segment_path, FstType::FIELDS);
+          check_offsets_file(tokenizer, segment_path, enc_type);
+          check_all_pef_tokens(tokenizer, segment_path);
+        }
       } catch (...) {
         std::lock_guard lk(err_mtx);
         if (!first_error) first_error = std::current_exception();
@@ -113,59 +131,38 @@ void create_index(const std::vector<std::string> &fields,
 }
 
 
-void generate_fst_files(Tokenizer &tokenizer, const std::string &fst_path, const bool run_checks) {
-  // Leave room at start of file for fst offset positions
-    Fst_header fst_header = {0,0,0};
-    std::ofstream out(fst_path, std::ios::binary);
-    out.write(reinterpret_cast<const char*>(&fst_header), sizeof(fst_header));
-
-    std::cout << "Creating Alpha FST" << std::endl;
+void generate_fsts(Tokenizer &tokenizer, std::ofstream &file, const bool run_checks) {
     StdCompactFst alpha_fst = create_fst<std::string>(tokenizer.getAlphaTokens());
-    fst_header.alpha_pos = write_to_disk(alpha_fst, out);
+    size_t alpha_pos = write_to_disk(alpha_fst, file);
+    update_alpha_fst_pos(file, alpha_pos);
     
     if (!run_checks)
       tokenizer.alpha_tokens.clear();
-    std::cout << "Finished" << std::endl;
 
-    std::cout << "Creating Float FST" << std::endl;
     StdCompactFst float_fst = create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens));
-    fst_header.float_pos =  write_to_disk(float_fst, out);
+    size_t float_pos =  write_to_disk(float_fst, file);
+    update_float_fst_pos(file, float_pos);
     
     if (!run_checks)
       tokenizer.float_tokens.clear();
-    std::cout << "Finished" << std::endl;
     
     StdCompactFst fields_fst = create_fst<std::string>(tokenizer.fields);
-    fst_header.fields_pos = write_to_disk(fields_fst, out);   
+    size_t fields_pos = write_to_disk(fields_fst, file);  
+    update_fields_fst_pos(file, fields_pos); 
 
     if (!run_checks)
       tokenizer.fields.clear();
-    std::cout << "Finished" << std::endl;
 
-    // Write real fst header data
-    out.seekp(0);
-    out.write(reinterpret_cast<const char*>(&fst_header), sizeof(fst_header));
-    out.close();
 
-    if (run_checks) {
-      check_fst(tokenizer.getAlphaTokens(), fst_path, FstType::ALPHA);
-      check_fst(tokenizer.getFloatTokens(), fst_path, FstType::FLOAT);
-      check_fst(tokenizer.fields, fst_path, FstType::FIELDS);
-    }
 }
 
-void generate_offsets_file(const Tokenizer &tokenizer,
-                           const std::string &file_name,
+void generate_offsets(const Tokenizer &tokenizer,
+                           std::ofstream &file,
                            const uint8_t enc_type,
                            const bool run_checks) {
-  std::ofstream file;
-  file.open(file_name + ".off", std::ios::binary);
-
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file: " + file_name);
-  }
 
   Offsets_header header = {};
+  const std::streampos header_pos = file.tellp();
   file.write(reinterpret_cast<const char *>(&header),
              sizeof(header)); // Reserve for later use
 
@@ -218,17 +215,16 @@ void generate_offsets_file(const Tokenizer &tokenizer,
             date_tok_off,
             time_tok_off,
             ip_tok_off};
-
-  file.seekp(0);
+  
+  // Write offsets_header
+  const std::streampos current_pos = file.tellp();
+  file.seekp(header_pos);
   file.write(reinterpret_cast<const char *>(&header),
              sizeof(header)); // Write header data
+  file.seekp(current_pos);
 
-  file.close();
-
-  if (run_checks) {
-    check_offsets_file(tokenizer, file_name + ".off", enc_type);
-    check_all_pef_tokens(tokenizer, file_name + ".off");
-  }
+  // Write offsets pos to segment_header
+  update_offsets_header_pos(file, header_pos);
 }
 
 void check_all_pef_tokens(const Tokenizer &tokenizer,
@@ -364,8 +360,7 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
   const uint8_t *file = static_cast<uint8_t *>(mf.addr());
   const size_t file_size = mf.size();
   // Read in header
-  Offsets_header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), &file[0], sizeof(header));
+  Offsets_header header = read_offsets_header(file);
 
   const auto &[addr_offset, size_to_read] = get_id_offsets_setup(header, type);
 
@@ -426,8 +421,7 @@ const std::pair<uint64_t, uint64_t>
 get_tok_offsets_setup(const std::vector<uint32_t> &id_to_offset,
                       const uint8_t *file, const uint8_t type) {
   // Read in header
-  Offsets_header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), &file[0], sizeof(header));
+  Offsets_header header = read_offsets_header(file);
 
   // Get offset to start of token offsets in file
   uint64_t tok_offsets_length = 0;
@@ -614,8 +608,7 @@ get_entry_offsets_from_file(const std::string &file_name,
   const size_t file_size = mf.size();
 
   // Read in header
-  Offsets_header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), &file[0], sizeof(header));
+  Offsets_header header = read_offsets_header(file);
 
   const size_t size_to_read =
       header.int_toks_header - header.entry_offsets_header;
@@ -642,8 +635,7 @@ std::pair<uint64_t, uint64_t>
 get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
                                const uint8_t type) {
   // Read in header
-  Offsets_header header = {};
-  std::memcpy(reinterpret_cast<char *>(&header), &file[0], sizeof(header));
+  Offsets_header header = read_offsets_header(file);
 
   uint64_t offset = 0;
   uint64_t size_to_read = 0;
@@ -666,7 +658,7 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
     break;
   case TokenType::IPV4:
     offset = header.ipv4_toks_header;
-    size_to_read = file_size - header.ipv4_toks_header;
+    size_to_read = get_alpha_fst_pos(file) - header.ipv4_toks_header;
     break;
   default:
     throw std::invalid_argument("Type not valid here");
@@ -676,15 +668,16 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
 }
 
 void check_index_dir_valid(const std::string &index_path) {
-  // Check valid fst directory
-  if (!std::filesystem::exists(index_path + "/fsts"))
-    throw std::invalid_argument("Fst's directory does not exist: " + index_path + "/fsts");
 
-  // Check valid offsets directory
-  if (!std::filesystem::exists(index_path + "/offsets"))
-    throw std::invalid_argument("Offset's directory does not exist: " + index_path + "/offsets");
+  // Check valid segments directory
+  if (!std::filesystem::exists(index_path + "/segments"))
+    throw std::invalid_argument("Segment's directory does not exist: " + index_path + "/segments");
 
   // Check file_mappings file exists
   if (!std::filesystem::exists(index_path + "/file_mappings.fst"))
-    throw std::invalid_argument("file_mappings file does not exist: " + index_path + "/file_mappings.fst");
+    throw std::invalid_argument("File mappings file does not exist: " + index_path + "/file_mappings.fst");
+    
+    // Check file_mappings file exists
+  if (!std::filesystem::exists(index_path + "/checksum.crc"))
+    throw std::invalid_argument("Checksum file does not exist: " + index_path + "/checksum.crc");
 }
