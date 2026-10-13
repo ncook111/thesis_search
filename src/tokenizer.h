@@ -32,8 +32,7 @@ namespace TokenType {
 
 class Tokenizer {
 public:
-  static Tokenizer from_file(const std::string &file_path, 
-    const uint8_t type, const std::vector<std::string> &fields);
+  static Tokenizer from_file(const std::string &file_path, const std::vector<std::string> &fields, const uint64_t segment_start = 0, uint64_t segment_size = 0); // Defaults to parsing entire file
   static Tokenizer from_string(const std::string &input);
   void close();
   
@@ -97,13 +96,13 @@ public:
 
 private:
   Tokenizer() = default;
-  void tokenize_file();
+  void tokenize_file(const uint64_t segment_start, const uint64_t segment_size);
   void tokenize_string(const std::string &input);
   void processToken(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id);
   void processToken(std::string &curr_token);
-  void tokenize_csv();
-  void tokenize_json();
-  void tokenize_logfmt();
+  void tokenize_csv(const uint64_t segment_start, const uint64_t segment_size);
+  void tokenize_json(const uint64_t segment_start, const uint64_t segment_size);
+  void tokenize_logfmt(const uint64_t segment_start, const uint64_t segment_size);
   void tokenize_field(const std::string_view field_str, const uint32_t doc_id, const uint32_t field_id);
   const bool is_ipv4(const std::string &s) const;
   const bool is_time(const std::string &s) const;

@@ -137,57 +137,72 @@ const bool Tokenizer::is_bool(const std::string &s) const {
   return (s == "true" || s == "false");
 }
 
-void Tokenizer::tokenize_file() {
+void Tokenizer::tokenize_file(const uint64_t segment_start, const uint64_t segment_size) {
   switch (type) {
-  case FileType::CSV:
-    tokenize_csv();
-    break;
-  case FileType::JSON:
-    tokenize_json();
-    break;
-  case FileType::LOGFMT:
-    tokenize_logfmt();
-    break;
-  default:
-    break;
+    case FileType::CSV:
+      tokenize_csv(segment_start, segment_size);
+      break;
+    case FileType::JSON:
+      tokenize_json(segment_start, segment_size);
+      break;
+    case FileType::LOGFMT:
+      tokenize_logfmt(segment_start, segment_size);
+      break;
+    default:
+      throw std::invalid_argument("File type not supported");
   }
 }
 
-void Tokenizer::tokenize_csv() {
-  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segment_size) {
+  // Open at front of file to get column names
+  std::vector<std::string> col_names;
+  {
+    csv::CSVFormat format;
+    format.variable_columns(csv::VariableColumnPolicy::THROW);
+    col_names = csv::get_col_names(file_path, format);
+  }
+  
+  // Reopen starting from segment_start
+  auto in = std::make_unique<std::ifstream>(file_path, std::ios::binary);
+  if (!*in) throw std::runtime_error("cannot open " + file_path);
+  in->seekg(static_cast<std::streamoff>(segment_start));
+  if (!*in) throw std::runtime_error("seek failed");
 
   csv::CSVFormat format;
-  format.variable_columns(csv::VariableColumnPolicy::THROW);
-  csv::CSVReader reader(file_path, format);
+  format.column_names(col_names).variable_columns(csv::VariableColumnPolicy::THROW);
+
+  csv::CSVReader reader(std::move(in), format); // 
 
   if (fields.empty())
-    fields = reader.get_col_names();
+    fields = col_names;
 
   for (const csv::CSVRow &row : reader) { // Input iterator
-    entry_offsets.push_back(row.byte_offset() + 1);
+    uint64_t curr_offset = row.byte_offset();
+    if (curr_offset >= segment_size) break; 
+
+    entry_offsets.push_back(curr_offset + 1);
 
     for (uint32_t field_id = 0; field_id < fields.size(); ++field_id )
       tokenize_field(row[fields[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
-
-    if (entry_offsets.size() % 10000 == 0)
-      std::cout << "Processed: "
-                << (float)(row.byte_offset() / (float)file_size) * 100 << "%"
-                << std::endl;
   }
 
-  entry_offsets.push_back(file_size + 2);
-  std::cout << "Lines: " << entry_offsets.size() << std::endl;
+  entry_offsets.push_back(segment_size + 2);
 }
 
-void Tokenizer::tokenize_json() {
-  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segment_size) {
+  constexpr size_t BATCH_SIZE = 16 << 20; // Use a 16MB batch size
 
   using namespace simdjson;
 
-  int BATCH_SIZE = 16 << 20; // Use a 16MB batch size
+  padded_string json(segment_size);
+  std::ifstream in(file_path, std::ios::binary);
+  if (!in) throw std::runtime_error("cannot open " + file_path);
+  in.seekg(segment_start);
+  if (!in.read(json.data(), static_cast<std::streamsize>(segment_size)))
+    throw std::runtime_error("short read");
+
   ondemand::parser parser;
   simdjson::ondemand::document_stream stream;
-  padded_string json = padded_string::load(file_path);
   auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
@@ -233,27 +248,24 @@ void Tokenizer::tokenize_json() {
 
     entry_offsets.push_back(j.current_index() + 1);
 
-    if (doc_id % 10000 == 0)
-      std::cout << "Processed: "
-                << (float)(j.current_index() / (float)file_size) * 100 << "%"
-                << std::endl;
-
     ++doc_id;
   }
 
-  entry_offsets.push_back(file_size + 1);
-
-  std::cout << "Lines: " << entry_offsets.size() << std::endl;
+  entry_offsets.push_back(segment_size + 1);
 }
 
-void Tokenizer::tokenize_logfmt() {
-  std::uint64_t file_size = std::filesystem::file_size(std::filesystem::path(file_path));
+void Tokenizer::tokenize_logfmt(const uint64_t segment_start, const uint64_t segment_size) {
   LogfmtParser parser = LogfmtParser(file_path);
 
   uint64_t doc_id = 1; // Doc_id's 1-indexed
   for (auto it = parser.begin(); it != parser.end(); ++it) {
     std::unordered_map<std::string, std::string> doc = (*it).current_row();
-    int64_t offset = (*it).current_offset();
+    
+    uint64_t offset;
+    if ((*it).current_offset())
+      offset = static_cast<uint64_t>((*it).current_offset());
+    else
+        throw std::invalid_argument("LOGFMT Parser: Invalid offset");
 
     // If no fields add all fields
     // This assumes fields for every json object will be the same
@@ -271,18 +283,10 @@ void Tokenizer::tokenize_logfmt() {
 
     entry_offsets.push_back(offset + 1);
 
-    if (doc_id % 10000 == 0)
-      std::cout << "Processed: "
-                << (float)(offset / (float)file_size) * 100 << "%"
-                << std::endl;
-
     ++doc_id;
-    
   }
 
-  entry_offsets.push_back(file_size);
-
-  std::cout << "Lines: " << entry_offsets.size() << std::endl;
+  entry_offsets.push_back(segment_size);
 }
 
 void Tokenizer::tokenize_field(const std::string_view field_str,
@@ -635,13 +639,16 @@ void Tokenizer::printTimeTokens() const {
 
 void Tokenizer::printIPTokens() const {}
 
-Tokenizer Tokenizer::from_file(const std::string &file_path, const uint8_t type,
-                               const std::vector<std::string> &fields) {
+Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<std::string> &fields, const uint64_t segment_start, uint64_t segment_size) {
   Tokenizer t;
+
+  if (segment_size == 0)
+    segment_size = std::filesystem::file_size(std::filesystem::path(file_path));
+
   t.file_path = file_path;
   t.fields = fields;
-  t.type = type;
-  t.tokenize_file();
+  t.type = get_file_type(file_path);
+  t.tokenize_file(segment_start, segment_size);
 
   return t;
 }

@@ -52,72 +52,80 @@ void create_index(const std::vector<std::string> &fields,
 
   std::vector<std::string> file_mappings_vec(files.size());
 
-  const size_t n_threads = std::min<size_t>(files.size(), std::max(1u, std::thread::hardware_concurrency()));
+  std::vector<std::vector<uint64_t>> segment_offsets_vec(files.size());
 
-  std::cout << "number of threads used: " << n_threads << std::endl;
+  for (size_t file_id = 0; file_id < files.size(); ++file_id) {
+    const std::filesystem::path &f = files[file_id];
+    file_mappings_vec[file_id] = f.filename().string();
+    const std::string data_path = data_dir_str + '/' + f.filename().string();
 
-  std::atomic<size_t> next{0};
-  std::mutex print_mtx;
-  std::mutex err_mtx;
-  std::exception_ptr first_error;
-  std::stop_source stop;
+    std::vector<uint64_t> segment_partitions = partition_file(data_path, 16 << 26);
 
-  auto worker = [&] {
-    while (true) {
-      const size_t i = next.fetch_add(1, std::memory_order_relaxed);
-      if (i >= files.size()) break;
-      
-      try {
-        const std::filesystem::path &f = files[i];
-        file_mappings_vec[i] = f.filename().string();
-        const std::string data_path = data_dir_str + '/' + f.filename().string();
-        const std::string segment_path = segments_dir.string() + "/segment_" + std::to_string(i) + ".seg"; // File_id;
+    if (segment_partitions.size() < 2) continue; // Empty file
 
-        std::ofstream segment_file(segment_path, std::ios::binary);
-        if (!segment_file.is_open()) {
-          throw std::runtime_error("Failed to open file: " + segment_path);
+    segment_offsets_vec[file_id].assign(segment_partitions.begin(), segment_partitions.end() - 1);
+
+    const size_t n_threads = std::min<size_t>(segment_partitions.size() - 1, std::max(1u, std::thread::hardware_concurrency()));
+    std::cout << "number of threads used: " << n_threads << std::endl;
+
+    std::atomic<size_t> next{0};
+    std::mutex print_mtx;
+    std::mutex err_mtx;
+    std::exception_ptr first_error;
+    std::stop_source stop;
+
+    auto worker = [&] {
+      while (true) {
+        const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
+        if (segment_id >= segment_partitions.size() - 1) break; // Last partition marks EOF
+        
+        try {
+          const uint64_t segment_offset = segment_partitions[segment_id];
+          const uint64_t segment_size = segment_partitions[segment_id + 1] - segment_offset;
+          const std::string segment_path = segments_dir.string() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg"; // File_id;
+
+
+          Tokenizer tokenizer = Tokenizer::from_file(data_path, fields, segment_offset, segment_size);
+
+          {
+            std::lock_guard lk(print_mtx);  // keep stats output from interleaving
+            // tokenizer.printStatistics();
+          }
+
+          std::ofstream segment_file(segment_path, std::ios::binary);
+
+          // Leave room at start of file for fst offset positions
+          Segment_header segment_header = {0,0,0,0};
+          segment_file.write(reinterpret_cast<const char*>(&segment_header), sizeof(segment_header));
+
+          generate_offsets(tokenizer, segment_file, enc_type, run_checks);
+          generate_fsts(tokenizer, segment_file, run_checks);
+
+          segment_file.close();
+
+          if (run_checks) {
+            check_fst(tokenizer.getAlphaTokens(), segment_path, FstType::ALPHA);
+            check_fst(tokenizer.getFloatTokens(), segment_path, FstType::FLOAT);
+            check_fst(tokenizer.fields, segment_path, FstType::FIELDS);
+            check_offsets_file(tokenizer, segment_path, enc_type);
+            check_all_pef_tokens(tokenizer, segment_path);
+          }
+        } catch (...) {
+          std::lock_guard lk(err_mtx);
+          if (!first_error) first_error = std::current_exception();
+          stop.request_stop();
         }
-
-        const uint8_t type = get_file_type(f.extension());
-
-        Tokenizer tokenizer = Tokenizer::from_file(data_path, type, fields);
-
-        {
-          std::lock_guard lk(print_mtx);  // keep stats output from interleaving
-          tokenizer.printStatistics();
-        }
-
-        // Leave room at start of file for fst offset positions
-        Segment_header segment_header = {0,0,0,0};
-        segment_file.write(reinterpret_cast<const char*>(&segment_header), sizeof(segment_header));
-
-        generate_offsets(tokenizer, segment_file, enc_type, run_checks);
-        generate_fsts(tokenizer, segment_file, run_checks);
-
-        segment_file.close();
-
-        if (run_checks) {
-          check_fst(tokenizer.getAlphaTokens(), segment_path, FstType::ALPHA);
-          check_fst(tokenizer.getFloatTokens(), segment_path, FstType::FLOAT);
-          check_fst(tokenizer.fields, segment_path, FstType::FIELDS);
-          check_offsets_file(tokenizer, segment_path, enc_type);
-          check_all_pef_tokens(tokenizer, segment_path);
-        }
-      } catch (...) {
-        std::lock_guard lk(err_mtx);
-        if (!first_error) first_error = std::current_exception();
-        stop.request_stop();
       }
+    };
+
+    {
+      std::vector<std::jthread> pool;
+      pool.reserve(n_threads);
+      for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
     }
-  };
 
-  {
-    std::vector<std::jthread> pool;
-    pool.reserve(n_threads);
-    for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+    if (first_error) std::rethrow_exception(first_error);
   }
-
-  if (first_error) std::rethrow_exception(first_error);
 
   StdCompactFst mappings_fst = create_fst<std::string>(file_mappings_vec);
   std::ofstream out(index_dir.string() + "/" + "file_mappings.fst", std::ios::binary);

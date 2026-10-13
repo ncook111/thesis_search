@@ -2,6 +2,10 @@
 #include <fstream>
 #include <cstring>
 #include "segment.h"
+#include "helper.h"
+#include "simdjson.h"
+#include "csv.hpp"
+#include "logfmt_parser.h"
 
 Offsets_header read_offsets_header(const std::string &file_name) {
   uint64_t offsets_header_pos = get_offsets_header_pos(file_name);
@@ -113,4 +117,143 @@ void update_fields_fst_pos(std::ofstream &file, const uint64_t value) {
   file.seekp(sizeof(uint64_t) * 3);
   file.write(reinterpret_cast<const char*>(&value), sizeof(value));
   file.seekp(current_pos);
+}
+
+std::vector<uint64_t> partition_file(const std::string &file_path, const uint64_t segment_size) {
+  uint8_t type = get_file_type(file_path);
+  switch (type) {
+    case FileType::CSV:
+      return partition_file_csv(file_path, segment_size);
+    case FileType::JSON:
+      return partition_file_json(file_path, segment_size);
+    case FileType::LOGFMT:
+      return partition_file_logfmt(file_path, segment_size);
+    default:
+      throw std::invalid_argument("File type not supported");
+  }
+}
+
+std::vector<uint64_t> partition_file_csv(const std::string &file_path, const uint64_t segment_size) {
+  csv::CSVFormat format;
+  format.variable_columns(csv::VariableColumnPolicy::THROW);
+  csv::CSVReader reader(file_path, format);
+
+  std::vector<uint64_t> segment_offsets;
+  bool first = true;
+  uint64_t segment_start = 0;
+  uint64_t num_documents = 0;
+  for (const csv::CSVRow &row : reader) { // Input iterator
+    const uint64_t pos = row.byte_offset();
+
+    if (first) { 
+      segment_start = pos; 
+      first = false; 
+    } else if (pos - segment_start > segment_size) {
+      segment_offsets.emplace_back(segment_start);
+      segment_start = pos;
+      num_documents = 0;
+    }
+
+    num_documents++;
+  }
+
+  // Leftover
+  if (num_documents > 0)
+    segment_offsets.emplace_back(segment_start);
+
+  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+
+  return segment_offsets;
+}
+
+std::vector<uint64_t> partition_file_json(const std::string &file_path, const uint64_t segment_size) {
+  using namespace simdjson;
+
+  constexpr size_t BATCH_SIZE = 16 << 20; // Use a 16MB batch size
+  ondemand::parser parser;
+  simdjson::ondemand::document_stream stream;
+  padded_string json = padded_string::load(file_path);
+  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
+  if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
+
+  std::vector<uint64_t> segment_offsets;
+  bool first = true;
+  uint64_t segment_start = 0;
+  uint64_t num_documents = 0;
+  for (auto j = stream.begin(); j != stream.end(); ++j) {
+    if (auto err = (*j).error())
+      throw std::runtime_error(std::string("document error: ") + error_message(err));
+
+    const uint64_t pos = j.current_index();
+
+    if (first) { 
+      segment_start = pos; 
+      first = false; 
+    } else if (pos - segment_start > segment_size) {
+      segment_offsets.emplace_back(segment_start);
+      segment_start = pos;
+      num_documents = 0;
+    }
+
+    num_documents++;
+  }
+
+  // Leftover
+  if (num_documents > 0)
+    segment_offsets.emplace_back(segment_start);
+
+  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+
+  return segment_offsets;
+}
+
+std::vector<uint64_t> partition_file_logfmt(const std::string &file_path, const uint64_t segment_size) {
+  LogfmtParser parser = LogfmtParser(file_path);
+
+  std::vector<uint64_t> segment_offsets;
+  bool first = true;
+  uint64_t segment_start = 0;
+  uint64_t num_documents = 0;
+  for (auto it = parser.begin(); it != parser.end(); ++it) {
+    const int64_t raw = (*it).current_offset();
+    if (raw < 0)
+      throw std::invalid_argument("LOGFMT Parser: Invalid offset");
+
+    const uint64_t pos = static_cast<uint64_t>(raw);
+    if (first) { 
+      segment_start = pos; 
+      first = false; 
+    } else if (pos - segment_start > segment_size) {
+      segment_offsets.emplace_back(segment_start);
+      segment_start = static_cast<uint64_t>(pos);
+      num_documents = 0;
+    }
+
+    num_documents++;
+  }
+
+  // Leftover
+  if (num_documents > 0)
+    segment_offsets.emplace_back(segment_start);
+
+  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+
+  return segment_offsets;
+}
+
+uint64_t count_documents(const std::string &file_path) {
+  using namespace simdjson;
+  int BATCH_SIZE = 16 << 20; // Use a 16MB batch size
+  ondemand::parser parser;
+  simdjson::ondemand::document_stream stream;
+  padded_string json = padded_string::load(file_path);
+  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
+  if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
+
+  uint64_t num_documents = 0;
+  for (auto j = stream.begin(); j != stream.end(); ++j) {
+    num_documents++;
+  }
+
+  return num_documents;
 }

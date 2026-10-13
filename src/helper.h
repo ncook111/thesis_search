@@ -45,7 +45,7 @@ enum Value : uint8_t { UNION = 0, INTER = 1, COMP = 2, INVALID = 3 };
 
 const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);
-const uint8_t get_file_type(const std::string &type);
+const uint8_t get_file_type(const std::string &file_name);
 const uint8_t get_enc_type(const std::string &type);
 const std::string enc_type_to_str(const uint8_t &type);
 const MappedFile open_mmap_r(const std::string &file_path);

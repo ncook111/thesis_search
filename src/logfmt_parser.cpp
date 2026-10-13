@@ -22,7 +22,7 @@ int64_t LogfmtParser::current_offset() {
     if (buffered_line_offsets.size())
         return buffered_line_offsets.front();
     else
-        return -1;
+        return -1; // TODO: Check this
 }
 
 std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {

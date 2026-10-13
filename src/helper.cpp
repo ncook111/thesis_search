@@ -9,7 +9,8 @@ const bool valid_extension(const std::string &ext) {
   return (ext == ".csv" || ext == ".json" || ext == ".logfmt");
 }
 
-const uint8_t get_file_type(const std::string &type) {
+const uint8_t get_file_type(const std::string &file_path) {
+  std::string type = std::filesystem::path(file_path).extension().string();
   if (type == ".csv")
     return 0;
   if (type == ".json")
