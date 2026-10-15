@@ -61,7 +61,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_gvb) {
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::cout << "key: " + key << std::endl;
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query, EncType::GVB));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -75,7 +75,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_gvb) {
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::cout << "key: " + key << std::endl;
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query, EncType::GVB));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -89,7 +89,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_gvb) {
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::cout << "key: " + key << std::endl;
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query, EncType::GVB));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_gvb", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -102,7 +102,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_pef) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query, EncType::PEF));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -115,7 +115,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_pef) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query, EncType::PEF));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -128,7 +128,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_pef) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query, EncType::PEF));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_pef", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -141,7 +141,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_fls) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query, EncType::FLS));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -154,7 +154,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_fls) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query, EncType::FLS));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -167,7 +167,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_fls) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query, EncType::FLS));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_fls", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -181,7 +181,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s4_bpd1) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query, EncType::S4_BPD1));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -194,7 +194,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s4_bpd1) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query, EncType::S4_BPD1));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -207,7 +207,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_bpd1) 
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query, EncType::S4_BPD1));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd1", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -220,7 +220,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s4_bpd2) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query, EncType::S4_BPD2));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -233,7 +233,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s4_bpd2) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query, EncType::S4_BPD2));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -246,7 +246,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s4_bpd
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query, EncType::S4_BPD2));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd2", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -259,7 +259,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s4_bpd4) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query, EncType::S4_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -272,7 +272,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s4_bpd4) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query, EncType::S4_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -285,7 +285,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s4_bpd
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query, EncType::S4_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -298,7 +298,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s4_bpdm) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query, EncType::S4_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -311,7 +311,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s4_bpdm) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query, EncType::S4_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -324,7 +324,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s4_bpd
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query, EncType::S4_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s4_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -339,7 +339,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s8_bpd4) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query, EncType::S8_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -352,7 +352,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s8_bpd4) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query, EncType::S8_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -365,7 +365,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s8_bpd
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query, EncType::S8_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -378,7 +378,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s8_bpdm) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query, EncType::S8_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -391,7 +391,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s8_bpdm) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query, EncType::S8_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -404,7 +404,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s8_bpd
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query, EncType::S8_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s8_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -419,7 +419,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s16_bpd4) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query, EncType::S16_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -432,7 +432,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s16_bpd4) 
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query, EncType::S16_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -445,7 +445,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s16_bp
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query, EncType::S16_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -458,7 +458,7 @@ TEST_F(fuzzed_program_test_csv, creation_and_search_test_fuzzed_csv_s16_bpdm) {
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_csv/fuzzed.csv", FileType::CSV);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query, EncType::S16_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -471,7 +471,7 @@ TEST_F(fuzzed_program_test_json, creation_and_search_test_fuzzed_json_s16_bpdm) 
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_json/fuzzed.json", FileType::JSON);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query, EncType::S16_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }
@@ -484,7 +484,7 @@ TEST_F(fuzzed_program_test_logfmt, creation_and_search_test_fuzzed_logfmt_s16_bp
     ret = -1;
     std::string key = get_matching_query(data_path+"/fuzzed_logfmt/fuzzed.logfmt", FileType::LOGFMT);
     std::string query = "[*] = \"" + key + "\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query, EncType::S16_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_1_s16_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_NE(get_count_from_file(output_path), 0);
 }

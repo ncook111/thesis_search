@@ -5,11 +5,16 @@
 #include <filesystem>
 #include <arpa/inet.h>
 
+bool is_blank(const std::string &str) {
+    return std::all_of(str.begin(), str.end(),
+                       [](unsigned char c) { return std::isspace(c); });
+}
+
 const bool valid_extension(const std::string &ext) {
   return (ext == ".csv" || ext == ".json" || ext == ".logfmt");
 }
 
-const uint8_t get_file_type(const std::string &file_path) {
+const uint8_t str_to_file_type(const std::string &file_path) {
   std::string type = std::filesystem::path(file_path).extension().string();
   if (type == ".csv")
     return 0;
@@ -21,7 +26,7 @@ const uint8_t get_file_type(const std::string &file_path) {
   throw std::invalid_argument("File type not supported");
 }
 
-const uint8_t get_enc_type(const std::string &type) {
+const uint8_t str_to_enc_type(const std::string &type) {
   if (type == "gvb")
     return EncType::GVB;
   if (type == "pef")

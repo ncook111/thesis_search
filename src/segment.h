@@ -46,10 +46,10 @@ void update_offsets_header_pos(std::ofstream &file, const uint64_t value);
 void update_alpha_fst_pos(std::ofstream &file, const uint64_t value);
 void update_float_fst_pos(std::ofstream &file, const uint64_t value);
 void update_fields_fst_pos(std::ofstream &file, const uint64_t value);
-std::vector<uint64_t> partition_file(const std::string &file_path, const uint64_t segment_size);
-std::vector<uint64_t> partition_file_csv(const std::string &file_path, const uint64_t segment_size);
-std::vector<uint64_t> partition_file_json(const std::string &file_path, const uint64_t segment_size);
-std::vector<uint64_t> partition_file_logfmt(const std::string &file_path, const uint64_t segment_size);
+void partition_file(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
+void partition_file_csv(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
+void partition_file_json(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
+void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
 uint64_t count_documents(const std::string &file_path);
 
 #endif

@@ -45,7 +45,7 @@ const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &inpu
     if (i - N < input.size()) {
         size_t remaining_num = input.size() - (i - N);
         std::vector<uint64_t> input_rem_view(input.begin() + (i - N), input.begin() + (i - N) + remaining_num); // Copy can be avoided by using span, unsupported by gvb_encode_unit64_t() however
-        remainder = gvb_encode_uint64_t(input_rem_view);
+        remainder = gvb_encode_uint64_t(cvrt_1(std::move(input_rem_view)));
 
         output.insert(output.end(), std::make_move_iterator(remainder.begin()), std::make_move_iterator(remainder.end()));
     }
@@ -86,7 +86,7 @@ const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &inpu
 
     if (offset < input.size()) { // gvb encoded remainder
         std::vector<uint8_t> remainder(input.begin() + offset, input.end());
-        std::vector<uint64_t> decoded = gvb_decode_uint64_t(remainder);
+        std::vector<uint64_t> decoded = cvrt_0(gvb_decode_uint64_t(remainder));
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
     }
 

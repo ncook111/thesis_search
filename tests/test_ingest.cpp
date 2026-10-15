@@ -42,7 +42,7 @@ TEST(parse_options_test, test_verbose) {
 
     uint8_t enc_type;
 
-    ASSERT_NO_THROW(enc_type = get_enc_type(vm["encoding"].as<std::string>()));
+    ASSERT_NO_THROW(enc_type = str_to_enc_type(vm["encoding"].as<std::string>()));
     ASSERT_EQ(enc_type, EncType::PEF);
 
     std::string data_path;
@@ -100,7 +100,7 @@ TEST(parse_options_test, test_concise) {
 
     uint8_t enc_type;
 
-    ASSERT_NO_THROW(enc_type = get_enc_type(vm["encoding"].as<std::string>()));
+    ASSERT_NO_THROW(enc_type = str_to_enc_type(vm["encoding"].as<std::string>()));
     ASSERT_EQ(enc_type, EncType::PEF);
 
     std::string data_path;
@@ -158,7 +158,7 @@ TEST(parse_options_test, test_reorder) {
 
     uint8_t enc_type;
 
-    ASSERT_NO_THROW(enc_type = get_enc_type(vm["encoding"].as<std::string>()));
+    ASSERT_NO_THROW(enc_type = str_to_enc_type(vm["encoding"].as<std::string>()));
     ASSERT_EQ(enc_type, EncType::PEF);
 
     std::string data_path;
@@ -209,7 +209,7 @@ TEST(parse_options_test, test_eq) {
 
     uint8_t enc_type;
 
-    ASSERT_NO_THROW(enc_type = get_enc_type(vm["encoding"].as<std::string>()));
+    ASSERT_NO_THROW(enc_type = str_to_enc_type(vm["encoding"].as<std::string>()));
     ASSERT_EQ(enc_type, EncType::PEF);
 
     std::string data_path;

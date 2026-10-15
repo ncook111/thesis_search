@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "ast.h"
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint32_t>>;
+using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
 
 namespace QueryTokType {
     enum Value : uint8_t { 
@@ -33,7 +33,7 @@ namespace QueryTokType {
     };
 }
 
-const FieldMap parse_queries(const std::string &queries, const std::string &index_path, const uint8_t enc_type);
+const FieldMap parse_queries(const std::string &queries, const Metadata &metadata);
 const std::vector<std::pair<uint8_t, std::string>> tokenize(const std::string &queries);
 void tokenize_std_query(bool &in_std_query, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);
 void tokenize_rng_query(bool &in_rng_query, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);

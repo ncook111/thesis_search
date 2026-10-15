@@ -8,6 +8,7 @@
 #include "fls.h"
 #include "pef.h"
 #include "segment.h"
+#include "metadata.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -27,12 +28,10 @@ void create_index(const std::vector<std::string> &fields,
                   const uint8_t enc_type,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
-  const std::filesystem::path segments_dir = index_dir_str + "/segments";
   const std::filesystem::path data_dir = data_dir_str;
 
   // Create index directory, fails gracefully if directory already exists
   std::filesystem::create_directory(index_dir);
-  std::filesystem::create_directory(segments_dir);
 
   // Check data directory exists
   if (!std::filesystem::exists(data_dir)) {
@@ -52,45 +51,50 @@ void create_index(const std::vector<std::string> &fields,
 
   std::vector<std::string> file_mappings_vec(files.size());
 
-  std::vector<std::vector<uint64_t>> segment_offsets_vec(files.size());
+  std::vector<std::vector<uint64_t>> all_segment_offsets(files.size());
+  std::vector<std::vector<uint64_t>> all_segment_docid_modifiers(files.size());
 
   for (size_t file_id = 0; file_id < files.size(); ++file_id) {
     const std::filesystem::path &f = files[file_id];
     file_mappings_vec[file_id] = f.filename().string();
     const std::string data_path = data_dir_str + '/' + f.filename().string();
 
-    std::vector<uint64_t> segment_partitions = partition_file(data_path, 16 << 26);
+    std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
 
-    if (segment_partitions.size() < 2) continue; // Empty file
+    std::vector<uint64_t> segment_offsets;
+    std::vector<uint64_t> segment_docid_modifiers;
+    partition_file(data_path, 128 << 20, segment_offsets, segment_docid_modifiers);
 
-    segment_offsets_vec[file_id].assign(segment_partitions.begin(), segment_partitions.end() - 1);
+    const size_t num_segments = segment_offsets.size() - 1;
 
-    const size_t n_threads = std::min<size_t>(segment_partitions.size() - 1, std::max(1u, std::thread::hardware_concurrency()));
-    std::cout << "number of threads used: " << n_threads << std::endl;
+    if (segment_offsets.size() < 2) continue; // Empty file
+
+    all_segment_offsets[file_id].assign(segment_offsets.begin(), segment_offsets.end() - 1);
+    all_segment_docid_modifiers[file_id].assign(segment_docid_modifiers.begin(), segment_docid_modifiers.end());
+
+    const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
+    std::cout << "  Threads Utilized: " << n_threads << "\n";
+    std::cout << "\r  Processed: " << "0.00%" << std::flush;
 
     std::atomic<size_t> next{0};
+    std::atomic<size_t> num_segments_completed{0};
     std::mutex print_mtx;
     std::mutex err_mtx;
     std::exception_ptr first_error;
     std::stop_source stop;
 
     auto worker = [&] {
-      while (true) {
+      while (!stop.stop_requested()) {
         const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
-        if (segment_id >= segment_partitions.size() - 1) break; // Last partition marks EOF
+        if (segment_id >= num_segments) break; // Last partition marks EOF
         
         try {
-          const uint64_t segment_offset = segment_partitions[segment_id];
-          const uint64_t segment_size = segment_partitions[segment_id + 1] - segment_offset;
-          const std::string segment_path = segments_dir.string() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg"; // File_id;
+          const uint64_t segment_offset = segment_offsets[segment_id];
+          const uint64_t segment_size = segment_offsets[segment_id + 1] - segment_offset;
+          const std::string segment_path = index_dir.string() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg"; // File_id;
 
 
           Tokenizer tokenizer = Tokenizer::from_file(data_path, fields, segment_offset, segment_size);
-
-          {
-            std::lock_guard lk(print_mtx);  // keep stats output from interleaving
-            // tokenizer.printStatistics();
-          }
 
           std::ofstream segment_file(segment_path, std::ios::binary);
 
@@ -110,6 +114,14 @@ void create_index(const std::vector<std::string> &fields,
             check_offsets_file(tokenizer, segment_path, enc_type);
             check_all_pef_tokens(tokenizer, segment_path);
           }
+
+          const size_t curr_completed = num_segments_completed.fetch_add(1, std::memory_order_relaxed) + 1;
+
+          // Print progress indicator
+          {
+            std::lock_guard lk(print_mtx);
+            std::cout << "\rProcessed: " << (100.0 * curr_completed / num_segments) << "%" << std::flush;
+          }
         } catch (...) {
           std::lock_guard lk(err_mtx);
           if (!first_error) first_error = std::current_exception();
@@ -124,16 +136,18 @@ void create_index(const std::vector<std::string> &fields,
       for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
     }
 
+    // erase progress line
+    std::cout << "\r\x1b[2K" << std::flush;
+    std::cout << "Completed\n" << std::flush;
+
     if (first_error) std::rethrow_exception(first_error);
   }
-
+  
   StdCompactFst mappings_fst = create_fst<std::string>(file_mappings_vec);
-  std::ofstream out(index_dir.string() + "/" + "file_mappings.fst", std::ios::binary);
-  write_to_disk(mappings_fst, out); 
-  out.close();
+  Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(mappings_fst), enc_type);
 
-  if (run_checks)
-    check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst", FstType::OTHER);
+  // if (run_checks)
+  //   check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst", FstType::OTHER);
 
   create_checksum_file(index_dir_str);
 }
@@ -259,7 +273,7 @@ write_entry_offsets_to_file(const std::vector<uint32_t> &entry_offsets,
 
   switch (enc_type) {
     case EncType::GVB:
-      write_gvb_to_file(entry_offsets, file);
+      write_gvb_to_file<uint32_t>(entry_offsets, file);
       break;
     case EncType::PEF:
       write_pef_to_file<uint32_t>(entry_offsets, file);
@@ -301,22 +315,16 @@ void check_offsets_file(const Tokenizer &tokenizer,
 const bool check_entry_offsets(const std::vector<uint32_t> &entry_offsets,
                                const std::string &file_name,
                                const uint8_t enc_type) {
-  // Convert into 0 indexing
-  std::vector<uint32_t> entry_offsets_0;
-  for (const auto cur : entry_offsets) {
-    entry_offsets_0.push_back(cur - 1);
-  }
-
   std::vector<uint32_t> input =
       get_entry_offsets_from_file(file_name, enc_type);
 
-  if (input == entry_offsets_0) {
+  if (input == entry_offsets) {
     std::cout << "Entry offsets correct: " << std::endl;
     return true;
   } else {
     std::cout << "Entry offsets incorrect: " << std::endl;
     std::cout << "read in size: " << input.size() << std::endl;
-    std::cout << "og size: " << entry_offsets_0.size() << std::endl;
+    std::cout << "og size: " << entry_offsets.size() << std::endl;
     return false;
   }
 }
@@ -377,7 +385,7 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
 
   switch (enc_type) {
     case EncType::GVB:
-      return read_gvb_from_file(file + addr_offset, size_to_read);
+      return read_gvb_from_file<uint32_t>(file + addr_offset, size_to_read);
     case EncType::PEF:
       return read_pef_from_file<uint32_t>(file + addr_offset, size_to_read);
     case EncType::FLS: 
@@ -494,12 +502,12 @@ get_tok_offsets(const uint64_t token_id,
                 const uint8_t *file, const uint8_t enc_type) {
   uint64_t size_to_read;
   if (token_id == id_to_offset.size() - 1) {
-    size_to_read = tok_offsets_length - id_to_offset[token_id] + 1;
+    size_to_read = tok_offsets_length - id_to_offset[token_id];
   } else {
     size_to_read = id_to_offset[token_id + 1] - id_to_offset[token_id];
   }
 
-  uint64_t addr_offset = id_to_offset[token_id] - 1;
+  uint64_t addr_offset = id_to_offset[token_id];
 
   Fields_header f_header = {};
   // Get fields header
@@ -531,12 +539,12 @@ get_tok_offsets(const uint64_t token_id,
         continue;
     }
 
-    addr_offset = f_header.field_offsets[i] - 1;
+    addr_offset = f_header.field_offsets[i];
 
     std::vector<uint32_t> docids;
     switch (enc_type) {
       case EncType::GVB:
-        docids = read_gvb_from_file(file + addr_offset, field_sizes[i]);
+        docids = read_gvb_from_file<uint32_t>(file + addr_offset, field_sizes[i]);
         break;
       case EncType::PEF:
         docids = read_pef_from_file<uint32_t>(file + addr_offset, field_sizes[i]);
@@ -558,21 +566,13 @@ get_tok_offsets(const uint64_t token_id,
     all_docids = merged;
   }
 
-  // Convert back to 0 indexing
-  for (auto &o : all_docids)
-    --o;
-
   std::vector<uint32_t> dedup = remove_dups_sorted(all_docids);
 
   return dedup;
 }
 
 const std::vector<uint32_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read) {
-  std::vector<uint32_t> decoded = read_gvb_from_file(file, size_to_read);
-
-  // Convert to 0 indexing
-  for (auto &o : decoded)
-    --o;
+  std::vector<uint32_t> decoded = read_gvb_from_file<uint32_t>(file, size_to_read);
 
   return decoded;
 }
@@ -580,29 +580,17 @@ const std::vector<uint32_t> read_entry_offsets_gvb(const uint8_t *file, const si
 const std::vector<uint32_t> read_entry_offsets_pef(const uint8_t *file, const size_t size_to_read) {
   std::vector<uint32_t> decoded = read_pef_from_file<uint32_t>(file, size_to_read);
 
-  // Convert back to 0 indexing
-  for (auto &o : decoded)
-    --o;
-
   return decoded;
 }
 
 const std::vector<uint32_t> read_entry_offsets_fls(const uint8_t *file, const size_t size_to_read) {
   std::vector<uint32_t> decoded = read_fls_from_file(file, size_to_read);
 
-  // Convert to 0 indexing
-  for (auto &o : decoded)
-    --o;
-
   return decoded;
 }
 
 const std::vector<uint32_t> read_entry_offsets_bp128(const uint8_t *file, const size_t size_to_read, uint8_t enc_type) {
   std::vector<uint32_t> decoded = read_bp128_from_file(file, size_to_read, enc_type);
-
-  // Convert to 0 indexing
-  for (auto &o : decoded)
-    --o;
 
   return decoded;
 }
@@ -676,16 +664,11 @@ get_pef_header_details_by_type(const uint8_t *file, const uint64_t file_size,
 }
 
 void check_index_dir_valid(const std::string &index_path) {
-
-  // Check valid segments directory
-  if (!std::filesystem::exists(index_path + "/segments"))
-    throw std::invalid_argument("Segment's directory does not exist: " + index_path + "/segments");
-
-  // Check file_mappings file exists
-  if (!std::filesystem::exists(index_path + "/file_mappings.fst"))
-    throw std::invalid_argument("File mappings file does not exist: " + index_path + "/file_mappings.fst");
+  // Check metadata file exists
+  if (!std::filesystem::exists(index_path + "/.metadata"))
+    throw std::invalid_argument("File mappings file does not exist: " + index_path + "/.metadata");
     
-    // Check file_mappings file exists
-  if (!std::filesystem::exists(index_path + "/checksum.crc"))
-    throw std::invalid_argument("Checksum file does not exist: " + index_path + "/checksum.crc");
+    // Check checksum file exists
+  if (!std::filesystem::exists(index_path + "/.checksum"))
+    throw std::invalid_argument("Checksum file does not exist: " + index_path + "/.checksum");
 }

@@ -1,6 +1,8 @@
 /data/
+/data2/
 /big_data/
 /index/
+/index3/
 /*.o
 /third_party/
 /build/

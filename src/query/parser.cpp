@@ -1,14 +1,15 @@
 #include "ast.h"
 #include "parser.h"
 #include "../helper.h"
+#include "../metadata.h"
 #include <memory>
 #include <regex>
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint32_t>>;
+using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
 
-const FieldMap parse_queries(const std::string &queries, const std::string &index_path, const uint8_t enc_type) {
+const FieldMap parse_queries(const std::string &queries, const Metadata &metadata) {
     std::vector<std::pair<uint8_t, std::string>> tokens = tokenize(queries);
-    std::unique_ptr<ASTNode> ast = build_ast(tokens, index_path, enc_type);
+    std::unique_ptr<ASTNode> ast = build_ast(tokens, metadata);
     return ast->evaluate();
 }
 

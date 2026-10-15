@@ -5,8 +5,9 @@
 #include <vector>
 #include <unordered_map>
 #include "../search.h"
+#include "../metadata.h"
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint32_t>>;
+using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
 
 class ASTNode {
   public:
@@ -17,11 +18,11 @@ class ASTNode {
 
 class QueryNode : public ASTNode {
   public:
-    QueryNode(std::vector<std::string> f, std::string q, std::string i, uint8_t e)
-            : fields(f), query(q), index_path(i), enc_type(e) {}
+    QueryNode(std::vector<std::string> f, std::string q, const Metadata &i)
+            : fields(f), query(q), metadata(i) {}
     
     const FieldMap evaluate() const override {
-      return search_index(fields, query, index_path, enc_type);
+      return search_index(fields, query, metadata);
     }
 
     void print_type() override {
@@ -36,19 +37,10 @@ class QueryNode : public ASTNode {
       return query;
     }
 
-    const std::string get_index_path() const {
-      return index_path;
-    }
-
-    const uint8_t get_enc_type() const {
-      return enc_type;
-    }
-
   protected:
     const std::vector<std::string> fields;
     const std::string query;
-    const std::string index_path;
-    const uint8_t enc_type;
+    const Metadata &metadata;
 };
 
 class BinaryOpNode : public ASTNode {
@@ -70,23 +62,22 @@ class BinaryOpNode : public ASTNode {
 
 class UnaryOpNode : public ASTNode {
   public:
-    UnaryOpNode(std::unique_ptr<ASTNode> n, std::string i, uint8_t e)
-          : node(std::move(n)), index_path(i), enc_type(e) {}
+    UnaryOpNode(std::unique_ptr<ASTNode> n, const Metadata &i)
+          : node(std::move(n)), metadata(i) {}
   
   const ASTNode* get_node() const {
       return node.get();
     }
   protected:
     const std::unique_ptr<ASTNode> node;
-    const std::string index_path;
-    const uint8_t enc_type;
+    const Metadata &metadata;
 };
 
 class ComplimentNode : public UnaryOpNode {
   public:
     using UnaryOpNode::UnaryOpNode;
     const FieldMap evaluate() const override {
-      return get_entries_offsets_compliment(node->evaluate(), index_path, enc_type);
+      return get_entries_offsets_compliment(node->evaluate(), metadata);
     }
 
     void print_type() override {
@@ -151,13 +142,11 @@ class IntersectionNode : public BinaryOpNode {
       }
 };
 
-std::unique_ptr<ASTNode> build_operand(std::vector<std::pair<uint8_t, std::string>> &tokens,
-                                        const std::string &index_path, const uint8_t enc_type);
-std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> &tokens,
-                                    const std::string &index_path, const uint8_t enc_type);
-std::unique_ptr<ASTNode> build_query(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
-std::unique_ptr<ASTNode> build_binary_op(std::unique_ptr<ASTNode> left, std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
-std::unique_ptr<ASTNode> build_unary_op(std::vector<std::pair<uint8_t, std::string>> &tokens, const std::string &index_path, const uint8_t enc_type);
+std::unique_ptr<ASTNode> build_operand(std::vector<std::pair<uint8_t, std::string>> &tokens, const Metadata &metadata);
+std::unique_ptr<ASTNode> build_ast(std::vector<std::pair<uint8_t, std::string>> &tokens, const Metadata &metadata);
+std::unique_ptr<ASTNode> build_query(std::vector<std::pair<uint8_t, std::string>> &tokens, const Metadata &metadata);
+std::unique_ptr<ASTNode> build_binary_op(std::unique_ptr<ASTNode> left, std::vector<std::pair<uint8_t, std::string>> &tokens, const Metadata &metadata);
+std::unique_ptr<ASTNode> build_unary_op(std::vector<std::pair<uint8_t, std::string>> &tokens, const Metadata &metadata);
 std::vector<std::string> get_fields(const std::string& s);
 
 #endif

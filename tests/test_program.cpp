@@ -28,7 +28,7 @@ TEST_F(program_test, creation_and_search_test_gvb) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_gvb", "", output_path, query, EncType::GVB));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_gvb", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -40,7 +40,7 @@ TEST_F(program_test, creation_and_search_test_pef) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_pef", "", output_path, query, EncType::PEF));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_pef", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -52,7 +52,7 @@ TEST_F(program_test, creation_and_search_test_fls) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_fls", "", output_path, query, EncType::FLS));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_fls", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -65,7 +65,7 @@ TEST_F(program_test, creation_and_search_test_s4_bpd1) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd1", "", output_path, query, EncType::S4_BPD1));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd1", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -77,7 +77,7 @@ TEST_F(program_test, creation_and_search_test_s4_bpd2) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd2", "", output_path, query, EncType::S4_BPD2));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd2", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -89,7 +89,7 @@ TEST_F(program_test, creation_and_search_test_s4_bpd4) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query, EncType::S4_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -101,7 +101,7 @@ TEST_F(program_test, creation_and_search_test_s4_bpdm) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query, EncType::S4_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
      ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -115,7 +115,7 @@ TEST_F(program_test, creation_and_search_test_s8_bpd4) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query, EncType::S8_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -127,7 +127,7 @@ TEST_F(program_test, creation_and_search_test_s8_bpdm) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query, EncType::S4_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
      ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -141,7 +141,7 @@ TEST_F(program_test, creation_and_search_test_s16_bpd4) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query, EncType::S16_BPD4));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpd4", "", output_path, query));
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(get_count_from_file(output_path), 4);
 }
@@ -153,7 +153,7 @@ TEST_F(program_test, creation_and_search_test_s16_bpdm) {
     
     ret = -1;
     std::string query = "[*] = \"here\"";
-    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query, EncType::S16_BPDM));
+    ASSERT_NO_THROW(ret = search_mode(index_path+"index_bpdm", "", output_path, query));
     ASSERT_EQ(ret, 0);
      ASSERT_EQ(get_count_from_file(output_path), 4);
 }

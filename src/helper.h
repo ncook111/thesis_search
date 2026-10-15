@@ -43,10 +43,11 @@ namespace QueryMode {
 enum Value : uint8_t { UNION = 0, INTER = 1, COMP = 2, INVALID = 3 };
 }
 
+bool is_blank(const std::string &str);
 const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);
-const uint8_t get_file_type(const std::string &file_name);
-const uint8_t get_enc_type(const std::string &type);
+const uint8_t str_to_file_type(const std::string &file_name);
+const uint8_t str_to_enc_type(const std::string &type);
 const std::string enc_type_to_str(const uint8_t &type);
 const MappedFile open_mmap_r(const std::string &file_path);
 const MappedFile open_mmap_rw(const std::string &file_path);
@@ -91,6 +92,18 @@ const std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
   }
 
   return tokens;
+}
+
+template <class T>
+std::vector<T> cvrt_1(std::vector<T> vec) {
+  for (auto& x : vec) ++x;
+  return vec;  // implicitly moved, no extra copy
+}
+
+template <class T>
+std::vector<T> cvrt_0(std::vector<T> vec) {
+  for (auto& x : vec) --x;
+  return vec;  // implicitly moved, no extra copy
 }
 
 #endif

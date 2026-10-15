@@ -119,29 +119,29 @@ void update_fields_fst_pos(std::ofstream &file, const uint64_t value) {
   file.seekp(current_pos);
 }
 
-std::vector<uint64_t> partition_file(const std::string &file_path, const uint64_t segment_size) {
-  uint8_t type = get_file_type(file_path);
+void partition_file(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifers) {
+  uint8_t type = str_to_file_type(file_path);
   switch (type) {
     case FileType::CSV:
-      return partition_file_csv(file_path, segment_size);
+      return partition_file_csv(file_path, segment_size, segment_offsets, segment_docid_modifers);
     case FileType::JSON:
-      return partition_file_json(file_path, segment_size);
+      return partition_file_json(file_path, segment_size, segment_offsets, segment_docid_modifers);
     case FileType::LOGFMT:
-      return partition_file_logfmt(file_path, segment_size);
+      return partition_file_logfmt(file_path, segment_size, segment_offsets, segment_docid_modifers);
     default:
       throw std::invalid_argument("File type not supported");
   }
 }
 
-std::vector<uint64_t> partition_file_csv(const std::string &file_path, const uint64_t segment_size) {
+void partition_file_csv(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
   csv::CSVFormat format;
   format.variable_columns(csv::VariableColumnPolicy::THROW);
   csv::CSVReader reader(file_path, format);
 
-  std::vector<uint64_t> segment_offsets;
   bool first = true;
   uint64_t segment_start = 0;
   uint64_t num_documents = 0;
+  segment_docid_modifiers.push_back(num_documents);
   for (const csv::CSVRow &row : reader) { // Input iterator
     const uint64_t pos = row.byte_offset();
 
@@ -151,6 +151,7 @@ std::vector<uint64_t> partition_file_csv(const std::string &file_path, const uin
     } else if (pos - segment_start > segment_size) {
       segment_offsets.emplace_back(segment_start);
       segment_start = pos;
+      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
       num_documents = 0;
     }
 
@@ -162,11 +163,9 @@ std::vector<uint64_t> partition_file_csv(const std::string &file_path, const uin
     segment_offsets.emplace_back(segment_start);
 
   segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
-
-  return segment_offsets;
 }
 
-std::vector<uint64_t> partition_file_json(const std::string &file_path, const uint64_t segment_size) {
+void partition_file_json(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
   using namespace simdjson;
 
   constexpr size_t BATCH_SIZE = 16 << 20; // Use a 16MB batch size
@@ -176,10 +175,10 @@ std::vector<uint64_t> partition_file_json(const std::string &file_path, const ui
   auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
-  std::vector<uint64_t> segment_offsets;
   bool first = true;
   uint64_t segment_start = 0;
   uint64_t num_documents = 0;
+  segment_docid_modifiers.push_back(num_documents);
   for (auto j = stream.begin(); j != stream.end(); ++j) {
     if (auto err = (*j).error())
       throw std::runtime_error(std::string("document error: ") + error_message(err));
@@ -192,6 +191,7 @@ std::vector<uint64_t> partition_file_json(const std::string &file_path, const ui
     } else if (pos - segment_start > segment_size) {
       segment_offsets.emplace_back(segment_start);
       segment_start = pos;
+      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
       num_documents = 0;
     }
 
@@ -203,17 +203,15 @@ std::vector<uint64_t> partition_file_json(const std::string &file_path, const ui
     segment_offsets.emplace_back(segment_start);
 
   segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
-
-  return segment_offsets;
 }
 
-std::vector<uint64_t> partition_file_logfmt(const std::string &file_path, const uint64_t segment_size) {
+void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
   LogfmtParser parser = LogfmtParser(file_path);
 
-  std::vector<uint64_t> segment_offsets;
   bool first = true;
   uint64_t segment_start = 0;
   uint64_t num_documents = 0;
+  segment_docid_modifiers.push_back(num_documents);
   for (auto it = parser.begin(); it != parser.end(); ++it) {
     const int64_t raw = (*it).current_offset();
     if (raw < 0)
@@ -226,6 +224,7 @@ std::vector<uint64_t> partition_file_logfmt(const std::string &file_path, const 
     } else if (pos - segment_start > segment_size) {
       segment_offsets.emplace_back(segment_start);
       segment_start = static_cast<uint64_t>(pos);
+      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
       num_documents = 0;
     }
 
@@ -237,8 +236,6 @@ std::vector<uint64_t> partition_file_logfmt(const std::string &file_path, const 
     segment_offsets.emplace_back(segment_start);
 
   segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
-
-  return segment_offsets;
 }
 
 uint64_t count_documents(const std::string &file_path) {

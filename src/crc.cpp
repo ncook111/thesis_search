@@ -4,6 +4,8 @@
 #include "helper.h"
 #include "crc.h"
 
+static const std::string CHECKSUM_FILE = ".checksum";
+
 const uint32_t create_checksum(const std::string &file_name) {
     boost::crc_32_type crc;
     const MappedFile mf = open_mmap_r(file_name);
@@ -23,7 +25,7 @@ const std::vector<uint32_t> checksum_folder(std::string path) {
     // Get list of supported files to index
     std::vector<std::filesystem::path> files;
     for (const auto &entry : std::filesystem::recursive_directory_iterator(path)) {
-        if (entry.is_regular_file() && entry.path().extension() != ".crc") // ignore checksum file
+        if (entry.is_regular_file() && entry.path().filename() != CHECKSUM_FILE)
             files.push_back(entry.path());
     }
 
@@ -51,13 +53,13 @@ const bool check_checksum_file(const std::string &index_dir) {
 
 void write_checksum_to_file(const std::string &index_dir, const std::vector<uint32_t> &checksums) {
     std::ofstream file;
-    file.open(index_dir + "/checksum.crc", std::ios::binary);
+    file.open(index_dir + '/' + CHECKSUM_FILE, std::ios::binary);
     file.write(reinterpret_cast<const char *>(checksums.data()), checksums.size() * sizeof(uint32_t));
 }
 
 const std::vector<uint32_t> read_checksum_from_file(const std::string &index_dir) {
     std::ifstream file;
-    file.open(index_dir + "/checksum.crc", std::ios::binary);
+    file.open(index_dir + '/' + CHECKSUM_FILE, std::ios::binary);
 
     file.seekg(0, std::ios::end);
     std::streamsize size = file.tellg();

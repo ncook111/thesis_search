@@ -138,6 +138,9 @@ const bool Tokenizer::is_bool(const std::string &s) const {
 }
 
 void Tokenizer::tokenize_file(const uint64_t segment_start, const uint64_t segment_size) {
+  if (segment_size > std::numeric_limits<uint32_t>::max())
+    throw std::out_of_range("Segment too large for 32-bit entry offsets");
+
   switch (type) {
     case FileType::CSV:
       tokenize_csv(segment_start, segment_size);
@@ -171,6 +174,13 @@ void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segmen
   csv::CSVFormat format;
   format.column_names(col_names).variable_columns(csv::VariableColumnPolicy::THROW);
 
+  // Header already read, so disregard it if reading from start of file
+  if (segment_start == 0)
+    format.header_row(0);
+  else
+    format.column_names(col_names);
+    
+
   csv::CSVReader reader(std::move(in), format); // 
 
   if (fields.empty())
@@ -180,13 +190,13 @@ void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segmen
     uint64_t curr_offset = row.byte_offset();
     if (curr_offset >= segment_size) break; 
 
-    entry_offsets.push_back(curr_offset + 1);
-
     for (uint32_t field_id = 0; field_id < fields.size(); ++field_id )
       tokenize_field(row[fields[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
+
+    entry_offsets.push_back(curr_offset);
   }
 
-  entry_offsets.push_back(segment_size + 2);
+  entry_offsets.push_back(segment_size);
 }
 
 void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segment_size) {
@@ -206,7 +216,6 @@ void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segme
   auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
-  uint64_t doc_id = 1; // Doc_id's 1-indexed
   for (auto j = stream.begin(); j != stream.end(); ++j) {
     auto doc = *j;
     ondemand::object obj;
@@ -243,47 +252,44 @@ void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segme
         text = v.raw_json();
       }
 
-      tokenize_field(text, doc_id, field_id);
+      tokenize_field(text, entry_offsets.size(), field_id);
     }
 
-    entry_offsets.push_back(j.current_index() + 1);
-
-    ++doc_id;
+    entry_offsets.push_back(j.current_index());
   }
 
-  entry_offsets.push_back(segment_size + 1);
+  entry_offsets.push_back(segment_size);
 }
 
 void Tokenizer::tokenize_logfmt(const uint64_t segment_start, const uint64_t segment_size) {
-  LogfmtParser parser = LogfmtParser(file_path);
+  LogfmtParser parser = LogfmtParser(file_path, segment_start, segment_start + segment_size);
 
-  uint64_t doc_id = 1; // Doc_id's 1-indexed
   for (auto it = parser.begin(); it != parser.end(); ++it) {
     std::unordered_map<std::string, std::string> doc = (*it).current_row();
-    
-    uint64_t offset;
-    if ((*it).current_offset())
-      offset = static_cast<uint64_t>((*it).current_offset());
-    else
-        throw std::invalid_argument("LOGFMT Parser: Invalid offset");
 
     // If no fields add all fields
-    // This assumes fields for every json object will be the same
+    // This assumes fields for every logfmt object will be the same
     if (!fields.size()) {
-      for (auto field : doc) { // Key : Value pair
-        fields.push_back(field.first);
+      for (const auto &[key, _] : doc) { // Key : Value pair
+        fields.push_back(key);
       }
     }
 
     for (uint32_t field_id = 0; field_id < fields.size(); ++field_id) {
       if (doc.contains(fields[field_id])) {
-        tokenize_field(doc[fields[field_id]], doc_id, field_id);
+        tokenize_field(doc[fields[field_id]], entry_offsets.size(), field_id);
       } 
     }
 
-    entry_offsets.push_back(offset + 1);
+    const int64_t raw = (*it).current_offset();
+    if (raw < 0 || static_cast<uint64_t>(raw) < segment_start)
+      throw std::invalid_argument("LOGFMT Parser: Invalid offset");
 
-    ++doc_id;
+    const uint64_t rel = static_cast<uint64_t>(raw) - segment_start;
+    if (rel > std::numeric_limits<uint32_t>::max())
+      throw std::out_of_range("LOGFMT Parser: offset exceeds uint32_t range");
+
+    entry_offsets.push_back(static_cast<uint32_t>(rel));
   }
 
   entry_offsets.push_back(segment_size);
@@ -339,7 +345,7 @@ bool Tokenizer::handle_pint(std::string &curr_token, const uint32_t doc_id, cons
     if (res_int > UINT64_MAX - 1)
       return false;
     // File tokenization
-    if (doc_id) {
+    if (!query_mode) {
         vector_inserter(num_tokens[res_int][field_id], doc_id);
     // String tokenization
     } else {
@@ -371,7 +377,7 @@ bool Tokenizer::handle_nint(std::string &curr_token, const uint32_t doc_id, cons
       return false;
       
     // File tokenization
-    if (doc_id)
+    if (!query_mode)
         vector_inserter(neg_num_tokens[res_int][field_id], doc_id);
     // String tokenization
     else
@@ -397,7 +403,7 @@ bool Tokenizer::handle_float(std::string &curr_token, const uint32_t doc_id, con
     if (res_err.ptr != curr_token.data() + curr_token.size())
       return false; // Didnt read the whole string
     // File tokenization
-    if (doc_id)
+    if (!query_mode)
       vector_inserter(float_tokens[std::move(res_float)][field_id], doc_id);
     // String tokenization
     else
@@ -423,7 +429,7 @@ bool Tokenizer::handle_date(std::string &curr_token, const uint32_t doc_id, cons
     return false;
   } else {
     // File tokenization
-    if (doc_id)
+    if (!query_mode)
       vector_inserter(d_tokens[static_cast<uint64_t>(dateTimePoint.time_since_epoch().count())][field_id], doc_id);
     // String tokenization
     else
@@ -446,7 +452,7 @@ bool Tokenizer::handle_time(std::string &curr_token, const uint32_t doc_id, cons
     return false;
   } else {
     // File tokenization
-    if (doc_id)
+    if (!query_mode)
       vector_inserter(t_tokens[static_cast<uint64_t>(tp.time_since_epoch().count())][field_id], doc_id);
     // String tokenization
     else
@@ -465,7 +471,7 @@ bool Tokenizer::handle_ipv4(std::string &curr_token, const uint32_t doc_id, cons
   uint32_t ip_addr = ip_str_to_int(2 /* AF_INET */, curr_token, fail);
 
   if (fail) return false;
-  if (doc_id)
+  if (!query_mode)
     vector_inserter(ipv4_tokens[ip_addr][field_id], doc_id);
   // String tokenization
   else
@@ -479,7 +485,7 @@ bool Tokenizer::handle_bool(std::string  &curr_token, const uint32_t doc_id, con
     return false;
 
   // File tokenization
-  if (doc_id) {
+  if (!query_mode) {
     if (curr_token == "true") {
       vector_inserter(t_bool_tokens[field_id], doc_id);
     } else if (curr_token == "false") {
@@ -501,7 +507,7 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
   if (std::ranges::all_of(curr_token, is_alpha)) {
     if (curr_token.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr_token, curr_token.begin(), to_lower);
-      if (doc_id)
+      if (!query_mode)
         vector_inserter(alpha_tokens[std::move(curr_token)][field_id], doc_id);
       else
         alpha_tokens_q.insert(std::move(curr_token));
@@ -522,7 +528,7 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
     } else {
       split = true;
       if (!curr.empty()) {
-        if (doc_id)
+        if (!query_mode)
           processToken(curr, doc_id, field_id);
         else
           processToken(curr);
@@ -538,14 +544,14 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
   if (curr.empty()) return;
 
   if (split) {
-    if (doc_id)
+    if (!query_mode)
       processToken(curr, doc_id, field_id);
     else
       processToken(curr);
   } else {
     if (curr.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
-      if (doc_id)
+      if (!query_mode)
         vector_inserter(alpha_tokens[std::move(curr)][field_id], doc_id);
       else
         alpha_tokens_q.insert(std::move(curr));
@@ -647,7 +653,7 @@ Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<s
 
   t.file_path = file_path;
   t.fields = fields;
-  t.type = get_file_type(file_path);
+  t.type = str_to_file_type(file_path);
   t.tokenize_file(segment_start, segment_size);
 
   return t;
@@ -655,6 +661,7 @@ Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<s
 
 Tokenizer Tokenizer::from_string(const std::string &file_path) {
   Tokenizer t;
+  t.query_mode = true;
   t.tokenize_string(file_path);
 
   return t;

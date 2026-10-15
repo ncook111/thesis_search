@@ -47,7 +47,7 @@ TEST_F(crc_test, simple_index_checksum_invalid) {
     
     // Modify an index file
     std::ofstream file;
-    file.open(index_path + "/index_1_crc/segments/segment_0.seg", std::ios::binary);
+    file.open(index_path + "/index_1_crc/segment_0.seg", std::ios::binary);
     uint32_t zero = 0;
     file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
     file.close();

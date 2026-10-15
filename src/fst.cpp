@@ -2,7 +2,7 @@
 #include "segment.h"
 #include <fst/fstlib.h>
 
-std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, const size_t read_pos) {
+StdCompactFst read_from_disk(const std::string &file_name, const size_t read_pos) {
   std::ifstream in(file_name, std::ios::binary);
   in.seekg(read_pos);
   fst::FstReadOptions opts(file_name);
@@ -11,11 +11,11 @@ std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, cons
   StdCompactFst *fst = StdCompactFst::Read(in, opts);
 
   if (!fst)
-    throw std::runtime_error("Failed to read FST");
+    throw std::runtime_error("Failed to read FST: " + file_name);
 
   in.close();
 
-  return std::unique_ptr<StdCompactFst>(fst);
+  return *fst;
 }
 
 size_t write_to_disk(const StdCompactFst &fst, std::ofstream &file) {

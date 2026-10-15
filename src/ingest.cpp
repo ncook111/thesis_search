@@ -5,6 +5,7 @@
 #include "tokenizer.h"
 #include "output.h"
 #include "crc.h"
+#include "metadata.h"
 #include "query/parser.h"
 #include <cstdio>
 #include <iostream>
@@ -12,7 +13,7 @@
 #include <boost/program_options.hpp>
 
 int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
-  if (std::filesystem::exists(index_path + "/file_mappings.fst")) {
+  if (std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Index already exists\n";
     return 1;
   }
@@ -33,7 +34,7 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
 }
 
 int recreate_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
-  if (!std::filesystem::exists(index_path + "/file_mappings.fst")) {
+  if (!std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Not a valid existing index folder\n";
     return 1;
   }
@@ -55,18 +56,19 @@ int recreate_mode(const std::string &index_path, const std::string &data_path, c
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query, const uint8_t enc_type) {
+int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query) {
   if (query.empty()) {
     std::cout << "No query values. Usage: ./ingest --help\n";
     return 1;
   }
 
   try {
-    const FieldMap matches = parse_queries(query, index_path, enc_type);
+    const Metadata metadata = Metadata::read(index_path);
+    const FieldMap matches = parse_queries(query, metadata);
     if (data_path.size()) {
-      output_entries(matches, index_path, data_path, output_path, enc_type);
+      output_entries(matches, metadata, data_path, output_path);
     } else {
-      output_counts(matches, index_path, output_path);
+      output_counts(matches, metadata, output_path);
     }
   } catch (const std::exception &e) {
     std::cout << "Error when searching index: " << e.what() << "\n";

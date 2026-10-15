@@ -304,17 +304,3 @@ gvb_decode_uint64_t(const std::vector<uint8_t> &bytes) {
 
   return decoded;
 }
-
-uint64_t write_gvb_to_file(const std::vector<uint32_t> &vec, std::ofstream &file) {
-  const std::vector<uint8_t> enc = gvb_encode_uint32_t(delta_encode(vec));
-  const uint64_t enc_size = enc.size();
-  file.write(reinterpret_cast<const char *>(enc.data()), enc_size);
-
-  return enc_size;
-}
-
-std::vector<uint32_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read) {
-  std::vector<uint8_t> decoded_gvb(size_to_read);
-  std::memcpy(reinterpret_cast<char *>(decoded_gvb.data()), file, size_to_read);                                             
-  return delta_decode(gvb_decode_uint32_t(decoded_gvb));
-}

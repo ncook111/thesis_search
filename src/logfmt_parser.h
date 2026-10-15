@@ -61,6 +61,7 @@ public:
     };
 
     explicit LogfmtParser(const std::string &file_path);
+    explicit LogfmtParser(const std::string &file_path, const uint64_t start_addr, const uint64_t end_addr);
     LogfmtParser() = default;
     iterator begin() { return iterator(this); }
     iterator end()   { return iterator(); }
@@ -72,8 +73,8 @@ private:
     std::deque<std::unordered_map<std::string, std::string>> buffered_rows;
     std::deque<uint64_t> buffered_line_offsets;
     MappedFile mf;
-    size_t file_size;
-    uint64_t file_offset;
+    size_t file_size = 0;
+    uint64_t file_offset = 0;
 
     void buffer_lines(const size_t n_lines);
     std::unordered_map<std::string, std::string> parse_line(const std::string &data);

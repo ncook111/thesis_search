@@ -4,6 +4,7 @@
 #include <concepts>
 #include "partitioned_sequence.hpp"
 #include <succinct/bit_vector.hpp>
+#include "helper.h"
 
 constexpr uint8_t BYTE_FST = 0x80; // Byte with most significant bit set
 constexpr uint8_t BYTE_RST = 0x7F; // Byte with last 7 bits set
@@ -24,8 +25,6 @@ const std::vector<uint64_t>
 gvb_decode_uint64_t(const std::vector<uint8_t> &bytes);
 inline const uint8_t get_length(const uint64_t num);
 inline const uint8_t get_length(const uint32_t num);
-uint64_t write_gvb_to_file(const std::vector<uint32_t> &vec, std::ofstream &file);
-std::vector<uint32_t> read_gvb_from_file(const uint8_t *file, const size_t size_to_read);
 void check(std::vector<uint32_t> &nums_in);
 const long get_memory_usage();
 
@@ -90,6 +89,47 @@ T vb_decode_num(const std::vector<uint8_t> &bytes, size_t &bytes_consumed) {
   }
 
   return num;
+}
+
+template <class T>
+  requires std::same_as<T, uint32_t> || std::same_as<T, uint64_t>
+uint64_t write_gvb_to_file(const std::vector<T> &vec, std::ofstream &file, const bool delta_enc = true) {
+  const std::vector<uint8_t> enc = [&] {
+    if constexpr (std::same_as<T, uint32_t>) {
+      if (delta_enc)
+        return gvb_encode_uint32_t(cvrt_1(delta_encode(vec)));
+      else
+        return gvb_encode_uint32_t(cvrt_1(vec));
+    } else {
+      if (delta_enc)
+        return gvb_encode_uint64_t(cvrt_1(delta_encode(vec)));
+      else
+        return gvb_encode_uint64_t(cvrt_1(vec));
+    }
+  }();
+
+  const uint64_t enc_size = enc.size();
+  file.write(reinterpret_cast<const char *>(enc.data()), enc_size);
+
+  return enc_size;
+}
+
+template <class T>
+  requires std::same_as<T, uint32_t> || std::same_as<T, uint64_t>
+std::vector<T> read_gvb_from_file(const uint8_t *file, const size_t size_to_read, const bool delta_enc = true) {
+  const std::vector<uint8_t> enc(file, file + size_to_read);
+  
+  if constexpr (std::same_as<T, uint32_t>) {
+    if (delta_enc)
+      return delta_decode(cvrt_0(gvb_decode_uint32_t(enc)));
+    else
+      return cvrt_0(gvb_decode_uint32_t(enc));
+  } else {
+    if (delta_enc)
+      return delta_decode(cvrt_0(gvb_decode_uint64_t(enc)));
+    else
+      return cvrt_0(gvb_decode_uint64_t(enc));
+  }
 }
 
 #endif

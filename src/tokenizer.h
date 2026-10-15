@@ -124,6 +124,7 @@ private:
 
   std::string file_path;
   uint8_t type;
+  bool query_mode = false;
 };
 
 #endif

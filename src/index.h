@@ -167,9 +167,7 @@ write_offsets_to_file(const std::map<M, std::map<uint32_t, std::vector<uint32_t>
 
   const uint64_t first_write_pos = file.tellp();
 
-  // Offsets begin at 1 as a requirement of the gvb encoding and decoding steps
-  // A value of 0 is used as terminator when decoding
-  uint32_t offset = 1;
+  uint32_t offset = 0;
   for (const auto &[_, fields] : tokens_map) {
     id_to_offset.push_back(offset);
     
@@ -202,7 +200,7 @@ write_offsets_to_file(const std::map<M, std::map<uint32_t, std::vector<uint32_t>
 
       switch (enc_type) {
         case EncType::GVB:
-          local_offset += write_gvb_to_file(offsets_dedup, file);
+          local_offset += write_gvb_to_file<uint32_t>(offsets_dedup, file);
           break;
         case EncType::PEF:
           local_offset += write_pef_to_file<uint32_t>(offsets_dedup, file);
@@ -233,7 +231,7 @@ write_offsets_to_file(const std::map<M, std::map<uint32_t, std::vector<uint32_t>
 
   switch (enc_type) {
     case EncType::GVB:
-      write_gvb_to_file(id_to_offset, file);
+      write_gvb_to_file<uint32_t>(id_to_offset, file);
       break;
     case EncType::PEF:
       write_pef_to_file<uint32_t>(id_to_offset, file);
@@ -258,7 +256,7 @@ bool check_offsets_file_by_type(
     const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   std::vector<uint32_t> id_to_offset;
 
-  uint32_t offset = 1;
+  uint32_t offset = 0;
   for (const auto &[_, fields] : tokens_map) {
     id_to_offset.push_back(offset);
     

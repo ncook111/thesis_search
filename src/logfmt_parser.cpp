@@ -4,10 +4,18 @@
 #include <iostream>
 
 #define LINES_TO_BUFFER 100
-LogfmtParser::LogfmtParser(const std::string &file_path) : mf(open_mmap_r(file_path)) {
-    file_size = mf.size();
-    file_offset = 0;
 
+LogfmtParser::LogfmtParser(const std::string &file_path)
+    : mf(open_mmap_r(file_path)),
+      file_size(mf.size()),
+      file_offset(0) {
+    buffer_lines(LINES_TO_BUFFER);
+}
+
+LogfmtParser::LogfmtParser(const std::string &file_path, const uint64_t start_addr, const uint64_t end_addr)
+    : mf(open_mmap_r(file_path)),
+      file_size(std::min<uint64_t>(end_addr, mf.size())),
+      file_offset(start_addr) {
     buffer_lines(LINES_TO_BUFFER);
 }
 
@@ -72,9 +80,10 @@ std::pair<std::string, uint64_t> LogfmtParser::read_next_line() {
 
 void LogfmtParser::buffer_lines(const size_t n_lines) {
     for (size_t i = 0; i < n_lines; ++i) {
-        if (file_offset == file_size) break; 
+        if (file_offset >= file_size) break; 
 
         auto [line, line_start] = read_next_line();
+		if (is_blank(line)) continue;
         buffered_rows.push_back(parse_line(line));
         buffered_line_offsets.push_back(line_start);
     }
@@ -85,7 +94,7 @@ bool LogfmtParser::has_next_row() {
         return true;
     } 
         
-    if (file_offset != file_size) { // More to read from file
+    if (file_offset < file_size) { // More to read from file
             buffer_lines(LINES_TO_BUFFER);
             return true;
     }
