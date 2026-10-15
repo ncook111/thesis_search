@@ -39,8 +39,8 @@ class Metadata {
     uint64_t get_segment_docid_modifier(const uint64_t file_id, const uint64_t segment_id) const;
     const StdCompactFst &get_mappings_fst() const;
     int64_t get_file_id(const std::string &file_name) const;
-    std::string get_file_name(const size_t file_id) const;
-    std::vector<std::string> get_file_names() const ;
+    const std::string &get_file_name(const size_t file_id) const;
+    const std::vector<std::string> &get_file_names() const;
     void update_segment_offsets(const std::vector<std::vector<uint64_t>> &segment_offsets);
     void update_file_mappings_fst(const StdCompactFst &mappings_fst);
 
@@ -53,6 +53,7 @@ class Metadata {
     MappedFile mf;
     uint8_t* metadata_file;
     size_t metadata_file_size;
+    std::vector<std::string> file_names;
 
     Metadata(const std::string &index_path)
     : index_path(index_path),
@@ -62,6 +63,7 @@ class Metadata {
       metadata_file_size(mf.size())
     {
       read_metadata_file();
+      file_names = get_strings_from_fst(*file_mappings_fst);
     }
 
     Metadata(std::string i_path, std::vector<std::vector<uint64_t>> segment_offsets, std::vector<std::vector<uint64_t>> segment_docid_modifiers, StdCompactFst mappings_fst, const uint8_t enc_type)
@@ -72,7 +74,8 @@ class Metadata {
       file_mappings_fst(std::move(mappings_fst)),
       mf((construct_metadata_file(), open_mmap_r(index_path + '/' + METADATA_FILE))),
       metadata_file(static_cast<uint8_t *>(mf.addr())),
-      metadata_file_size(mf.size()) {}
+      metadata_file_size(mf.size()),
+      file_names(get_strings_from_fst(*file_mappings_fst)) {}
 
     void construct_metadata_file();
     void read_metadata_file();

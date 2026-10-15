@@ -56,12 +56,12 @@ int64_t Metadata::get_file_id(const std::string &file_name) const {
   return get_id_from_fst(*file_mappings_fst, file_name);
 }
 
-std::string Metadata::get_file_name(const size_t file_id) const {
-  return id_to_string(*file_mappings_fst, file_id);
+const std::string &Metadata::get_file_name(const size_t file_id) const {
+  return file_names[file_id];
 }
 
-std::vector<std::string> Metadata::get_file_names() const {
-  return get_strings_from_fst(*file_mappings_fst);
+const std::vector<std::string> &Metadata::get_file_names() const {
+  return file_names;
 }
 
 void Metadata::update_segment_offsets(const std::vector<std::vector<uint64_t>> &segment_offsets) {

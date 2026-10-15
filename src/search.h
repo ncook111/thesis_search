@@ -89,14 +89,10 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
   const size_t files_indexed = metadata.get_file_names().size();
   
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
-    std::cout << "Fileid: " << file_id << std::endl;
     const size_t num_segments = metadata.get_num_segments(file_id);
     std::vector<std::vector<uint64_t>> results(num_segments);
 
-    std::cout << "num_segments: " <<num_segments << std::endl;
-
     const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
-    std::cout << "number of threads used: " << n_threads << std::endl;
 
     std::atomic<size_t> next{0};
     std::mutex err_mtx;

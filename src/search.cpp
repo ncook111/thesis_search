@@ -127,7 +127,7 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map,
     std::vector<uint32_t> entry_offsets;
     size_t loaded = SIZE_MAX;
 
-    // TODO: Stupid inefficient approach, fix
+    uint64_t local, base;
     for (const uint64_t docid : docids) {  // docids are sorted
       // advance to segment containing this docid
       while (segment_id + 1 < num_segments &&
@@ -138,11 +138,12 @@ const EntryMap get_entries_offsets(const FieldMap &offsets_map,
         const std::string segment_path = metadata.get_index_path() + '/' + std::to_string(file_id) +
                                          "_segment_" + std::to_string(segment_id) + ".seg";
         entry_offsets = get_entry_offsets_from_file(segment_path, metadata.get_enc_type());
+
+        local = docid - metadata.get_segment_docid_modifier(file_id, segment_id);
+        base = metadata.get_segment_offset(file_id, segment_id);
         loaded = segment_id;
       }
 
-      const uint64_t local = docid - metadata.get_segment_docid_modifier(file_id, segment_id);
-      const uint64_t base = metadata.get_segment_offset(file_id, segment_id);
       line_offsets.push_back(base + entry_offsets[local]);
       line_offsets.push_back(base + entry_offsets[local + 1] - 1);
     }
