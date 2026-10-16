@@ -93,7 +93,7 @@ T vb_decode_num(const std::vector<uint8_t> &bytes, size_t &bytes_consumed) {
 
 template <class T>
   requires std::same_as<T, uint32_t> || std::same_as<T, uint64_t>
-uint64_t write_gvb_to_file(const std::vector<T> &vec, std::ofstream &file, const bool delta_enc = true) {
+uint64_t write_gvb_to_file(const std::vector<T> &vec, std::ostream &file, const bool delta_enc = true) {
   const std::vector<uint8_t> enc = [&] {
     if constexpr (std::same_as<T, uint32_t>) {
       if (delta_enc)

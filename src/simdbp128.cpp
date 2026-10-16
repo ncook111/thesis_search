@@ -1,6 +1,6 @@
 
-#include "codecfactory.h"
 #include "helper.h"
+#include "codecfactory.h"
 #include "avx2_binarypacking.h"
 #include "avx512_binarypacking.h"
 #include "coder.h"
@@ -71,7 +71,7 @@ std::vector<uint32_t> decode_simdbp128(const std::vector<uint32_t> &input, const
   return decoded;
 }
 
-uint64_t write_bp128_to_file(const std::vector<uint32_t> &vec, std::ofstream &file, const uint8_t encoding) {
+uint64_t write_bp128_to_file(const std::vector<uint32_t> &vec, std::ostream &file, const uint8_t encoding) {
   size_t orig_size = vec.size();
 
   std::vector<uint8_t> enc_data;

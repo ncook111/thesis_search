@@ -4,6 +4,7 @@
 #include "custom_types.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <map>
 #include <vector>
 
@@ -76,18 +77,18 @@ template <class F> const F from_bytes(const std::vector<uint8_t> &bytes) {
   return val;
 }
 
-template <FstQueryType Q, MapType M, class T>
-const std::vector<Q> tokens_from_map(const std::map<M, T> &tokens_map) {
+template <FstQueryType Q, class Key, class Value>
+const std::vector<Q> tokens_from_map(const std::vector<std::pair<Key, const Value *>> &tokens_map) {
   std::vector<Q> tokens;
 
-  // Handle strings differently to all other M types
-  if constexpr (std::is_same_v<M, std::string>) {
-    for (auto &tok : tokens_map) {
-      tokens.push_back(tok.first);
+  // Handle strings differently to all other Key types
+  if constexpr (std::is_same_v<Key, std::string_view>) {
+    for (const auto &[tok, _] : tokens_map) {
+      tokens.emplace_back(tok);
     }
   } else {
-    for (auto &tok : tokens_map) {
-      tokens.push_back(to_bytes(tok.first));
+    for (const auto &[tok, _] : tokens_map) {
+      tokens.push_back(to_bytes(tok));
     }
   }
 
@@ -104,6 +105,23 @@ template <class T>
 std::vector<T> cvrt_0(std::vector<T> vec) {
   for (auto& x : vec) --x;
   return vec;  // implicitly moved, no extra copy
+}
+
+template <class K, class Value,
+          class Key = std::conditional_t<std::is_same_v<K, std::string>, std::string_view, K>>
+std::vector<std::pair<Key, const Value *>> sorted_view(const boost::unordered_flat_map<K, Value> &m) {
+  std::vector<std::pair<Key, const Value *>> out;
+
+  out.reserve(m.size());
+  for (const auto &[key, value] : m)
+    out.emplace_back(key, &value);
+
+  std::sort(out.begin(), out.end(),
+    [](const std::pair<Key, const Value *> &a, const std::pair<Key, const Value *> &b) {
+      return a.first < b.first;
+    });
+
+  return out;
 }
 
 #endif

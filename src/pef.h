@@ -22,7 +22,7 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
                                           const uint64_t offset,
                                           const uint64_t size_to_read,
                                           const uint64_t id);
-const uint8_t write_bv_header(const Pef_Header header, std::ofstream &file);
+const uint8_t write_bv_header(const Pef_Header header, std::ostream &file);
 const std::pair<Pef_Header, uint8_t> read_bv_header(const uint8_t *file);
 const succinct::bit_vector get_bv(const uint8_t *file, const Pef_Header &header, const uint64_t size_to_read);
 const std::optional<Range> find_range_pef_id(const std::string &file_path,
@@ -72,7 +72,7 @@ std::vector<T> partitioned_ef_decode(const succinct::bit_vector &bv_f, const uin
 }
 
 template <std::unsigned_integral T>
-uint64_t write_pef_to_file(const std::vector<T> &vec, std::ofstream &file) {
+uint64_t write_pef_to_file(const std::vector<T> &vec, std::ostream &file) {
   succinct::bit_vector enc;
   const Pef_Header header = partitioned_ef_encode<T>(enc, vec);
   

@@ -60,7 +60,7 @@ const std::optional<uint64_t> find_pef_id(const std::string &file_path,
   return (value == id && value != header.universe) ? std::make_optional(pef_id) : std::nullopt;
 }
 
-const uint8_t write_bv_header(const Pef_Header header, std::ofstream &file) {
+const uint8_t write_bv_header(const Pef_Header header, std::ostream &file) {
   const std::vector<uint8_t> compressed = gvb_encode_uint64_t({header.num_bits+1, header.universe+1, header.n+1});
 
   // Write size of following compressed header

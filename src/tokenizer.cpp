@@ -693,6 +693,8 @@ const std::vector<std::string> Tokenizer::getAlphaTokens() const {
   for (const auto &i : alpha_tokens)
     tokens.push_back(i.first);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 
@@ -700,6 +702,8 @@ const std::vector<uint64_t> Tokenizer::getNumTokens() const {
   std::vector<uint64_t> tokens;
   for (const auto i : num_tokens)
     tokens.push_back(i.first);
+
+  std::sort(tokens.begin(), tokens.end());
 
   return tokens;
 }
@@ -709,6 +713,8 @@ const std::vector<uint64_t> Tokenizer::getNegNumTokens() const {
   for (const auto i : neg_num_tokens)
     tokens.push_back(i.first);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 
@@ -716,6 +722,8 @@ const std::vector<float> Tokenizer::getFloatTokens() const {
   std::vector<float> tokens;
   for (const auto i : float_tokens)
     tokens.push_back(i.first);
+  
+  std::sort(tokens.begin(), tokens.end());
 
   return tokens;
 }
@@ -725,6 +733,8 @@ const std::vector<uint64_t> Tokenizer::getDateTokens() const {
   for (const auto i : d_tokens)
     tokens.push_back(i.first);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
@@ -732,12 +742,16 @@ const std::vector<uint64_t> Tokenizer::getTimeTokens() const {
   for (const auto i : t_tokens)
     tokens.push_back(i.first);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getIPTokens() const {
   std::vector<uint64_t> tokens;
   for (const auto i : ipv4_tokens)
     tokens.push_back(i.first);
+
+  std::sort(tokens.begin(), tokens.end());
 
   return tokens;
 }
@@ -747,6 +761,8 @@ const std::vector<std::string> Tokenizer::getAlphaTokensQ() const {
   for (const auto &i : alpha_tokens_q)
     tokens.push_back(i);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 
@@ -754,6 +770,8 @@ const std::vector<uint64_t> Tokenizer::getNumTokensQ() const {
   std::vector<uint64_t> tokens;
   for (const auto i : num_tokens_q)
     tokens.push_back(i);
+  
+  std::sort(tokens.begin(), tokens.end());
 
   return tokens;
 }
@@ -763,6 +781,8 @@ const std::vector<uint64_t> Tokenizer::getNegNumTokensQ() const {
   for (const auto i : neg_num_tokens_q)
     tokens.push_back(i);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 
@@ -771,12 +791,16 @@ const std::vector<float> Tokenizer::getFloatTokensQ() const {
   for (const auto i : float_tokens_q)
     tokens.push_back(i);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getDateTokensQ() const {
   std::vector<uint64_t> tokens;
   for (const auto i : d_tokens_q)
     tokens.push_back(i);
+
+  std::sort(tokens.begin(), tokens.end());
 
   return tokens;
 }
@@ -785,6 +809,8 @@ const std::vector<uint64_t> Tokenizer::getTimeTokensQ() const {
   for (const auto i : t_tokens_q)
     tokens.push_back(i);
 
+  std::sort(tokens.begin(), tokens.end());
+
   return tokens;
 }
 const std::vector<uint64_t> Tokenizer::getIPTokensQ() const {
@@ -792,5 +818,7 @@ const std::vector<uint64_t> Tokenizer::getIPTokensQ() const {
   for (const auto i : ipv4_tokens_q)
     tokens.push_back(i);
 
+  std::sort(tokens.begin(), tokens.end());
+  
   return tokens;
 }

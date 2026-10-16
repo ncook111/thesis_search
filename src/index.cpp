@@ -63,7 +63,7 @@ void create_index(const std::vector<std::string> &fields,
 
     std::vector<uint64_t> segment_offsets;
     std::vector<uint64_t> segment_docid_modifiers;
-    partition_file(data_path, 384 << 20, segment_offsets, segment_docid_modifiers);
+    partition_file(data_path, 256 << 20, segment_offsets, segment_docid_modifiers);
 
     const size_t num_segments = segment_offsets.size() - 1;
 
@@ -161,7 +161,7 @@ void generate_fsts(Tokenizer &tokenizer, std::ofstream &file, const bool run_che
     if (!run_checks)
       tokenizer.alpha_tokens.clear();
 
-    StdCompactFst float_fst = create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(tokenizer.float_tokens));
+    StdCompactFst float_fst = create_fst<std::vector<uint8_t>>(tokens_from_map<std::vector<uint8_t>>(sorted_view(tokenizer.float_tokens)));
     size_t float_pos =  write_to_disk(float_fst, file);
     update_float_fst_pos(file, float_pos);
     
@@ -189,19 +189,19 @@ void generate_offsets(const Tokenizer &tokenizer,
              sizeof(header)); // Reserve for later use
 
   const Write_pos alpha_pos =
-      write_offsets_to_file(tokenizer.alpha_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.alpha_tokens), file, enc_type);
   const Write_pos num_pos =
-      write_offsets_to_file(tokenizer.num_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.num_tokens), file, enc_type);
   const Write_pos neg_num_pos =
-      write_offsets_to_file(tokenizer.neg_num_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.neg_num_tokens), file, enc_type);
   const Write_pos float_pos =
-      write_offsets_to_file(tokenizer.float_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.float_tokens), file, enc_type);
   const Write_pos date_pos =
-      write_offsets_to_file(tokenizer.d_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.d_tokens), file, enc_type);
   const Write_pos time_pos =
-      write_offsets_to_file(tokenizer.t_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.t_tokens), file, enc_type);
   const Write_pos ipv4_pos =
-      write_offsets_to_file(tokenizer.ipv4_tokens, file, enc_type);
+      write_offsets_to_file(sorted_view(tokenizer.ipv4_tokens), file, enc_type);
   const uint64_t entry_offsets_pos = write_entry_offsets_to_file(
       tokenizer.entry_offsets, file, enc_type); // Handled differently to above
 
@@ -296,13 +296,13 @@ write_entry_offsets_to_file(const std::vector<uint32_t> &entry_offsets,
 void check_offsets_file(const Tokenizer &tokenizer,
                         const std::string &file_name, const uint8_t enc_type) {
   bool check = true;
-  check = check && check_offsets_file_by_type(tokenizer.alpha_tokens, file_name, TokenType::ALPHA, enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.num_tokens, file_name, TokenType::PINT ,enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.neg_num_tokens, file_name, TokenType::NINT ,enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.float_tokens, file_name, TokenType::FLOAT, enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.d_tokens, file_name, TokenType::DATE, enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.t_tokens, file_name, TokenType::TIME, enc_type);
-  check = check && check_offsets_file_by_type(tokenizer.ipv4_tokens, file_name, TokenType::IPV4, enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.alpha_tokens), file_name, TokenType::ALPHA, enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.num_tokens), file_name, TokenType::PINT ,enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.neg_num_tokens), file_name, TokenType::NINT ,enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.float_tokens), file_name, TokenType::FLOAT, enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.d_tokens), file_name, TokenType::DATE, enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.t_tokens), file_name, TokenType::TIME, enc_type);
+  check = check && check_offsets_file_by_type(sorted_view(tokenizer.ipv4_tokens), file_name, TokenType::IPV4, enc_type);
   check = check && check_entry_offsets(tokenizer.entry_offsets, file_name, enc_type);
 
   if (check) {

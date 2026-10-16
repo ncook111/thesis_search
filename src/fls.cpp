@@ -165,7 +165,7 @@ const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &en
     return decoded;
 }
 
-uint64_t write_fls_to_file(const std::vector<uint32_t> &vec, std::ofstream &file) {
+uint64_t write_fls_to_file(const std::vector<uint32_t> &vec, std::ostream &file) {
   std::vector<uint64_t> vec64(vec.begin(), vec.end());
   std::vector<uint8_t> enc_data;
   std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec64, enc_data);

@@ -3,6 +3,7 @@
 
 #include "date/date.h"
 #include "fast_float/fast_float.h"
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <chrono>
 #include <cstdio>
 #include <iomanip>
@@ -40,14 +41,14 @@ public:
   // E.g. "Wooden Table" would have an entry for "wooden" and "table"
   // Each entry contains a map for each field tokenized, with each vector containing
   // Another vector of docids in which that token is found
-  std::map<std::string, std::map<uint32_t, std::vector<uint32_t>>> alpha_tokens;
-  std::map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> num_tokens;
-  std::map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> neg_num_tokens;
-  std::map<float, std::map<uint32_t, std::vector<uint32_t>>> float_tokens;
-  std::map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> d_tokens;
-  std::map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> t_tokens;
-  std::map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> ipv4_tokens;
-  std::map<uint64_t, std::map<uint32_t,std::vector<uint32_t>>> ipv6_tokens;
+  boost::unordered_flat_map<std::string, std::map<uint32_t, std::vector<uint32_t>>> alpha_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> num_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> neg_num_tokens;
+  boost::unordered_flat_map<float, std::map<uint32_t, std::vector<uint32_t>>> float_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> d_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> t_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> ipv4_tokens;
+  boost::unordered_flat_map<uint64_t, std::map<uint32_t,std::vector<uint32_t>>> ipv6_tokens;
   
   // Map of boolean tokens for each field
   std::map<uint32_t, std::vector<uint32_t>> t_bool_tokens;
