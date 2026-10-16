@@ -172,26 +172,35 @@ void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segmen
   if (!*in) throw std::runtime_error("seek failed");
 
   csv::CSVFormat format;
-  format.column_names(col_names).variable_columns(csv::VariableColumnPolicy::THROW);
+  format.column_names(col_names)
+        .delimiter(',')
+        .variable_columns(csv::VariableColumnPolicy::THROW);
 
   // Header already read, so disregard it if reading from start of file
   if (segment_start == 0)
     format.header_row(0);
-  else
-    format.column_names(col_names);
-    
 
   csv::CSVReader reader(std::move(in), format); // 
 
   if (fields.empty())
     fields = col_names;
 
+  // Resolve column names ids for faster lookup
+  std::vector<size_t> field_idx;
+  field_idx.reserve(fields.size());
+  for (const auto &field : fields) {
+    int idx = reader.index_of(field);
+    if (idx < 0) throw std::runtime_error("unknown column: " + field);
+    field_idx.push_back(static_cast<size_t>(idx));
+  }
+
+  const uint32_t num_fields = static_cast<uint32_t>(fields.size());
   for (const csv::CSVRow &row : reader) { // Input iterator
     uint64_t curr_offset = row.byte_offset();
     if (curr_offset >= segment_size) break; 
 
-    for (uint32_t field_id = 0; field_id < fields.size(); ++field_id )
-      tokenize_field(row[fields[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
+    for (uint32_t field_id = 0; field_id < num_fields; ++field_id )
+      tokenize_field(row[field_idx[field_id]].get<std::string_view>(), entry_offsets.size(), field_id);
 
     entry_offsets.push_back(curr_offset);
   }
@@ -200,20 +209,16 @@ void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segmen
 }
 
 void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segment_size) {
-  constexpr size_t BATCH_SIZE = 16 << 20; // Use a 16MB batch size
-
   using namespace simdjson;
+  constexpr size_t BATCH_SIZE = 16 << 20;
 
-  padded_string json(segment_size);
-  std::ifstream in(file_path, std::ios::binary);
-  if (!in) throw std::runtime_error("cannot open " + file_path);
-  in.seekg(segment_start);
-  if (!in.read(json.data(), static_cast<std::streamsize>(segment_size)))
-    throw std::runtime_error("short read");
+  padded_memory_map map(file_path.c_str());
+  if (!map.is_valid()) throw std::runtime_error("cannot map " + file_path);
+  padded_string_view json = map.view();
 
   ondemand::parser parser;
-  simdjson::ondemand::document_stream stream;
-  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
+  ondemand::document_stream stream;
+  auto error = parser.iterate_many(json.data() + segment_start, segment_size, BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
   for (auto j = stream.begin(); j != stream.end(); ++j) {
@@ -221,7 +226,7 @@ void Tokenizer::tokenize_json(const uint64_t segment_start, const uint64_t segme
     ondemand::object obj;
 
     error = doc.get_object().get(obj);
-    if (error) throw std::invalid_argument("JSON deserialisation error: " + std::to_string(error));
+    if (error) throw std::invalid_argument(std::string("JSON deserialisation error: ") + error_message(error));
 
     // If no fields add all fields
     // This assumes fields for every json object will be the same
@@ -297,36 +302,37 @@ void Tokenizer::tokenize_logfmt(const uint64_t segment_start, const uint64_t seg
 
 void Tokenizer::tokenize_field(const std::string_view field_str,
                                const uint32_t doc_id, const uint32_t field_id) {
-  std::string curr_token;
+  field_token.clear();
+
   for (const char c : field_str) {
     if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
-      curr_token.push_back(c);
-    } else if (curr_token.size()) {
-      processToken(curr_token, doc_id, field_id);
-      curr_token.clear();
+      field_token.push_back(c);
+    } else if (field_token.size()) {
+      processToken(field_token, doc_id, field_id);
+      field_token.clear();
     }
   }
 
   // Process leftover token if present
-  if (curr_token.size())
-    processToken(curr_token, doc_id, field_id);
+  if (field_token.size())
+    processToken(field_token, doc_id, field_id);
 }
 
 void Tokenizer::tokenize_string(const std::string &input) {
-  std::string curr_token;
+  field_token.clear();
 
   for (const char c : input) {
     if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
-      curr_token.push_back(c);
-    } else if (curr_token.size()) {
-      processToken(curr_token);
-      curr_token.clear();
+      field_token.push_back(c);
+    } else if (field_token.size()) {
+      processToken(field_token);
+      field_token.clear();
     }
   }
 
   // Process leftover token if required
-  if (curr_token.size())
-    processToken(curr_token);
+  if (field_token.size())
+    processToken(field_token);
 }
 
 bool Tokenizer::handle_pint(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
@@ -508,9 +514,9 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
     if (curr_token.size() <= MAX_TOK_LENGTH) {
       std::ranges::transform(curr_token, curr_token.begin(), to_lower);
       if (!query_mode)
-        vector_inserter(alpha_tokens[std::move(curr_token)][field_id], doc_id);
+        vector_inserter(alpha_tokens[curr_token][field_id], doc_id);
       else
-        alpha_tokens_q.insert(std::move(curr_token));
+        alpha_tokens_q.insert(curr_token);
     }
 
     return;
@@ -654,6 +660,7 @@ Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<s
   t.file_path = file_path;
   t.fields = fields;
   t.type = str_to_file_type(file_path);
+  t.field_token.reserve(MAX_TOK_LENGTH);
   t.tokenize_file(segment_start, segment_size);
 
   return t;
@@ -662,6 +669,7 @@ Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<s
 Tokenizer Tokenizer::from_string(const std::string &file_path) {
   Tokenizer t;
   t.query_mode = true;
+  t.field_token.reserve(MAX_TOK_LENGTH);
   t.tokenize_string(file_path);
 
   return t;

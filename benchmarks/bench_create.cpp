@@ -85,6 +85,7 @@ template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benc
         ->Args({FileSize, 3, FileType, EncType::S16_BPDM})
         ->Args({FileSize, 4, FileType, EncType::S16_BPDM})
     #endif
+        ->Unit(benchmark::kSecond)
         ->Iterations(1);
 }
 class IndexCreate : public benchmark::Fixture {
@@ -140,19 +141,19 @@ BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
         const uint64_t index_size = get_folder_size(index_path);
         state.counters["IndexSize"]   = index_size;
         state.counters["DataSize"]   = data_size;
-        state.counters["Compression(%)"] = (float)index_size / (float)data_size;
+        state.counters["Compression(%)"] = (float)index_size / (float)data_size * 100;
         std::filesystem::remove_all(index_path);
         state.ResumeTiming();
     }
 }
 
 
-BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
-//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV>);
-BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
-//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
 // BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON>);
-BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
-//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
+//BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
 //BENCHMARK_REGISTER_F(IndexCreate, index_create)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);

@@ -149,7 +149,7 @@ void partition_file_csv(const std::string &file_path, const uint64_t segment_siz
       segment_start = pos; 
       first = false; 
     } else if (pos - segment_start > segment_size) {
-      segment_offsets.emplace_back(segment_start);
+      segment_offsets.push_back(segment_start);
       segment_start = pos;
       segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
       num_documents = 0;
@@ -160,49 +160,47 @@ void partition_file_csv(const std::string &file_path, const uint64_t segment_siz
 
   // Leftover
   if (num_documents > 0)
-    segment_offsets.emplace_back(segment_start);
+    segment_offsets.push_back(segment_start);
 
-  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+  segment_offsets.push_back(std::filesystem::file_size(file_path));
 }
 
-void partition_file_json(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
+void partition_file_json(const std::string &file_path, const uint64_t segment_size,
+                         std::vector<uint64_t> &segment_offsets,
+                         std::vector<uint64_t> &segment_docid_modifiers) {
   using namespace simdjson;
+  constexpr size_t BATCH_SIZE = 16 << 20;
 
-  constexpr size_t BATCH_SIZE = 16 << 20; // Use a 16MB batch size
+  padded_memory_map map(file_path.c_str());
+  if (!map.is_valid()) throw std::runtime_error("cannot map " + file_path);
+  padded_string_view json = map.view();
+
   ondemand::parser parser;
-  simdjson::ondemand::document_stream stream;
-  padded_string json = padded_string::load(file_path);
-  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
+  ondemand::document_stream stream;
+  auto error = parser.iterate_many(json.data(), json.size(), BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
-  bool first = true;
   uint64_t segment_start = 0;
   uint64_t num_documents = 0;
-  segment_docid_modifiers.push_back(num_documents);
+  segment_docid_modifiers.push_back(0);
+
   for (auto j = stream.begin(); j != stream.end(); ++j) {
     if (auto err = (*j).error())
       throw std::runtime_error(std::string("document error: ") + error_message(err));
 
     const uint64_t pos = j.current_index();
-
-    if (first) { 
-      segment_start = pos; 
-      first = false; 
-    } else if (pos - segment_start > segment_size) {
-      segment_offsets.emplace_back(segment_start);
+    if (num_documents == 0) {
       segment_start = pos;
-      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
-      num_documents = 0;
+    } else if (pos - segment_start > segment_size) {
+      segment_offsets.push_back(segment_start);
+      segment_docid_modifiers.push_back(num_documents);
+      segment_start = pos;
     }
-
     num_documents++;
   }
 
-  // Leftover
-  if (num_documents > 0)
-    segment_offsets.emplace_back(segment_start);
-
-  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+  if (num_documents > 0) segment_offsets.push_back(segment_start);
+  segment_offsets.push_back(json.size());
 }
 
 void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {

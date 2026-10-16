@@ -63,7 +63,7 @@ void create_index(const std::vector<std::string> &fields,
 
     std::vector<uint64_t> segment_offsets;
     std::vector<uint64_t> segment_docid_modifiers;
-    partition_file(data_path, 128 << 20, segment_offsets, segment_docid_modifiers);
+    partition_file(data_path, 384 << 20, segment_offsets, segment_docid_modifiers);
 
     const size_t num_segments = segment_offsets.size() - 1;
 

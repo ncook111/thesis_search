@@ -122,6 +122,7 @@ private:
   void handle_alpha(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   inline void vector_inserter(std::vector<uint32_t> &vec, const uint32_t value);
 
+  std::string field_token;
   std::string file_path;
   uint8_t type;
   bool query_mode = false;
