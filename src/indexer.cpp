@@ -35,14 +35,13 @@ int main(int argc, const char *argv[]) {
 
   uint8_t enc_type = EncType::INVALID;
   if (vm.count("encoding")) {
-    std::cout << "here" << std::endl;
     try {
       enc_type = str_to_enc_type(vm["encoding"].as<std::string>());
     } catch (std::exception& e) {
       std::cout << "Encoding argument invalid. Usage: ./ingest --help\n";
       return 1;
     }
-  } else if (act_mode != "v" && act_mode !=  "verify"){
+  } else if (act_mode != "v" && act_mode !=  "verify" && act_mode != "u" && act_mode !=  "update"){
     std::cout << "Encoding argument missing. Usage: ./ingest --help\n";
     return 1;
   }
@@ -73,13 +72,13 @@ int main(int argc, const char *argv[]) {
     std::cout << queries << std::endl;
   }
 
-  if (act_mode == "c" || act_mode == "create") { // Create index mode
+  if (act_mode == "c" || act_mode == "create") { // Index create mode
     return create_mode(index_path, data_path, fields, enc_type);
-  } else if (act_mode == "r" || act_mode ==  "recreate") { // Recreate index mode
-    return recreate_mode(index_path, data_path, fields, enc_type);
+  } else if (act_mode == "u" || act_mode ==  "update") { // Index update mode
+    return update_mode(index_path, data_path, fields);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
     return search_mode(index_path, data_path, output_path, queries);
-  } else if (act_mode == "v" || act_mode ==  "verify") { // Index search mode
+  } else if (act_mode == "v" || act_mode ==  "verify") { // Index verify
     return verify_mode(index_path);
   } else {
     std::cout << "Invalid mode. Usage: ./ingest --help\n";

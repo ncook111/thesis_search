@@ -163,6 +163,7 @@ void partition_file_csv(const std::string &file_path, const uint64_t segment_siz
     segment_offsets.push_back(segment_start);
 
   segment_offsets.push_back(std::filesystem::file_size(file_path));
+  segment_docid_modifiers.push_back(num_documents);
 }
 
 void partition_file_json(const std::string &file_path, const uint64_t segment_size,
@@ -201,6 +202,7 @@ void partition_file_json(const std::string &file_path, const uint64_t segment_si
 
   if (num_documents > 0) segment_offsets.push_back(segment_start);
   segment_offsets.push_back(json.size());
+  segment_docid_modifiers.push_back(num_documents);
 }
 
 void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
@@ -220,7 +222,7 @@ void partition_file_logfmt(const std::string &file_path, const uint64_t segment_
       segment_start = pos; 
       first = false; 
     } else if (pos - segment_start > segment_size) {
-      segment_offsets.emplace_back(segment_start);
+      segment_offsets.push_back(segment_start);
       segment_start = static_cast<uint64_t>(pos);
       segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
       num_documents = 0;
@@ -231,22 +233,57 @@ void partition_file_logfmt(const std::string &file_path, const uint64_t segment_
 
   // Leftover
   if (num_documents > 0)
-    segment_offsets.emplace_back(segment_start);
+    segment_offsets.push_back(segment_start);
 
-  segment_offsets.emplace_back(std::filesystem::file_size(std::filesystem::path(file_path)));
+  segment_offsets.push_back(std::filesystem::file_size(file_path));
+  segment_docid_modifiers.push_back(num_documents);
 }
 
-uint64_t count_documents(const std::string &file_path) {
+uint64_t count_documents_csv(const std::string &file_path) {
+  csv::CSVFormat format;
+  format.variable_columns(csv::VariableColumnPolicy::THROW);
+  csv::CSVReader reader(file_path, format);
+
+  for (const csv::CSVRow &row : reader) {}
+
+  return reader.n_rows();
+}
+
+uint64_t count_documents_json(const std::string &file_path) {
   using namespace simdjson;
-  int BATCH_SIZE = 16 << 20; // Use a 16MB batch size
+  constexpr size_t BATCH_SIZE = 16 << 20;
+
+  padded_memory_map map(file_path.c_str());
+  if (!map.is_valid()) throw std::runtime_error("cannot map " + file_path);
+  padded_string_view json = map.view();
   ondemand::parser parser;
   simdjson::ondemand::document_stream stream;
-  padded_string json = padded_string::load(file_path);
-  auto error = parser.iterate_many(json, BATCH_SIZE).get(stream);
-  if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
+  auto error = parser.iterate_many(json.data(), json.size(), BATCH_SIZE).get(stream);
+  if (error) 
+    throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
   uint64_t num_documents = 0;
   for (auto j = stream.begin(); j != stream.end(); ++j) {
+    if (auto err = (*j).error())
+      throw std::runtime_error(std::string("document error: ") + error_message(err));
+    num_documents++;
+  }
+
+  if (stream.truncated_bytes() > 0)
+    throw std::runtime_error("trailing incomplete document");
+
+  return num_documents;
+}
+
+uint64_t count_documents_logfmt(const std::string &file_path) {
+  LogfmtParser parser = LogfmtParser(file_path);
+
+  uint64_t num_documents = 0;
+  for (auto it = parser.begin(); it != parser.end(); ++it) {
+    const int64_t raw = (*it).current_offset();
+    if (raw < 0)
+      throw std::invalid_argument("LOGFMT Parser: Invalid offset");
+
     num_documents++;
   }
 

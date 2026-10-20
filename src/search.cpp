@@ -298,7 +298,7 @@ const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, con
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const Metadata &metadata) {
   FieldMap compliment_offsets;
 
-  const uint64_t num_files = metadata.get_file_names().size();
+  const uint64_t num_files = metadata.get_file_mappings().size();
 
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
     // Every doc id in this file, in order: each segment's ids shifted by its modifier

@@ -661,6 +661,7 @@ Tokenizer Tokenizer::from_file(const std::string &file_path, const std::vector<s
   t.fields = fields;
   t.type = str_to_file_type(file_path);
   t.field_token.reserve(MAX_TOK_LENGTH);
+
   t.tokenize_file(segment_start, segment_size);
 
   return t;

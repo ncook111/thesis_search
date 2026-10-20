@@ -86,7 +86,7 @@ get_id(const Q &query, const std::string &segment_path, const uint8_t type) {
 
 template <QueryType Q>
 void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fields, const Q &token, const uint8_t type, const Metadata &metadata) {
-  const size_t files_indexed = metadata.get_file_names().size();
+  const size_t files_indexed = metadata.get_file_mappings().size();
   
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);
@@ -168,7 +168,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
     std::cout << "Range: " << range.first << " : " << range.second << std::endl;
   }
 
-  const size_t files_indexed = metadata.get_file_names().size();
+  const size_t files_indexed = metadata.get_file_mappings().size();
 
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);

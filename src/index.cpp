@@ -55,101 +55,213 @@ void create_index(const std::vector<std::string> &fields,
   std::vector<std::vector<uint64_t>> all_segment_docid_modifiers(files.size());
 
   for (size_t file_id = 0; file_id < files.size(); ++file_id) {
-    const std::filesystem::path &f = files[file_id];
-    file_mappings_vec[file_id] = f.filename().string();
-    const std::string data_path = data_dir_str + '/' + f.filename().string();
-
-    std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
-
-    std::vector<uint64_t> segment_offsets;
-    std::vector<uint64_t> segment_docid_modifiers;
-    partition_file(data_path, 256 << 20, segment_offsets, segment_docid_modifiers);
-
-    const size_t num_segments = segment_offsets.size() - 1;
-
-    if (segment_offsets.size() < 2) continue; // Empty file
-
-    all_segment_offsets[file_id].assign(segment_offsets.begin(), segment_offsets.end() - 1);
-    all_segment_docid_modifiers[file_id].assign(segment_docid_modifiers.begin(), segment_docid_modifiers.end());
-
-    const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
-    std::cout << "  Threads Utilized: " << n_threads << "\n";
-    std::cout << "\r  Processed: " << "0.00%" << std::flush;
-
-    std::atomic<size_t> next{0};
-    std::atomic<size_t> num_segments_completed{0};
-    std::mutex print_mtx;
-    std::mutex err_mtx;
-    std::exception_ptr first_error;
-    std::stop_source stop;
-
-    auto worker = [&] {
-      while (!stop.stop_requested()) {
-        const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
-        if (segment_id >= num_segments) break; // Last partition marks EOF
-        
-        try {
-          const uint64_t segment_offset = segment_offsets[segment_id];
-          const uint64_t segment_size = segment_offsets[segment_id + 1] - segment_offset;
-          const std::string segment_path = index_dir.string() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg"; // File_id;
-
-
-          Tokenizer tokenizer = Tokenizer::from_file(data_path, fields, segment_offset, segment_size);
-
-          std::ofstream segment_file(segment_path, std::ios::binary);
-
-          // Leave room at start of file for fst offset positions
-          Segment_header segment_header = {0,0,0,0};
-          segment_file.write(reinterpret_cast<const char*>(&segment_header), sizeof(segment_header));
-
-          generate_offsets(tokenizer, segment_file, enc_type, run_checks);
-          generate_fsts(tokenizer, segment_file, run_checks);
-
-          segment_file.close();
-
-          if (run_checks) {
-            check_fst(tokenizer.getAlphaTokens(), segment_path, FstType::ALPHA);
-            check_fst(tokenizer.getFloatTokens(), segment_path, FstType::FLOAT);
-            check_fst(tokenizer.fields, segment_path, FstType::FIELDS);
-            check_offsets_file(tokenizer, segment_path, enc_type);
-            check_all_pef_tokens(tokenizer, segment_path);
-          }
-
-          const size_t curr_completed = num_segments_completed.fetch_add(1, std::memory_order_relaxed) + 1;
-
-          // Print progress indicator
-          {
-            std::lock_guard lk(print_mtx);
-            std::cout << "\rProcessed: " << (100.0 * curr_completed / num_segments) << "%" << std::flush;
-          }
-        } catch (...) {
-          std::lock_guard lk(err_mtx);
-          if (!first_error) first_error = std::current_exception();
-          stop.request_stop();
-        }
-      }
-    };
-
-    {
-      std::vector<std::jthread> pool;
-      pool.reserve(n_threads);
-      for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
-    }
-
-    // erase progress line
-    std::cout << "\r\x1b[2K" << std::flush;
-    std::cout << "Completed\n" << std::flush;
-
-    if (first_error) std::rethrow_exception(first_error);
+    index_file(file_id, fields, index_dir, files[file_id], enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
   }
   
-  StdCompactFst mappings_fst = create_fst<std::string>(file_mappings_vec);
-  Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(mappings_fst), enc_type);
-
-  // if (run_checks)
-  //   check_fst<std::string>(file_mappings_vec, index_dir.string() + "/" + "file_mappings.fst", FstType::OTHER);
+  Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec), enc_type);
 
   create_checksum_file(index_dir_str);
+}
+
+void index_file(const size_t file_id,
+                const std::vector<std::string> &fields,
+                const std::filesystem::path &index_dir,
+                const std::filesystem::path &data_path,
+                const uint8_t enc_type,
+                std::vector<std::string> &file_mappings_vec,
+                std::vector<std::vector<uint64_t>> &all_segment_offsets,
+                std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
+                const bool run_checks) {
+  file_mappings_vec[file_id] = data_path.filename().string();
+
+  std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
+
+  std::vector<uint64_t> segment_offsets;
+  std::vector<uint64_t> segment_docid_modifiers;
+  partition_file(data_path, 256 << 20, segment_offsets, segment_docid_modifiers);
+
+  const size_t num_segments = segment_offsets.size() - 1;
+
+  if (segment_offsets.size() < 2) return; // Empty file
+
+  all_segment_offsets[file_id].assign(segment_offsets.begin(), segment_offsets.end() - 1);
+  all_segment_docid_modifiers[file_id].assign(segment_docid_modifiers.begin(), segment_docid_modifiers.end());
+
+  const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
+  std::cout << "  Threads Utilized: " << n_threads << "\n";
+  std::cout << "\r  Processed: " << "0.00%" << std::flush;
+
+  std::atomic<size_t> next{0};
+  std::atomic<size_t> num_segments_completed{0};
+  std::mutex print_mtx;
+  std::mutex err_mtx;
+  std::exception_ptr first_error;
+  std::stop_source stop;
+
+  auto worker = [&] {
+    while (!stop.stop_requested()) {
+      const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
+      if (segment_id >= num_segments) break; // Last partition marks EOF
+      
+      try {
+        create_segment(data_path, fields, index_dir, file_id, segment_id, segment_offsets, enc_type, run_checks);
+        const size_t curr_completed = num_segments_completed.fetch_add(1, std::memory_order_relaxed) + 1;
+
+        // Print progress indicator
+        {
+          std::lock_guard lk(print_mtx);
+          std::cout << "\rProcessed: " << (100.0 * curr_completed / num_segments) << "%" << std::flush;
+        }
+      } catch (...) {
+        std::lock_guard lk(err_mtx);
+        if (!first_error) first_error = std::current_exception();
+        stop.request_stop();
+      }
+    }
+  };
+
+  {
+    std::vector<std::jthread> pool;
+    pool.reserve(n_threads);
+    for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+  }
+
+  // erase progress line
+  std::cout << "\r\x1b[2K" << std::flush;
+  std::cout << "Completed\n" << std::flush;
+
+  if (first_error) std::rethrow_exception(first_error);
+}
+
+void update_index(const std::vector<std::string> &fields,
+                  const std::string &index_dir_str,
+                  const std::string &data_dir_str,
+                  const bool run_checks) {
+  const std::filesystem::path index_dir = index_dir_str;
+  const std::filesystem::path data_dir = data_dir_str;
+
+  // Check data directory exists
+  if (!std::filesystem::exists(data_dir)) {
+    throw std::invalid_argument("Data directory does not exist");
+  }
+
+  Metadata metadata = Metadata::read(index_dir);
+
+  for (auto &f : metadata.get_file_mappings()) {
+    std::cout << "existing: " << f << std::endl;
+  }
+
+  // Get list of files currently indexed
+  std::vector<std::string> files_indexed = metadata.get_file_mappings();
+
+  // Get list of supported files within data directory
+  std::vector<std::filesystem::path> files_current;
+  for (const auto &entry : std::filesystem::directory_iterator(data_dir)) {
+    if (entry.is_regular_file() && valid_extension(entry.path().extension())) {
+      files_current.push_back(entry.path());
+    }
+  }
+
+  std::vector<std::string> new_files;
+
+for (auto &f_cur : files_current) {
+  auto name = f_cur.filename().string();
+  if (std::ranges::find(files_indexed, name) == files_indexed.end())
+    new_files.push_back(name);
+}
+
+for (auto &f : new_files) std::cout << "New file: " << f << '\n';
+
+
+  std::vector<std::string> files_to_update;
+  for (auto &f : files_indexed) {
+    uint64_t num_documents;
+    switch (str_to_file_type(f)) {
+      case FileType::CSV:
+        num_documents = count_documents_csv(data_dir.string() + '/' + f);
+        break;
+      case FileType::JSON:
+        num_documents = count_documents_json(data_dir.string() + '/' + f);
+        break;
+      case FileType::LOGFMT:
+        num_documents = count_documents_logfmt(data_dir.string() + '/' + f);
+        break;
+    }
+
+    uint64_t file_id = metadata.get_file_id(f);
+    uint64_t num_documents_prev = metadata.get_num_documents(file_id);
+
+    if (num_documents != num_documents_prev) {
+      files_to_update.push_back(f);
+    }
+  }
+
+  // Add in new files
+  // TODO: Fileids will be invalidated as files need to be sorted
+  std::vector<std::string> file_mappings_vec = metadata.get_file_mappings();
+  uint64_t file_id = file_mappings_vec.size();
+  std::vector<std::vector<uint64_t>> all_segment_offsets = metadata.get_all_segment_offsets();
+  std::vector<std::vector<uint64_t>> all_segment_docid_modifiers = metadata.get_all_segment_docid_modifiers();
+
+  // Make room for the new files so index_file can write at vec[file_id]
+  const size_t total_files = file_mappings_vec.size() + new_files.size();
+  file_mappings_vec.resize(total_files);
+  all_segment_offsets.resize(total_files);
+  all_segment_docid_modifiers.resize(total_files);
+  for (auto &f : new_files) {
+      std::cout << data_dir.string() + '/' + f << '\n';
+    index_file(file_id, fields, index_dir, data_dir.string() + '/' + f, metadata.get_enc_type(), file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
+    ++file_id;
+  }
+
+  metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
+  
+  // // Update existing files
+  // for (auto &f : files_to_update) {
+  //   uint64_t file_id = metadata.get_file_id(f);
+  //   uint64_t old_file_size = metadata.get_file_size();
+  //   uint64_t new_file_size = 
+  // }
+
+}
+
+void create_segment(const std::string &data_path,
+                    const std::vector<std::string> &fields,
+                    const std::filesystem::path &index_dir,
+                    const size_t file_id,
+                    const size_t segment_id,
+                    const std::vector<uint64_t> &segment_offsets,
+                    const uint8_t enc_type,
+                    const bool run_checks) {
+  const uint64_t segment_offset = segment_offsets[segment_id];
+  const uint64_t segment_size = segment_offsets[segment_id + 1] - segment_offset;
+  const std::string segment_path = index_dir.string() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg"; // File_id;
+
+
+  Tokenizer tokenizer = Tokenizer::from_file(data_path, fields, segment_offset, segment_size);
+
+  std::vector<char> output_buf(16 << 20); 
+  std::ofstream segment_file;
+  segment_file.rdbuf()->pubsetbuf(output_buf.data(), output_buf.size());
+  segment_file.open(segment_path, std::ios::binary);
+
+
+  // Leave room at start of file for fst offset positions
+  Segment_header segment_header = {0,0,0,0};
+  segment_file.write(reinterpret_cast<const char*>(&segment_header), sizeof(segment_header));
+
+  generate_offsets(tokenizer, segment_file, enc_type, run_checks);
+  generate_fsts(tokenizer, segment_file, run_checks);
+
+  segment_file.close();
+
+  if (run_checks) {
+    check_fst(tokenizer.getAlphaTokens(), segment_path, FstType::ALPHA);
+    check_fst(tokenizer.getFloatTokens(), segment_path, FstType::FLOAT);
+    check_fst(tokenizer.fields, segment_path, FstType::FIELDS);
+    check_offsets_file(tokenizer, segment_path, enc_type);
+    check_all_pef_tokens(tokenizer, segment_path);
+  }
 }
 
 

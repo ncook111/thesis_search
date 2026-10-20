@@ -50,6 +50,8 @@ void partition_file(const std::string &file_path, const uint64_t segment_size, s
 void partition_file_csv(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
 void partition_file_json(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
 void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers);
-uint64_t count_documents(const std::string &file_path);
+uint64_t count_documents_csv(const std::string &file_path);
+uint64_t count_documents_json(const std::string &file_path);
+uint64_t count_documents_logfmt(const std::string &file_path);
 
 #endif

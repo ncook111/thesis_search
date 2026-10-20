@@ -6,6 +6,7 @@
 #include "output.h"
 #include "crc.h"
 #include "metadata.h"
+#include "segment.h"
 #include "query/parser.h"
 #include <cstdio>
 #include <iostream>
@@ -19,7 +20,7 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
   }
 
   if (data_path.empty()) {
-    std::cout << "Data path missing, required when creating or recreating an index. Usage: ./ingest --help\n";
+    std::cout << "Data path missing, required when creating or updating an index. Usage: ./ingest --help\n";
     return 1;
   }
 
@@ -33,23 +34,21 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
   return 0;
 }
 
-int recreate_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
+int update_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields) {
   if (!std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Not a valid existing index folder\n";
     return 1;
   }
 
   if (data_path.empty()) {
-    std::cout << "Data path missing, required when creating or recreating an index. Usage: ./ingest --help\n";
+    std::cout << "Data path missing, required when creating or updating an index. Usage: ./ingest --help\n";
     return 1;
   }
 
-  std::filesystem::remove_all(index_path);
-
   try {
-    create_index(fields, index_path, data_path, enc_type);
+    update_index(fields, index_path, data_path);
   } catch (const std::exception &e) {
-    std::cout << "Error when recreating index: " << e.what() << "\n";
+    std::cout << "Error when updating index: " << e.what() << "\n";
     return 1;
   }
 
@@ -93,9 +92,9 @@ int parse_options(po::options_description &desc, po::variables_map &vm, const in
   try {
     desc.add_options()
     ("help", "produce help message")
-    ("mode,m", po::value<std::string>(), "set operation mode [create/recreate/search/verify] or [c/r/s/v]")
+    ("mode,m", po::value<std::string>(), "set operation mode [create/update/search/verify] or [c/r/s/v]")
     ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
-    ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/recreate, or if original output desired when mode=search")
+    ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/update, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")
     ("fields,f", po::value<std::vector<std::string>>()->multitoken(), "fields to index from the input data, optional")
     ("output-path,o", po::value<std::string>(), "output file, optional")

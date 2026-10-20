@@ -6,7 +6,7 @@
 #include <filesystem>
 
 class create_mode_test : public index_setup {};
-class recreate_mode_test : public index_setup {};
+class update_mode_test : public index_setup {};
 
 /* test parse_options */
 TEST(parse_options_test, test_verbose) {
@@ -293,20 +293,20 @@ TEST_F(create_mode_test, test_valid_instantiation) {
     std::filesystem::remove_all(index_path+"_pef1");
 }
 
-/* test recreate_mode */
-TEST_F(recreate_mode_test, test_empty_data_path) {
-    ASSERT_EQ(recreate_mode(index_path+"_pef", "", {}, EncType::PEF), 1);
+/* test update_mode */
+TEST_F(update_mode_test, test_empty_data_path) {
+    ASSERT_EQ(update_mode(index_path+"_pef", "", {}), 1);
 }
 
-TEST_F(recreate_mode_test, test_index_exists_valid) {
+TEST_F(update_mode_test, test_index_exists_valid) {
     create_mode(index_path+"_pef", data_path, {}, EncType::PEF);
-    ASSERT_EQ(recreate_mode(index_path+"_pef", data_path, {}, EncType::PEF), 0);
+    ASSERT_EQ(update_mode(index_path+"_pef", data_path, {}), 0);
 }
 
-TEST_F(recreate_mode_test, test_invalid_index) {
-    ASSERT_EQ(recreate_mode("invalid", data_path, {}, EncType::PEF), 1);
+TEST_F(update_mode_test, test_invalid_index) {
+    ASSERT_EQ(update_mode("invalid", data_path, {}), 1);
 }
 
-TEST_F(recreate_mode_test, test_invalid_data_path) {
-    ASSERT_EQ(recreate_mode(index_path+"_pef", "../invalid", {}, EncType::PEF), 1);
+TEST_F(update_mode_test, test_invalid_data_path) {
+    ASSERT_EQ(update_mode(index_path+"_pef", "../invalid", {}), 1);
 }
