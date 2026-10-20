@@ -25,7 +25,7 @@ static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->RangeMultiplier(10)
      ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M, 10M
      ->Unit(benchmark::kMicrosecond)
-     ->Iterations(100)
+     ->Iterations(10)
      ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
      ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
      ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
