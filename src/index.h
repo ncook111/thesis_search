@@ -13,6 +13,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include <filesystem>
 
 struct Fields_header {
   uint16_t num_fields; // Number of fields that will contain docids

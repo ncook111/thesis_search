@@ -7,6 +7,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <map>
 #include <vector>
+#include <algorithm>
 
 struct MappedFile {
   boost::interprocess::file_mapping mapping;
