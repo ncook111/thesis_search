@@ -16,11 +16,19 @@ using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<ui
 
 constexpr size_t cache_size = 4096 * 1024;
 
+static double get_percentile(std::vector<double> timings, double percentile) {
+  std::sort(timings.begin(), timings.end());
+  return timings[static_cast<size_t>(percentile * (timings.size() - 1))];
+}
+
 static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->RangeMultiplier(10)
-     ->Range(1000, 10000000)   // 1k, 10k, 100k, 1M, 10M
+     ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M, 10M
      ->Unit(benchmark::kMicrosecond)
-     ->Iterations(50);
+     ->Iterations(100)
+     ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
+     ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+     ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 }
 
 std::vector<uint64_t> generate_int_dist(size_t size) {
