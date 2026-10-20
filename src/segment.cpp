@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <fstream>
 #include <cstring>
+#include <filesystem>
 #include "segment.h"
 #include "helper.h"
 #include "simdjson.h"

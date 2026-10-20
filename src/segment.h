@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <vector>
 
 // Saved to the front of each segment file
 struct Segment_header {
