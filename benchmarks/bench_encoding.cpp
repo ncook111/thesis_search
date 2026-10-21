@@ -12,6 +12,8 @@
 #include <random>
 #include <set>
 
+#define NUM_REPETITIONS 10
+
 using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
 constexpr size_t cache_size = 4096 * 1024;
@@ -23,9 +25,10 @@ static double get_percentile(std::vector<double> timings, double percentile) {
 
 static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->RangeMultiplier(10)
-     ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M, 10M
+     ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M
      ->Unit(benchmark::kMicrosecond)
-     ->Iterations(10)
+     ->Iterations(1)
+     ->Repetitions(NUM_REPETITIONS)
      ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
      ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
      ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
