@@ -22,7 +22,7 @@ def load_results_encoding_decoding(path):
     all_cols = ["scheme", "size", "stat", "compression", "bytes_per_second", "bits_per_int"]
     return df.reindex(columns=all_cols)
 
-def create_chart_throughput(df, type, key_title):
+def create_chart_throughput(df, chart_type, key_title, title_type):
     # Throughput charts
     stats = ["mean", "median", "p90", "p99"]
     for stat in stats:
@@ -31,10 +31,10 @@ def create_chart_throughput(df, type, key_title):
         throughput = sub.pivot(index="size", columns=f"{key_title} Schemes", values="bytes_per_second")
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        throughput.plot(ax=ax, marker="o", logx=True, title=f"Throughput ({stat})", ylabel="bytes/s")
+        throughput.plot(ax=ax, marker="o", logx=True, title=f"{title_type} Throughput ({stat})", ylabel="bytes/s")
         ax.minorticks_off()
         ax.grid(alpha=0.3)
-        out = f"results/figures/{type}_throughput_{stat}.png"
+        out = f"results/figures/{chart_type}_throughput_{stat}.png"
         fig.tight_layout()
         fig.savefig(out, dpi=150)
         plt.close(fig)
@@ -82,10 +82,10 @@ if __name__ == "__main__":
     
     os.makedirs("results/figures", exist_ok=True)
     
-    create_chart_throughput(df_comp_enc, "compression_encoding", "Compression")
+    create_chart_throughput(df_comp_enc, "compression_encoding", "Compression", "Encoding")
     create_chart_compression(df_comp_enc, "compression_encoding", "Compression")
-    create_chart_throughput(df_comp_dec, "compression_decoding", "Compression")
+    create_chart_throughput(df_comp_dec, "compression_decoding", "Compression", "Decoding")
     create_chart_bits_int(df_comp_dec, "compression_decoding", "Compression")
-    create_chart_throughput(df_delta_enc, "delta_encoding", "Delta")
-    create_chart_throughput(df_delta_dec, "delta_decoding", "Delta")
+    create_chart_throughput(df_delta_enc, "delta_encoding", "Delta", "Encoding")
+    create_chart_throughput(df_delta_dec, "delta_decoding", "Delta", "Decoding")
     
