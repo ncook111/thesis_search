@@ -156,22 +156,22 @@ public:
     }
 };
 
-class U64GVBDecode : public benchmark::Fixture {
+class U32GVBDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
     void SetUp(::benchmark::State& state) {
-        input = gvb_encode_uint64_t(generate_int_dist(state.range(0)));
+        input = gvb_encode_uint32_t(generate_uint32_t_dist(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
     }
 };
 
-class U64GVBDeltaDecode : public benchmark::Fixture {
+class U32GVBDeltaDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
     void SetUp(::benchmark::State& state) {
-        input = gvb_encode_uint64_t(delta_encode(generate_int_dist(state.range(0))));
+        input = gvb_encode_uint32_t(delta_encode(generate_uint32_t_dist(state.range(0))));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -189,13 +189,13 @@ public:
     }
 };
 
-class U64PEFDecode : public benchmark::Fixture {
+class U32PEFDecode : public benchmark::Fixture {
 public:
     succinct::bit_vector input;
     Pef_Header header;
 
     void SetUp(::benchmark::State& state) {
-        header = partitioned_ef_encode<uint64_t>(input, generate_int_dist(state.range(0)));
+        header = partitioned_ef_encode<uint32_t>(input, generate_uint32_t_dist(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -432,29 +432,29 @@ public:
 };
 #endif
 
-BENCHMARK_DEFINE_F(U64Vec, gvb_u64_t_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_u32_t_encode)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
     
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = gvb_encode_uint64_t(input);
+        encoded = gvb_encode_uint32_t(input);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint64_t));
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, delta_u32_t_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_delta_u32_t_encode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -471,29 +471,29 @@ BENCHMARK_DEFINE_F(U32Vec, delta_u32_t_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U64Vec, gvb_delta_u64_t_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta_u32_t_encode)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
     
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = gvb_encode_uint64_t(delta_encode(input));
+        encoded = gvb_encode_uint32_t(delta_encode(input));
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint64_t));
+    const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_pef_u32_t_encode)(benchmark::State& state) {
     succinct::bit_vector encoded;
     Pef_Header header;
 
@@ -501,23 +501,23 @@ BENCHMARK_DEFINE_F(U64Vec, pef_u64_t_encode)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        header = partitioned_ef_encode<uint64_t>(encoded, input);
+        header = partitioned_ef_encode<uint32_t>(encoded, input);
         benchmark::DoNotOptimize(encoded);
         benchmark::DoNotOptimize(header);
         benchmark::ClobberMemory();
     }
 
-    const double input_bytes   = static_cast<double>(input.size() * 8);
-    const double encoded_bytes = static_cast<double>(encoded.data().size() * sizeof(uint64_t) + sizeof(header));
+    const double input_bytes   = static_cast<double>(input.size() * 4);
+    const double encoded_bytes = static_cast<double>(encoded.data().size() * sizeof(uint32_t) + sizeof(header));
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U64Vec, cenc_fls_u64_t_encode)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> num_blocks;
 
@@ -537,13 +537,13 @@ BENCHMARK_DEFINE_F(U64Vec, fls_u64_t_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_DEFINE_F(U32Vec, s4d1_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s4d1_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -561,7 +561,7 @@ BENCHMARK_DEFINE_F(U32Vec, s4d1_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4d2_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s4d2_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -579,7 +579,7 @@ BENCHMARK_DEFINE_F(U32Vec, s4d2_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4d4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s4d4_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -597,7 +597,7 @@ BENCHMARK_DEFINE_F(U32Vec, s4d4_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4dm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s4dm_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -615,7 +615,7 @@ BENCHMARK_DEFINE_F(U32Vec, s4dm_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4_bpd1_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -632,12 +632,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpd1_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4_bpd2_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -654,12 +654,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpd2_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4_bpd4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -676,12 +676,12 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpd4_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s4_bpdm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -698,14 +698,14 @@ BENCHMARK_DEFINE_F(U32Vec, s4_bpdm_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s8d4_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -723,7 +723,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8d4_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s8dm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s8dm_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -741,7 +741,7 @@ BENCHMARK_DEFINE_F(U32Vec, s8dm_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s8_bpd4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -758,12 +758,12 @@ BENCHMARK_DEFINE_F(U32Vec, s8_bpd4_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s8_bpdm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -780,14 +780,14 @@ BENCHMARK_DEFINE_F(U32Vec, s8_bpdm_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s16d4_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -805,7 +805,7 @@ BENCHMARK_DEFINE_F(U32Vec, s16d4_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s16dm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s16dm_encode)(benchmark::State& state) {
     aligned_vec encoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -823,7 +823,7 @@ BENCHMARK_DEFINE_F(U32Vec, s16dm_encode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s16_bpd4_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -840,12 +840,12 @@ BENCHMARK_DEFINE_F(U32Vec, s16_bpd4_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U32Vec, s16_bpdm_encode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, denc_s16_bpdm_encode)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     
     for (auto _ : state) {
@@ -862,13 +862,13 @@ BENCHMARK_DEFINE_F(U32Vec, s16_bpdm_encode)(benchmark::State& state) {
 
     state.counters["InputBytes"]   = input_bytes;
     state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression(%)"] = encoded_bytes / input_bytes;
+    state.counters["Compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 #endif
 
-BENCHMARK_DEFINE_F(U64GVBDecode, gvb_u64_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb_u32_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -879,15 +879,15 @@ BENCHMARK_DEFINE_F(U64GVBDecode, gvb_u64_t_decode)(benchmark::State& state) {
     }
 
     const double input_bytes = static_cast<double>(input.size());
-    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32DeltaDecode, delta_u32_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta_u32_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -902,7 +902,7 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, delta_u32_t_decode)(benchmark::State& state) 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta_u32_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -913,15 +913,15 @@ BENCHMARK_DEFINE_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)(benchmark::State& 
     }
 
     const double input_bytes = static_cast<double>(input.size());
-    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32PEFDecode, cdec_pef_u32_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -932,15 +932,15 @@ BENCHMARK_DEFINE_F(U64PEFDecode, pef_u64_t_decode)(benchmark::State& state) {
     }
 
     const double input_bytes = static_cast<double>(input.data().size() * sizeof(uint64_t));
-    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint64_t);
+    const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls_u64_t_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -960,7 +960,7 @@ BENCHMARK_DEFINE_F(U64FLSDecode, fls_u64_t_decode)(benchmark::State& state) {
 }
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_DEFINE_F(U32S4BPD1Decode, s4_bpd1_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -974,12 +974,12 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, s4_bpd1_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4BPD2Decode, s4_bpd2_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -993,12 +993,12 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, s4_bpd2_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4BPD4Decode, s4_bpd4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1012,12 +1012,12 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, s4_bpd4_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1031,12 +1031,12 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, s4_bpdm_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4D1Decode, s4d1_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4D1Decode, ddec_s4d1_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1052,7 +1052,7 @@ BENCHMARK_DEFINE_F(U32S4D1Decode, s4d1_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4D2Decode, s4d2_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4D2Decode, ddec_s4d2_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1068,7 +1068,7 @@ BENCHMARK_DEFINE_F(U32S4D2Decode, s4d2_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4D4Decode, s4d4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4D4Decode, ddec_s4d4_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1084,7 +1084,7 @@ BENCHMARK_DEFINE_F(U32S4D4Decode, s4d4_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S4DMDecode, s4dm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1102,7 +1102,7 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, s4dm_decode)(benchmark::State& state) {
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_DEFINE_F(U32S8BPD4Decode, s8_bpd4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1116,12 +1116,12 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, s8_bpd4_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1135,12 +1135,12 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, s8_bpdm_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S8D4Decode, s8d4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S8D4Decode, ddec_s8d4_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1156,7 +1156,7 @@ BENCHMARK_DEFINE_F(U32S8D4Decode, s8d4_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S8DMDecode, s8dm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1174,7 +1174,7 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, s8dm_decode)(benchmark::State& state) {
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_DEFINE_F(U32S16BPD4Decode, s16_bpd4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1188,12 +1188,12 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, s16_bpd4_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm_decode)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1207,12 +1207,12 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, s16_bpdm_decode)(benchmark::State& state) {
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["BitsPerInt"] = 4.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S16D4Decode, s16d4_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S16D4Decode, ddec_s16d4_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1228,7 +1228,7 @@ BENCHMARK_DEFINE_F(U32S16D4Decode, s16d4_decode)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U32S16DMDecode, s16dm_decode)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm_decode)(benchmark::State& state) {
     aligned_vec decoded(state.range(0));
     for (auto _ : state) {
         state.PauseTiming();
@@ -1245,84 +1245,84 @@ BENCHMARK_DEFINE_F(U32S16DMDecode, s16dm_decode)(benchmark::State& state) {
 }
 #endif
 
-BENCHMARK_REGISTER_F(U64Vec, gvb_u64_t_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64Vec, gvb_delta_u64_t_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64Vec, pef_u64_t_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64Vec, fls_u64_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_gvb_u32_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_gvb_delta_u32_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_pef_u32_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64Vec, cenc_fls_u64_t_encode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd1_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd2_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4_bpd4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4_bpdm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd1_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd2_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32Vec, s8_bpd4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s8_bpdm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s8_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s8_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32Vec, s16_bpd4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s16_bpdm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s16_bpd4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_s16_bpdm_encode)->Apply(StandardBenchArgs);
 #endif
 
-BENCHMARK_REGISTER_F(U64GVBDecode, gvb_u64_t_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64GVBDeltaDecode, gvb_delta_u64_t_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64PEFDecode, pef_u64_t_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64FLSDecode, fls_u64_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32GVBDecode, cdec_gvb_u32_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32GVBDeltaDecode, cdec_gvb_delta_u32_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32PEFDecode, cdec_pef_u32_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U64FLSDecode, cdec_fls_u64_t_decode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32S4BPD1Decode, s4_bpd1_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4BPD2Decode, s4_bpd2_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4BPD4Decode, s4_bpd4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4BPDMDecode, s4_bpdm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPD1Decode, cdec_s4_bpd1_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPD2Decode, cdec_s4_bpd2_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPD4Decode, cdec_s4_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4BPDMDecode, cdec_s4_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32S8BPD4Decode, s8_bpd4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S8BPDMDecode, s8_bpdm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8BPD4Decode, cdec_s8_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8BPDMDecode, cdec_s8_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32S16BPD4Decode, s16_bpd4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S16BPDMDecode, s16_bpdm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16BPD4Decode, cdec_s16_bpd4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16BPDMDecode, cdec_s16_bpdm_decode)->Apply(StandardBenchArgs);
 #endif
 
-BENCHMARK_REGISTER_F(U32Vec, delta_u32_t_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_delta_u32_t_encode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32Vec, s4d1_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4d2_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4d4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s4dm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s4d1_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s4d2_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s4d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s4dm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32Vec, s8d4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s8dm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s8d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s8dm_encode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32Vec, s16d4_encode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, s16dm_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s16d4_encode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, denc_s16dm_encode)->Apply(StandardBenchArgs);
 #endif
 
-BENCHMARK_REGISTER_F(U32DeltaDecode, delta_u32_t_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32DeltaDecode, ddec_delta_u32_t_decode)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32S4D1Decode, s4d1_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4D2Decode, s4d2_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4D4Decode, s4d4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4DMDecode, s4dm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4D1Decode, ddec_s4d1_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4D2Decode, ddec_s4d2_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4D4Decode, ddec_s4d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S4DMDecode, ddec_s4dm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX2)
-BENCHMARK_REGISTER_F(U32S8D4Decode, s8d4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S8DMDecode, s8dm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8D4Decode, ddec_s8d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S8DMDecode, ddec_s8dm_decode)->Apply(StandardBenchArgs);
 #endif
 
 #if defined(SIMD_TARGET_AVX512BW)
-BENCHMARK_REGISTER_F(U32S16D4Decode, s16d4_decode)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S16DMDecode, s16dm_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16D4Decode, ddec_s16d4_decode)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32S16DMDecode, ddec_s16dm_decode)->Apply(StandardBenchArgs);
 #endif

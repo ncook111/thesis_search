@@ -1,0 +1,2 @@
+mkdir -p results/search
+./../build/benchmarks/indexer_benchmarks --benchmark_filter=search --benchmark_out=results/search/search.json --benchmark_out_format=json --benchmark_report_aggregates_only=true --benchmark_enable_random_interleaving=true

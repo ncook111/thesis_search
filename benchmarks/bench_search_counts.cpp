@@ -14,7 +14,7 @@ static std::string index_path = "../benchmarks/bench_data/temp_indexes/index_sea
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-static const std::vector<std::string> bench_paths = {"small_data/data_1","small_data/data_2", "small_data/data_3", "small_data/data_4", "small_data/data_5", /*"medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", "medium_data/data_5", "large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4", "large_data/data_5"*/};
+static const std::vector<std::string> bench_paths = {"small_data/data_1","small_data/data_2", "small_data/data_3", "small_data/data_4", "small_data/data_5", "medium_data/data_1", "medium_data/data_2", "medium_data/data_3", "medium_data/data_4", "medium_data/data_5", "large_data/data_1", "large_data/data_2", "large_data/data_3", "large_data/data_4", "large_data/data_5"};
 
 static double get_percentile(std::vector<double> timings, double percentile) {
   std::sort(timings.begin(), timings.end());
