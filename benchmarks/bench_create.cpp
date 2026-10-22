@@ -6,15 +6,26 @@
 
 constexpr size_t cache_size = 4096 * 1024;
 
-static std::string csv_data_path = "../benchmarks/bench_data/all_input_data/csv/";
-static std::string json_data_path = "../benchmarks/bench_data/all_input_data/json/";
-static std::string logfmt_data_path = "../benchmarks/bench_data/all_input_data/logfmt/";
-static std::string index_path = "../benchmarks/bench_data/temp_indexes/index_1/";
+static std::string csv_data_path = BENCH_DATA_DIR "/all_input_data/csv/";
+static std::string json_data_path = BENCH_DATA_DIR "/all_input_data/json/";
+static std::string logfmt_data_path = BENCH_DATA_DIR "/all_input_data/logfmt/";
+static std::string index_path = BENCH_DATA_DIR "/temp_indexes/index_1";
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-namespace FileSize {
-enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2 };
+constexpr const std::string file_size_to_str(const uint8_t size) {
+    switch (size) { 
+        case FileSize::SMALL: return "small";
+        case FileSize::MEDIUM: return "medium";
+        default: return "large"; 
+    }
+}
+constexpr const std::string file_type_to_str(const uint8_t type) {
+    switch (type) {
+        case FileType::CSV: return "csv";
+        case FileType::JSON: return "json";
+        default: return "logfmt"; 
+    }
 }
 
 /*
@@ -24,7 +35,9 @@ enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2 };
     Arg4: encoding
 */
 template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
-    args->Args({FileSize, 0, FileType, EncType::GVB})
+    args->Name(std::string("IndexCreate/") + file_size_to_str(FileSize) + "/" + file_type_to_str(FileType))
+        ->ArgNames({"size", "dataset", "file_type", "scheme"})
+        ->Args({FileSize, 0, FileType, EncType::GVB})
         ->Args({FileSize, 1, FileType, EncType::GVB})
         ->Args({FileSize, 2, FileType, EncType::GVB})
         ->Args({FileSize, 3, FileType, EncType::GVB})
@@ -99,8 +112,9 @@ public:
         uint8_t file_type = state.range(2);
         enc_type = state.range(3);
         std::filesystem::remove_all(index_path);
+        std::filesystem::create_directories(std::filesystem::path(index_path).parent_path());
         std::string dataset = datasets[dataset_size];
-        state.SetLabel(std::to_string(dataset_number+1) + "_" + dataset + "/" + enc_type_to_str(enc_type));
+        state.SetLabel(std::string(enc_type_to_str(enc_type) + ',' + file_size_to_str(dataset_size) + "," + file_type_to_str(file_type) + "," + std::to_string(dataset_number)));
         bench_path = dataset + "_data/data_" + std::to_string(dataset_number+1);
         
         switch (file_type) {
@@ -139,9 +153,9 @@ BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
         state.PauseTiming();
         const uint64_t data_size = get_folder_size(data_path + bench_path);
         const uint64_t index_size = get_folder_size(index_path);
-        state.counters["IndexSize"]   = index_size;
-        state.counters["DataSize"]   = data_size;
-        state.counters["Compression(%)"] = (float)index_size / (float)data_size * 100;
+        state.counters["index_size"]   = index_size;
+        state.counters["data_size"]   = data_size;
+        state.counters["compression"] = (float)index_size / (float)data_size;
         std::filesystem::remove_all(index_path);
         state.ResumeTiming();
     }

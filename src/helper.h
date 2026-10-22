@@ -21,6 +21,10 @@ namespace FileType {
 enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
+namespace FileSize {
+enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2 };
+}
+
 namespace FstType {
 enum Value : uint8_t { ALPHA = 0, FLOAT = 1, FIELDS = 2, OTHER = 3, INVALID = 4 };
 }

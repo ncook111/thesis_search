@@ -447,9 +447,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -466,7 +466,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -486,9 +486,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -510,9 +510,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_pef)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * 4);
     const double encoded_bytes = static_cast<double>(encoded.data().size() * sizeof(uint64_t) + sizeof(header));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -535,9 +535,9 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -556,7 +556,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s4d1)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -574,7 +574,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s4d2)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -592,7 +592,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s4d4)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -610,7 +610,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s4dm)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -630,9 +630,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -652,9 +652,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -674,9 +674,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -696,9 +696,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -718,7 +718,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s8d4)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -736,7 +736,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s8dm)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -756,9 +756,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -778,9 +778,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -800,7 +800,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s16d4)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -818,7 +818,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s16dm)(benchmark::State& state) {
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -838,9 +838,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -860,9 +860,9 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
 
-    state.counters["InputBytes"]   = input_bytes;
-    state.counters["EncodedBytes"] = encoded_bytes;
-    state.counters["Compression"] = encoded_bytes / input_bytes;
+    state.counters["input_bytes"]   = input_bytes;
+    state.counters["encoded_bytes"] = encoded_bytes;
+    state.counters["compression"] = encoded_bytes / input_bytes;
 
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
@@ -881,8 +881,8 @@ BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -915,8 +915,8 @@ BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -934,8 +934,8 @@ BENCHMARK_DEFINE_F(U32PEFDecode, cdec_pef)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.data().size() * sizeof(uint64_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -953,8 +953,8 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -973,8 +973,8 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -992,8 +992,8 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1011,8 +1011,8 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1030,8 +1030,8 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1115,8 +1115,8 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1134,8 +1134,8 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1187,8 +1187,8 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
@@ -1206,8 +1206,8 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
-    state.counters["InputBytes"] = input_bytes;
-    state.counters["BitsPerInt"] = 8.0 * input_bytes / state.range(0);
+    state.counters["input_bytes"] = input_bytes;
+    state.counters["bits_per_int"] = 8.0 * input_bytes / state.range(0);
 
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
