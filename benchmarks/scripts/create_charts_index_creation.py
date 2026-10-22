@@ -124,8 +124,8 @@ if __name__ == "__main__":
     
     os.makedirs("../results/figures/creation", exist_ok=True)
     
-    file_sizes = ["small", "medium"]
-    file_types = ["csv", "json", "logfmt"]
+    file_sizes = ["medium"]
+    file_types = ["csv"]
     datasets = [None, 1, 2, 3, 4, 5]
     
     for dataset in datasets:
