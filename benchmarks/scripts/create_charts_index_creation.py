@@ -5,6 +5,21 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+def save(out, data, chart_title, legend_title, xlabel, ylabel):
+    if data.empty:
+        print(f"{out}: no data")
+        return
+    
+    fig, ax = plt.subplots(figsize=(8, 5))
+    data.plot.bar(ax=ax, rot=0, title=chart_title,
+                         xlabel=xlabel, ylabel=ylabel)
+    ax.legend(title=legend_title)
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out, dpi=300)
+    plt.close(fig)
+    print(f"wrote {out}")
+
 def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
@@ -19,51 +34,89 @@ def load_results(path):
     all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset"]
     return df.reindex(columns=all_cols)
 
-def create_chart_compression_by_file_type(df, file_type, dataset=None):
-    title = f"Index size ({file_type})"
-    out = f"../results/figures/creation/{file_type}_compression.png"
-    sub = df[df["file_type"] == file_type]
+def plot_compression_by_file_type(df, file_size, dataset=None):
+    title = f"Index size ({file_size})"
+    out = f"../results/figures/creation/{file_size}_compression_by_file_type.png"
+    
+    data = df[df["file_size"] == file_size].copy()
     if dataset is not None:
-        sub = sub[sub["dataset"] == dataset]
+        data = data[data["dataset"] == dataset].copy()
+        out = f"../results/figures/creation/dataset_{dataset}_{file_size}_compression.png"
+        title = f"Index size ({file_size}, dataset_{dataset})"
+ 
+    totals = data.groupby(["file_type", "scheme"])[["index_size", "data_size"]].sum()
+    compression = (totals["index_size"] / totals["data_size"] * 100).unstack("scheme")
+ 
+    save(out, compression, title, "Encoding Schemes", "file type", "% of input")
+    
+def plot_compression_by_file_size(df, file_type, dataset=None):
+    title = f"Index size ({file_type})"
+    out = f"../results/figures/creation/{file_type}_compression_by_file_size.png"
+    
+    data = df[df["file_type"] == file_type].copy()
+    if dataset is not None:
+        data = data[data["dataset"] == dataset].copy()
         out = f"../results/figures/creation/dataset_{dataset}_{file_type}_compression.png"
         title = f"Index size ({file_type}, dataset_{dataset})"
  
-    totals = sub.groupby(["file_size", "scheme"], observed=True)[["index_size", "data_size"]].sum()
+    totals = data.groupby(["file_size", "scheme"], observed=True)[["index_size", "data_size"]].sum()
     compression = (totals["index_size"] / totals["data_size"] * 100).unstack("scheme")
  
-    fig, ax = plt.subplots(figsize=(8, 5))
-    compression.plot.bar(ax=ax, rot=0, title=f"Index size ({file_type})",
-                         xlabel="dataset size", ylabel="% of input")
-    ax.legend(title="Encoding Schemes")
-    ax.minorticks_off()
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote {out}")
-    
-def create_chart_throughput_by_file_type(df, file_type, dataset=None):
-    title = f"Index creation throughput ({file_type})"
-    out = f"../results/figures/creation/{file_type}_throughput.png"
-    sub = df[df["file_type"] == file_type]
-    if dataset is not None:
-        sub = sub[sub["dataset"] == dataset]
-        out = f"../results/figures/creation/dataset_{dataset}_{file_type}_throughput.png"
-        title = title = f"Index creation throughput ({file_type}, dataset_{dataset})"
+    save(out, compression, title, "Encoding Schemes", "dataset size", "% of input")
 
-    totals = sub.groupby(["file_size", "scheme"], observed=True)[["data_size", "real_time"]].sum()
+def plot_compression_by_dataset(df, file_size, file_type):
+    title = f"Index size ({file_size}, {file_type})"
+    out = f"../results/figures/creation/{file_size}_{file_type}_compression_by_dataset.png"
+
+    data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
+    if data.empty:
+        print(f"skipped {out}: no results for {file_size}/{file_type}")
+        return
+
+    compression = data.pivot(index="dataset", columns="scheme", values="compression") * 100
+
+    save(out, compression, title, "Encoding Schemes", "dataset", "% of input")
+    
+def plot_throughput_by_file_type(df, file_size, dataset=None):
+    title = f"Index creation throughput ({file_size})"
+    out = f"../results/figures/creation/{file_size}_throughput_by_file_type.png"
+    
+    data = df[df["file_size"] == file_size].copy()
+    if dataset is not None:
+        data = data[data["dataset"] == dataset].copy()
+        out = f"../results/figures/creation/dataset_{dataset}_{file_size}_throughput.png"
+        title = f"Index creation throughput ({file_size}, dataset_{dataset})"
+
+    totals = data.groupby(["file_type", "scheme"])[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    throughput.plot.bar(ax=ax, rot=0, title=title,
-                        xlabel="dataset size", ylabel="MB/s")
-    ax.legend(title="Encoding Schemes")
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote {out}")
+    save(out, throughput, title, "Encoding Schemes", "file type", "MB/s")
     
+def plot_throughput_by_file_size(df, file_type, dataset=None):
+    title = f"Index creation throughput ({file_type})"
+    out = f"../results/figures/creation/{file_type}_throughput_by_file_size.png"
+    
+    data = df[df["file_type"] == file_type].copy()
+    if dataset is not None:
+        data = data[data["dataset"] == dataset].copy()
+        out = f"../results/figures/creation/dataset_{dataset}_{file_type}_throughput.png"
+        title = f"Index creation throughput ({file_type}, dataset_{dataset})"
+
+    totals = data.groupby(["file_size", "scheme"], observed=True)[["data_size", "real_time"]].sum()
+    throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
+
+    save(out, throughput, title, "Encoding Schemes", "dataset size", "MB/s")
+    
+def plot_throughput_by_dataset(df, file_size, file_type):
+    title = f"Index creation throughput ({file_size}, {file_type})"
+    out = f"../results/figures/creation/{file_size}_{file_type}_throughput_by_dataset.png"
+
+    data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
+
+    data["throughput"] = data["data_size"] / 1000000 / data["real_time"]
+    throughput = data.pivot(index="dataset", columns="scheme", values="throughput")
+
+    save(out, throughput, title, "Encoding Schemes", "dataset", "MB/s")
 
 
 if __name__ == "__main__":
@@ -71,18 +124,23 @@ if __name__ == "__main__":
     
     os.makedirs("../results/figures/creation", exist_ok=True)
     
-    create_chart_compression_by_file_type(df, "csv")
-    create_chart_compression_by_file_type(df, "csv", 1)
-    create_chart_compression_by_file_type(df, "csv", 2)
-    create_chart_compression_by_file_type(df, "csv", 3)
-    create_chart_compression_by_file_type(df, "csv", 4)
-    create_chart_compression_by_file_type(df, "csv", 5)
-    create_chart_throughput_by_file_type(df, "csv")
-    create_chart_throughput_by_file_type(df, "csv", 1)
-    create_chart_throughput_by_file_type(df, "csv", 2)
-    create_chart_throughput_by_file_type(df, "csv", 3)
-    create_chart_throughput_by_file_type(df, "csv", 4)
-    create_chart_throughput_by_file_type(df, "csv", 5)
+    file_sizes = ["small", "medium"]
+    file_types = ["csv", "json", "logfmt"]
+    datasets = [None, 1, 2, 3, 4, 5]
+    
+    for dataset in datasets:
+        for type in file_types:
+            plot_compression_by_file_size(df, type, dataset)
+            plot_throughput_by_file_size(df, type, dataset)
+    
+        for size in file_sizes:
+            plot_compression_by_file_type(df, size, dataset)
+            plot_throughput_by_file_type(df, size, dataset)
+    
+    for type in file_types:
+        for size in file_sizes:
+            plot_compression_by_dataset(df, size, type)
+            plot_throughput_by_dataset(df, size, type)
 
 
 
