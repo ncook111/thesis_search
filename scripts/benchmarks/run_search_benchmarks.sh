@@ -8,7 +8,7 @@ OUT_DIR="$RESULTS_DIR/search"
 mkdir -p "$OUT_DIR"
 
 "$BENCH_BIN" \
---benchmark_filter=IndexSearch/small/csv \
+--benchmark_filter=IndexSearch/medium/csv \
 --benchmark_out="$OUT_DIR/search.json" \
 --benchmark_out_format=json \
 --benchmark_report_aggregates_only=true \
