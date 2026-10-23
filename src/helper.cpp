@@ -5,6 +5,36 @@
 #include <filesystem>
 #include <arpa/inet.h>
 
+const std::vector<int64_t> available_enc_types() {
+ return {
+      EncType::GVB, EncType::PEF, EncType::FLS,
+  #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
+      EncType::S4_BPD1, EncType::S4_BPD2, EncType::S4_BPD4, EncType::S4_BPDM,
+  #endif
+  #if defined(SIMD_TARGET_AVX2)
+      EncType::S8_BPD4, EncType::S8_BPDM,
+  #endif
+  #if defined(SIMD_TARGET_AVX512BW)
+      EncType::S16_BPD4, EncType::S16_BPDM,
+  #endif
+ };
+}
+
+const std::string file_size_to_str(const uint8_t size) {
+    switch (size) { 
+        case FileSize::SMALL: return "small";
+        case FileSize::MEDIUM: return "medium";
+        default: return "large"; 
+    }
+}
+const std::string file_type_to_str(const uint8_t type) {
+    switch (type) {
+        case FileType::CSV: return "csv";
+        case FileType::JSON: return "json";
+        default: return "logfmt"; 
+    }
+}
+
 bool is_blank(const std::string &str) {
     return std::all_of(str.begin(), str.end(),
                        [](unsigned char c) { return std::isspace(c); });

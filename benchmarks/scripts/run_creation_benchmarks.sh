@@ -1,2 +1,0 @@
-mkdir -p ../results/creation
-./../../build/benchmarks/indexer_benchmarks --benchmark_filter="IndexCreate/medium/csv" --benchmark_out=../results/creation/creation.json --benchmark_out_format=json --benchmark_report_aggregates_only=true --benchmark_enable_random_interleaving=true

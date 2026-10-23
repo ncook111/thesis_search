@@ -1,0 +1,5 @@
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
+BUILD_DIR="$ROOT/build"
+BENCH_BIN="$BUILD_DIR/benchmarks/indexer_benchmarks"
+BENCH_DATA="$ROOT/benchmarks/bench_data"
+RESULTS_DIR="$ROOT/results"

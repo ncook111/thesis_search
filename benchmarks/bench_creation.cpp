@@ -13,21 +13,6 @@ static std::string index_path = BENCH_DATA_DIR "/temp_indexes/index_1";
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-constexpr const std::string file_size_to_str(const uint8_t size) {
-    switch (size) { 
-        case FileSize::SMALL: return "small";
-        case FileSize::MEDIUM: return "medium";
-        default: return "large"; 
-    }
-}
-constexpr const std::string file_type_to_str(const uint8_t type) {
-    switch (type) {
-        case FileType::CSV: return "csv";
-        case FileType::JSON: return "json";
-        default: return "logfmt"; 
-    }
-}
-
 /*
     Arg1: dataset size
     Arg2: dataset number
@@ -36,7 +21,7 @@ constexpr const std::string file_type_to_str(const uint8_t type) {
 */
 template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexCreate/") + file_size_to_str(FileSize) + "/" + file_type_to_str(FileType))
-        ->ArgNames({"size", "dataset", "file_type", "scheme"})
+        ->ArgNames({"file_size", "dataset", "file_type", "scheme"})
         ->Args({FileSize, 0, FileType, EncType::GVB})
         ->Args({FileSize, 1, FileType, EncType::GVB})
         ->Args({FileSize, 2, FileType, EncType::GVB})

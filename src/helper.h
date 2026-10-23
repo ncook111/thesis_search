@@ -49,6 +49,9 @@ namespace QueryMode {
 enum Value : uint8_t { UNION = 0, INTER = 1, COMP = 2, INVALID = 3 };
 }
 
+const std::vector<int64_t> available_enc_types();
+const std::string file_size_to_str(const uint8_t size);
+const std::string file_type_to_str(const uint8_t size);
 bool is_blank(const std::string &str);
 const bool pef_or_fst(const uint8_t type);
 const bool valid_extension(const std::string &ext);

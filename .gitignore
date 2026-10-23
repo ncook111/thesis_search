@@ -5,6 +5,7 @@
 /big_data/
 /index/
 /index3/
+/results/
 /*.o
 /third_party/
 /build/

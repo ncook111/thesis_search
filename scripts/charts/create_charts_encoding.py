@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 import json
 import os
-
+from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[2]
+RESULTS_DIR = ROOT / "results"
 
 def load_results_encoding_decoding(path):
 
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
-    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p90", "p99"])].copy()
+    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p90", "p99", "p10", "p1"])].copy()
 
     parts = df["run_name"].str.split("/")
     df["scheme"] = parts.str[1].str.split("_", n=1).str[1]
@@ -23,11 +25,10 @@ def load_results_encoding_decoding(path):
     return df.reindex(columns=all_cols)
 
 def plot_throughput(df, chart_type, key_title, title_type):
-    title = f"{title_type} Throughput ({stat})"
-    out = f"../results/figures/encoding/{chart_type}_throughput_{stat}.png"
-
-    stats = ["mean", "median", "p90", "p99"]
+    stats = ["median", "p10", "p1"]
     for stat in stats:
+        title = f"{title_type} Throughput ({stat})"
+        out = f"{RESULTS_DIR}/figures/encoding/{chart_type}_throughput_{stat}.png"
         data = df[df["stat"] == stat]
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second") / 1e9 # Convert into GB/s
 
@@ -44,7 +45,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
 
 def plot_compression(df, type, key_title):
     title = "Compressed Size"
-    out = f"../results/figures/encoding/{type}_compression.png"
+    out = f"{RESULTS_DIR}/figures/encoding/{type}_compression.png"
     
     data = df[df["stat"] == "median"]
     compression = data.pivot(index="size", columns="scheme", values="compression") * 100
@@ -62,7 +63,7 @@ def plot_compression(df, type, key_title):
     
 def plot_bits_int(df, type, key_title):
     title = "Bits Per Int"
-    out = f"../results/figures/encoding/{type}_bits_int.png"
+    out = f"{RESULTS_DIR}/figures/encoding/{type}_bits_int.png"
     
     data = df[df["stat"] == "median"]
     bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int")
@@ -81,12 +82,12 @@ def plot_bits_int(df, type, key_title):
     
 
 if __name__ == "__main__":
-    df_comp_enc = load_results_encoding_decoding("../results/encodings/compression_encoding.json")
-    df_comp_dec = load_results_encoding_decoding("../results/encodings/compression_decoding.json")
-    df_delta_enc = load_results_encoding_decoding("../results/encodings/delta_encoding.json")
-    df_delta_dec = load_results_encoding_decoding("../results/encodings/delta_decoding.json")
+    df_comp_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/compression_encoding.json")
+    df_comp_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/compression_decoding.json")
+    df_delta_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_encoding.json")
+    df_delta_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_decoding.json")
     
-    os.makedirs("../results/figures/encoding", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/encoding", exist_ok=True)
     
     plot_throughput(df_comp_enc, "compression_encoding", "Compression", "Encoding")
     plot_compression(df_comp_enc, "compression_encoding", "Compression")
