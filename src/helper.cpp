@@ -9,7 +9,7 @@ const std::vector<int64_t> available_enc_types() {
  return {
       EncType::GVB, EncType::PEF, EncType::FLS,
   #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-      EncType::S4_BPD1, EncType::S4_BPD2, EncType::S4_BPD4, EncType::S4_BPDM,
+      EncType::S4_BPD4, EncType::S4_BPDM,
   #endif
   #if defined(SIMD_TARGET_AVX2)
       EncType::S8_BPD4, EncType::S8_BPDM,

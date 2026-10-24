@@ -13,7 +13,7 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel):
         print(f"{out}: no data")
         return
     
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(10, 5))
     data.plot.bar(ax=ax, rot=0, title=chart_title,
                          xlabel=xlabel, ylabel=ylabel)
     ax.legend(title=legend_title)

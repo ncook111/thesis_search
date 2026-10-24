@@ -1254,8 +1254,6 @@ BENCHMARK_REGISTER_F(U32Vec, cenc_pef)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U64Vec, cenc_fls)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd1)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd2)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd4)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpdm)->Apply(StandardBenchArgs);
 #endif
@@ -1276,8 +1274,6 @@ BENCHMARK_REGISTER_F(U32PEFDecode, cdec_pef)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U64FLSDecode, cdec_fls)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32S4BPD1Decode, cdec_s4_bpd1)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4BPD2Decode, cdec_s4_bpd2)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32S4BPD4Decode, cdec_s4_bpd4)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32S4BPDMDecode, cdec_s4_bpdm)->Apply(StandardBenchArgs);
 #endif
@@ -1295,8 +1291,6 @@ BENCHMARK_REGISTER_F(U32S16BPDMDecode, cdec_s16_bpdm)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, denc_delta)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32Vec, denc_s4d1)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32Vec, denc_s4d2)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, denc_s4d4)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, denc_s4dm)->Apply(StandardBenchArgs);
 #endif
@@ -1314,8 +1308,6 @@ BENCHMARK_REGISTER_F(U32Vec, denc_s16dm)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32DeltaDecode, ddec_delta)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-BENCHMARK_REGISTER_F(U32S4D1Decode, ddec_s4d1)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U32S4D2Decode, ddec_s4d2)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32S4D4Decode, ddec_s4d4)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32S4DMDecode, ddec_s4dm)->Apply(StandardBenchArgs);
 #endif

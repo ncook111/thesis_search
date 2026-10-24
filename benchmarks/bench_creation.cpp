@@ -13,76 +13,15 @@ static std::string index_path = BENCH_DATA_DIR "/temp_indexes/index_1";
 
 static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
-/*
-    Arg1: dataset size
-    Arg2: dataset number
-    Arg3: file type
-    Arg4: encoding
-*/
 template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexCreate/") + file_size_to_str(FileSize) + "/" + file_type_to_str(FileType))
         ->ArgNames({"file_size", "dataset", "file_type", "scheme"})
-        ->Args({FileSize, 0, FileType, EncType::GVB})
-        ->Args({FileSize, 1, FileType, EncType::GVB})
-        ->Args({FileSize, 2, FileType, EncType::GVB})
-        ->Args({FileSize, 3, FileType, EncType::GVB})
-        ->Args({FileSize, 4, FileType, EncType::GVB})
-        ->Args({FileSize, 0, FileType, EncType::PEF})
-        ->Args({FileSize, 1, FileType, EncType::PEF})
-        ->Args({FileSize, 2, FileType, EncType::PEF})
-        ->Args({FileSize, 3, FileType, EncType::PEF})
-        ->Args({FileSize, 4, FileType, EncType::PEF})
-        ->Args({FileSize, 0, FileType, EncType::FLS})
-        ->Args({FileSize, 1, FileType, EncType::FLS})
-        ->Args({FileSize, 2, FileType, EncType::FLS})
-        ->Args({FileSize, 3, FileType, EncType::FLS})
-        ->Args({FileSize, 4, FileType, EncType::FLS})
-    #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
-        ->Args({FileSize, 0, FileType, EncType::S4_BPD1})
-        ->Args({FileSize, 1, FileType, EncType::S4_BPD1})
-        ->Args({FileSize, 2, FileType, EncType::S4_BPD1})
-        ->Args({FileSize, 3, FileType, EncType::S4_BPD1})
-        ->Args({FileSize, 4, FileType, EncType::S4_BPD1})
-        ->Args({FileSize, 0, FileType, EncType::S4_BPD2})
-        ->Args({FileSize, 1, FileType, EncType::S4_BPD2})
-        ->Args({FileSize, 2, FileType, EncType::S4_BPD2})
-        ->Args({FileSize, 3, FileType, EncType::S4_BPD2})
-        ->Args({FileSize, 4, FileType, EncType::S4_BPD2})
-        ->Args({FileSize, 0, FileType, EncType::S4_BPD4})
-        ->Args({FileSize, 1, FileType, EncType::S4_BPD4})
-        ->Args({FileSize, 2, FileType, EncType::S4_BPD4})
-        ->Args({FileSize, 3, FileType, EncType::S4_BPD4})
-        ->Args({FileSize, 4, FileType, EncType::S4_BPD4})
-        ->Args({FileSize, 0, FileType, EncType::S4_BPDM})
-        ->Args({FileSize, 1, FileType, EncType::S4_BPDM})
-        ->Args({FileSize, 2, FileType, EncType::S4_BPDM})
-        ->Args({FileSize, 3, FileType, EncType::S4_BPDM})
-        ->Args({FileSize, 4, FileType, EncType::S4_BPDM})
-    #endif
-    #if defined(SIMD_TARGET_AVX2)
-        ->Args({FileSize, 0, FileType, EncType::S8_BPD4})
-        ->Args({FileSize, 1, FileType, EncType::S8_BPD4})
-        ->Args({FileSize, 2, FileType, EncType::S8_BPD4})
-        ->Args({FileSize, 3, FileType, EncType::S8_BPD4})
-        ->Args({FileSize, 4, FileType, EncType::S8_BPD4})
-        ->Args({FileSize, 0, FileType, EncType::S8_BPDM})
-        ->Args({FileSize, 1, FileType, EncType::S8_BPDM})
-        ->Args({FileSize, 2, FileType, EncType::S8_BPDM})
-        ->Args({FileSize, 3, FileType, EncType::S8_BPDM})
-        ->Args({FileSize, 4, FileType, EncType::S8_BPDM})
-    #endif
-    #if defined(SIMD_TARGET_AVX512BW)
-        ->Args({FileSize, 0, FileType, EncType::S16_BPD4})
-        ->Args({FileSize, 1, FileType, EncType::S16_BPD4})
-        ->Args({FileSize, 2, FileType, EncType::S16_BPD4})
-        ->Args({FileSize, 3, FileType, EncType::S16_BPD4})
-        ->Args({FileSize, 4, FileType, EncType::S16_BPD4})
-        ->Args({FileSize, 0, FileType, EncType::S16_BPDM})
-        ->Args({FileSize, 1, FileType, EncType::S16_BPDM})
-        ->Args({FileSize, 2, FileType, EncType::S16_BPDM})
-        ->Args({FileSize, 3, FileType, EncType::S16_BPDM})
-        ->Args({FileSize, 4, FileType, EncType::S16_BPDM})
-    #endif
+        ->ArgsProduct({
+            {FileSize},
+            {0, 1, 2, 3, 4},
+            {FileType},
+            available_enc_types()
+        })
         ->Unit(benchmark::kSecond)
         ->Iterations(1);
 }

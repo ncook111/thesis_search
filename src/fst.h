@@ -15,7 +15,7 @@
 
 using StdCompactFst = fst::CompactUnweightedFst<fst::StdArc>;
 
-StdCompactFst read_from_disk(const std::string &file_name, const size_t read_pos = 0);
+std::unique_ptr<StdCompactFst> read_from_disk(const std::string &file_name, const size_t read_pos = 0);
 size_t write_to_disk(const StdCompactFst &fst, std::ofstream &file);
 size_t get_fst_pos(const std::string &file_name, const uint8_t fst_type);
 
@@ -174,13 +174,13 @@ template <MapType M>
 bool check_fst(const std::vector<M> &tokens, const std::string &file_name, const uint8_t fst_type) {
   std::cout << "read in fst: " << +fst_type << std::endl;
   size_t read_pos = get_fst_pos(file_name, fst_type);
-  StdCompactFst fst = read_from_disk(file_name, read_pos);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(file_name, read_pos);
 
   std::vector<M> out;
   if constexpr (std::is_same_v<M, std::string>) {
-    out = get_strings_from_fst(fst);  // already sorted
+    out = get_strings_from_fst(*fst);  // already sorted
   } else {
-    for (const auto &v : get_sequences_from_fst<std::vector<uint8_t>>(fst))
+    for (const auto &v : get_sequences_from_fst<std::vector<uint8_t>>(*fst))
       out.push_back(from_bytes<M>(v));
     std::ranges::sort(out);
   }

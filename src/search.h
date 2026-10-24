@@ -48,8 +48,8 @@ const std::optional<uint64_t> get_id_fst(const Q &query, const std::string &segm
   
   const uint8_t fst_type = (token_type == TokenType::FLOAT) ? FstType::FLOAT : FstType::ALPHA;
   size_t read_pos = get_fst_pos(segment_path, fst_type);
-  StdCompactFst fst = read_from_disk(segment_path, read_pos);
-  int id = get_id_from_fst(fst, query);
+  std::unique_ptr<StdCompactFst> fst = read_from_disk(segment_path, read_pos);
+  int id = get_id_from_fst(*fst, query);
 
   return (id >= 0) ? std::make_optional(id) : std::nullopt;
 }
@@ -196,8 +196,8 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
           if constexpr (std::is_same_v<Q, Range>) {
             ids = get_range_id_pef(range, segment_path, type);
           } else {
-            StdCompactFst fst = read_from_disk(segment_path, get_float_fst_pos(segment_path));
-            ids = get_id_range_from_fst(fst, range);
+            std::unique_ptr<StdCompactFst> fst = read_from_disk(segment_path, get_float_fst_pos(segment_path));
+            ids = get_id_range_from_fst(*fst, range);
           }
 
           // No token id found for current query

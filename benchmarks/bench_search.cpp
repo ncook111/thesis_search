@@ -30,7 +30,7 @@ template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void St
     args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType) + '/' + search_types[SearchType])
         ->ArgsProduct({
             {FileSize},
-            {0, 1, 2, 3},
+            {0, 1, 2, 3, 4},
             {FileType},
             available_enc_types()
         })
@@ -47,7 +47,8 @@ static const std::vector<std::vector<std::string>> queries = {
             "[*] = \"male\"", 
             "[*] = \"1994-01-01\"", 
             "[*] = \"Pavel\"", 
-            "[*] = \"53\""
+            "[*] = \"53\"",
+            "[*] = \"html\""
         },
 
         // union_search
@@ -55,7 +56,8 @@ static const std::vector<std::vector<std::string>> queries = {
             "[sex] = \"male\" | [sex] = \"female\"",
             "[dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}",
             "[authors] = \"Pavel\" | [authors] = \"Louis\"",
-            "[time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\""
+            "[time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\"",
+            "[*] = \"html\" | [*] = \"2024-11-01\""
         },
 
         // intersection_search
@@ -63,7 +65,8 @@ static const std::vector<std::vector<std::string>> queries = {
             "[sex] = \"male\" & [first_name] = \"bob\"",
             "[dob] = {1994-01-01,1995-12-31} & [acc_bal] = {0.1,2000.1}",
             "[authors] = \"Pavel\" & [authors] = \"Dimitry\"",
-            "[time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\""
+            "[time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\"",
+            "[*] = \"html\" & [*] = \"2024-11-01\""
         },
 
         // combination_search
@@ -71,7 +74,8 @@ static const std::vector<std::vector<std::string>> queries = {
             "([sex] = \"male\" | [sex] = \"female\") & [first_name] = \"bob\"",
             "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1}",
             "([authors] = \"Pavel\" | [authors] = \"Louis\") & [title] = \"Graph Decompositions\"",
-            "([time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\") | [time_stamp] = \"07:00:00\""
+            "([time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\") | [time_stamp] = \"07:00:00\"",
+            "[*] = \"html\" | [*] = \"2024-11-01\" | [*] = \"19:14:42\""
         },
 
         // complex combination_search
@@ -79,7 +83,8 @@ static const std::vector<std::vector<std::string>> queries = {
             "([sex] = \"male\" & [first_name] = \"bob\") | ([sex] = \"female\" & [first_name] = \"Gloria\" & ![city] = \"Kingsport\")",
             "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1} & ![acc_num] = \"74578716\"",
             "([authors] = \"Pavel\" | [authors] = \"Dimitry\" | [authors] = \"Alejandro\") & ([title] = \"Graph Decompositions\" | [title] = \"prompt diphoton\") & ![authors] = \"Berger\"",
-            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}"
+            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}",
+            "([*] = \"html\" | [*] = \"2024-11-01\" | [*] = \"19:14:42\") & [*] = \"{0, 99999}\""
         }
 }; 
 

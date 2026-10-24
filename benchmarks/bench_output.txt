@@ -1,3 +1,0 @@
-Data_1 medium csv Average Time: 1.4455 seconds
-Data_1 medium json Average Time: 2.128 seconds
-Data_1 medium logfmt Average Time: 1.8495 seconds
