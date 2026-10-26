@@ -219,6 +219,82 @@ gvb_encode_uint32_t(const std::vector<uint32_t> &nums) {
   return encoded;
 }
 
+void
+gvb_encode_uint32_t(const std::vector<uint32_t> &nums, std::vector<uint8_t> &encoded) {
+  size_t i;
+  for (i = 0; i + 3 < nums.size(); i += 4) {
+    // Process header
+    const uint32_t a = nums[i];
+    const uint32_t b = nums[i + 1];
+    const uint32_t c = nums[i + 2];
+    const uint32_t d = nums[i + 3];
+
+    const uint8_t length_a = get_length(a);
+    const uint8_t length_b = get_length(b);
+    const uint8_t length_c = get_length(c);
+    const uint8_t length_d = get_length(d);
+
+    encoded.emplace_back(length_a << 6 | length_b << 4 | length_c << 2 |
+                         length_d);
+
+    // Process a
+    put_value(encoded, a, length_a);
+
+    // Process b
+    put_value(encoded, b, length_b);
+
+    // Process c
+    put_value(encoded, c, length_c);
+
+    // Process d
+    put_value(encoded, d, length_d);
+  }
+
+  // If input is not divisible by 4, process last few ints and pad output so it
+  // is divisible by 4
+  if (uint8_t r = nums.size() % 4) {
+    uint32_t a, b, c;
+    uint8_t length_a, length_b, length_c;
+    uint8_t header = 0;
+
+    switch (r) {
+    case 3:
+      c = nums[i + 2];
+      length_c = get_length(c);
+      header |= length_c << 2;
+      [[fallthrough]];
+    case 2:
+      b = nums[i + 1];
+      length_b = get_length(b);
+      header |= length_b << 4;
+      [[fallthrough]];
+    case 1:
+      a = nums[i];
+      length_a = get_length(a);
+      header |= length_a << 6;
+    }
+
+    encoded.emplace_back(header);
+
+    // Process a
+    put_value(encoded, a, length_a);
+
+    // Process b
+    if (r > 1) {
+      put_value(encoded, b, length_b);
+    }
+
+    // Process c
+    if (r > 2) {
+      put_value(encoded, c, length_c);
+    }
+
+    // Pad remaining values
+    for (uint8_t k = r; k < 4; ++k)
+      encoded.emplace_back(0);
+  }
+}
+
 const std::vector<uint8_t>
 gvb_encode_uint64_t(const std::vector<uint64_t> &nums) {
   std::vector<uint8_t> encoded;
@@ -281,6 +357,31 @@ gvb_decode_uint32_t(const std::vector<uint8_t> &bytes) {
   }
 
   return decoded;
+}
+
+void
+gvb_decode_uint32_t(const std::vector<uint8_t> &bytes, std::vector<uint32_t> &decoded) {
+  std::vector<uint32_t> decoded;
+
+  const uint8_t *b_off = bytes.data();
+
+  while (b_off < bytes.data() + bytes.size()) {
+    const uint8_t header = b_off[0];
+
+    // Decode a
+    get_value_u32(header >> 6, b_off, decoded);
+
+    // Decode b
+    get_value_u32((header & 48) >> 4, b_off, decoded);
+
+    // Decode c
+    get_value_u32((header & 12) >> 2, b_off, decoded);
+
+    // Deocde d
+    get_value_u32((header & 3), b_off, decoded);
+
+    ++b_off;
+  }
 }
 
 const std::vector<uint64_t>

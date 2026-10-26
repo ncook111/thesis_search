@@ -24,7 +24,7 @@ static double get_percentile(std::vector<double> timings, double percentile) {
 
 static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->RangeMultiplier(10)
-     ->Range(10000, 10000000)   // 10k, 100k, 1M, 10M
+     ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M
      ->Unit(benchmark::kMicrosecond)
      ->Iterations(1)
      ->UseRealTime()
@@ -471,19 +471,17 @@ public:
 #endif
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
-    {
-        std::vector<uint8_t> encoded;
-        encoded = gvb_encode_uint32_t(input);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint8_t> encoded;
+    encoded = gvb_encode_uint32_t(input);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = gvb_encode_uint32_t(input);
+        gvb_encode_uint32_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -499,19 +497,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = delta_encode(input);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = delta_encode(input);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = delta_encode(input);
+        delta_encode(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -524,19 +520,17 @@ BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta)(benchmark::State& state) {
-    {
-        std::vector<uint8_t> encoded;
-        encoded = gvb_encode_uint32_t(delta_encode(input));
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint8_t> encoded;
+    encoded = gvb_encode_uint32_t(delta_encode(input));
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = gvb_encode_uint32_t(delta_encode(input));
+        gvb_encode_uint32_t(delta_encode(input), encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -597,7 +591,7 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
     std::vector<uint8_t> num_blocks;
     for (auto _ : state) {
         state.PauseTiming();
-    flush_cache(cache_size);
+        flush_cache(cache_size);
         encoded.clear();
         num_blocks.clear();
         state.ResumeTiming();
@@ -706,19 +700,17 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S4_BPD1);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S4_BPD1);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S4_BPD1);
+        encode_simdbp128(input, encoded, EncType::S4_BPD1);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -734,19 +726,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S4_BPD2);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S4_BPD2);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S4_BPD2);
+        encode_simdbp128(input, encoded, EncType::S4_BPD2);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -762,19 +752,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S4_BPD4);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S4_BPD4);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S4_BPD4);
+        encode_simdbp128(input, encoded, EncType::S4_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -790,19 +778,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S4_BPDM);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S4_BPDM);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S4_BPDM);
+        encode_simdbp128(input, encoded, EncType::S4_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -864,19 +850,17 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
-    {   
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S8_BPD4);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S8_BPD4);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S8_BPD4);
+        encode_simdbp128(input, encoded, EncType::S8_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -892,19 +876,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S8_BPDM);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S8_BPDM);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S8_BPDM);
+        encode_simdbp128(input, encoded, EncType::S8_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -966,19 +948,17 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S16_BPD4);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S16_BPD4);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S16_BPD4);
+        encode_simdbp128(input, encoded, EncType::S16_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -994,19 +974,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> encoded;
-        encoded = encode_simdbp128(input, EncType::S16_BPDM);
-        benchmark::DoNotOptimize(encoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> encoded;
+    encoded = encode_simdbp128(input, EncType::S16_BPDM);
+    benchmark::DoNotOptimize(encoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        encoded = encode_simdbp128(input, EncType::S16_BPDM);
+        encode_simdbp128(input, encoded, EncType::S16_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -1023,19 +1001,17 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
 #endif
 
 BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = gvb_decode_uint32_t(input);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> decoded;
+    decoded = gvb_decode_uint32_t(input);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = gvb_decode_uint32_t(input);
+        gvb_decode_uint32_t(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1050,19 +1026,17 @@ BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = delta_decode(input);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = delta_decode(input);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = delta_decode(input);
+        delta_decode(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1073,19 +1047,17 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = delta_decode(gvb_decode_uint32_t(input));
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = delta_decode(gvb_decode_uint32_t(input));
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = delta_decode(gvb_decode_uint32_t(input));
+        delta_decode(gvb_decode_uint32_t(input), decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1155,19 +1127,17 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S4_BPD1, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S4_BPD1, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S4_BPD1, orig_size);
+        decode_simdbp128(input, decoded, EncType::S4_BPD1, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1182,19 +1152,17 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S4_BPD2, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S4_BPD2, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S4_BPD2, orig_size);
+        decode_simdbp128(input, decoded, EncType::S4_BPD2, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1209,19 +1177,17 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S4_BPD4, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S4_BPD4, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S4_BPD4, orig_size);
+        decode_simdbp128(input, decoded, EncType::S4_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1236,19 +1202,17 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S4_BPDM, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S4_BPDM, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S4_BPDM, orig_size);
+        decode_simdbp128(input, decoded, EncType::S4_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1345,19 +1309,17 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX2)
 BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S8_BPD4, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-    
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S8_BPD4, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+    
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S8_BPD4, orig_size);
+        decode_simdbp128(input, decoded, EncType::S8_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1372,19 +1334,17 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S8_BPDM, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S8_BPDM, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S8_BPDM, orig_size);
+        decode_simdbp128(input, decoded, EncType::S8_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1441,19 +1401,17 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX512BW)
 BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S16_BPD4, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S16_BPD4, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S16_BPD4, orig_size);
+        decode_simdbp128(input, decoded, EncType::S16_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1468,19 +1426,17 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
-    {
-        std::vector<uint32_t> decoded;
-        decoded = decode_simdbp128(input, EncType::S16_BPDM, orig_size);
-        benchmark::DoNotOptimize(decoded);
-        benchmark::ClobberMemory();
-    }
-
     std::vector<uint32_t> decoded;
+    decoded = decode_simdbp128(input, EncType::S16_BPDM, orig_size);
+    benchmark::DoNotOptimize(decoded);
+    benchmark::ClobberMemory();
+
     for (auto _ : state) {
         state.PauseTiming();
+        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
-        decoded = decode_simdbp128(input, EncType::S16_BPDM, orig_size);
+        decode_simdbp128(input, decoded, EncType::S16_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }

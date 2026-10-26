@@ -62,6 +62,13 @@ std::vector<uint32_t> encode_simdbp128(const std::vector<uint32_t> &input, const
   return encoded;
 }
 
+void encode_simdbp128(const std::vector<uint32_t> &input, std::vector<uint32_t> &output, const uint8_t encoding) {
+  std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
+
+  size_t encoded_size = output.size();
+  codec->encodeArray(std::vector<uint32_t>(input).data(), input.size(), output.data(), encoded_size);
+}
+
 std::vector<uint32_t> decode_simdbp128(const std::vector<uint32_t> &input, const uint8_t encoding, size_t decoded_size) {
   std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
 
@@ -69,6 +76,12 @@ std::vector<uint32_t> decode_simdbp128(const std::vector<uint32_t> &input, const
   codec->decodeArray(input.data(), input.size(), decoded.data(), decoded_size);
 
   return decoded;
+}
+
+void decode_simdbp128(const std::vector<uint32_t> &input, std::vector<uint32_t> &output, const uint8_t encoding, size_t decoded_size) {
+  std::shared_ptr<IntegerCODEC> codec = get_codec(encoding);
+
+  codec->decodeArray(input.data(), input.size(), output.data(), decoded_size);
 }
 
 uint64_t write_bp128_to_file(const std::vector<uint32_t> &vec, std::ostream &file, const uint8_t encoding) {

@@ -17,6 +17,8 @@ const std::vector<uint8_t> vb_encode_num_uint64_t(uint64_t num);
 const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t &bytes_consumed);
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums);
+void gvb_encode_uint32_t(const std::vector<uint32_t> &nums, std::vector<uint8_t> &encoded);
+void gvb_decode_uint32_t(const std::vector<uint8_t> &bytes, std::vector<uint32_t> &decoded)
 const std::vector<uint32_t>
 gvb_decode_uint32_t(const std::vector<uint8_t> &bytes);
 const std::vector<uint8_t>
@@ -40,6 +42,14 @@ template <class F> std::vector<F> delta_encode(const std::vector<F> &nums) {
   return encoded;
 }
 
+template <class F> std::vector<F> delta_encode(const std::vector<F> &nums, std::vector<F> &encoded) {
+  F prev = 0;
+  for (const F &num : nums) {
+    encoded.push_back(num - prev);
+    prev = num;
+  }
+}
+
 template <class F> std::vector<F> delta_decode(const std::vector<F> &nums) {
   std::vector<F> decoded;
 
@@ -50,6 +60,14 @@ template <class F> std::vector<F> delta_decode(const std::vector<F> &nums) {
   }
 
   return decoded;
+}
+
+template <class F> std::vector<F> delta_decode(const std::vector<F> &nums, const std::vector<F> &decoded) {
+  F total = 0;
+  for (const F &num : nums) {
+    decoded.push_back(num + total);
+    total += num;
+  }
 }
 
 template <std::unsigned_integral T>
