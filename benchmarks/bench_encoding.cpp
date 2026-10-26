@@ -15,7 +15,7 @@
 
 using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
-constexpr size_t cache_size = 4096 * 1024;
+constexpr size_t cache_size = 2048 * 1024;
 
 static double get_percentile(std::vector<double> timings, double percentile) {
   std::sort(timings.begin(), timings.end());
@@ -481,6 +481,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = gvb_encode_uint32_t(input);
         benchmark::DoNotOptimize(encoded);
@@ -508,6 +509,7 @@ BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = delta_encode(input);
         benchmark::DoNotOptimize(encoded);
@@ -532,6 +534,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta)(benchmark::State& state) {
     std::vector<uint8_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = gvb_encode_uint32_t(delta_encode(input));
         benchmark::DoNotOptimize(encoded);
@@ -562,6 +565,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_pef)(benchmark::State& state) {
     Pef_Header header;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         header = partitioned_ef_encode<uint32_t>(encoded, input);
         benchmark::DoNotOptimize(encoded);
@@ -593,6 +597,7 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
     std::vector<uint8_t> num_blocks;
     for (auto _ : state) {
         state.PauseTiming();
+    flush_cache(cache_size);
         encoded.clear();
         num_blocks.clear();
         state.ResumeTiming();
@@ -620,6 +625,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d1)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_encode<RegularDeltaSIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -641,6 +647,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d2)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_encode<CoarseDelta2SIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -662,6 +669,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_encode<CoarseDelta4SIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -683,6 +691,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_encode<Max4DeltaSIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -707,6 +716,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S4_BPD1);
         benchmark::DoNotOptimize(encoded);
@@ -734,6 +744,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S4_BPD2);
         benchmark::DoNotOptimize(encoded);
@@ -761,6 +772,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S4_BPD4);
         benchmark::DoNotOptimize(encoded);
@@ -788,6 +800,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S4_BPDM);
         benchmark::DoNotOptimize(encoded);
@@ -814,6 +827,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s8_delta_encode<CoarseDelta4AVX2>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -835,6 +849,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s8_delta_encode<Max4DeltaAVX2>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -859,6 +874,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S8_BPD4);
         benchmark::DoNotOptimize(encoded);
@@ -886,6 +902,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S8_BPDM);
         benchmark::DoNotOptimize(encoded);
@@ -912,6 +929,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s16_delta_encode<CoarseDelta4AVX512>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -933,6 +951,7 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s16_delta_encode<Max4DeltaAVX512>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
@@ -957,6 +976,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S16_BPD4);
         benchmark::DoNotOptimize(encoded);
@@ -984,6 +1004,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> encoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         encoded = encode_simdbp128(input, EncType::S16_BPDM);
         benchmark::DoNotOptimize(encoded);
@@ -1012,6 +1033,7 @@ BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = gvb_decode_uint32_t(input);
         benchmark::DoNotOptimize(decoded);
@@ -1038,6 +1060,7 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = delta_decode(input);
         benchmark::DoNotOptimize(decoded);
@@ -1060,6 +1083,7 @@ BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = delta_decode(gvb_decode_uint32_t(input));
         benchmark::DoNotOptimize(decoded);
@@ -1086,6 +1110,7 @@ BENCHMARK_DEFINE_F(U32PEFDecode, cdec_pef)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = partitioned_ef_decode<uint32_t>(input, header.universe, header.n);
         benchmark::DoNotOptimize(decoded);
@@ -1112,6 +1137,7 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
     std::vector<uint64_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = fls_decode_uint64_t(input, num_blocks);
         benchmark::DoNotOptimize(decoded);
@@ -1139,6 +1165,7 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S4_BPD1, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1165,6 +1192,7 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S4_BPD2, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1191,6 +1219,7 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S4_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1217,6 +1246,7 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S4_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1240,6 +1270,7 @@ BENCHMARK_DEFINE_F(U32S4D1Decode, ddec_s4d1)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_decode<RegularDeltaSIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1259,6 +1290,7 @@ BENCHMARK_DEFINE_F(U32S4D2Decode, ddec_s4d2)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_decode<CoarseDelta2SIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1278,6 +1310,7 @@ BENCHMARK_DEFINE_F(U32S4D4Decode, ddec_s4d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_decode<CoarseDelta4SIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1297,6 +1330,7 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s4_delta_decode<Max4DeltaSIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1321,6 +1355,7 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S8_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1347,6 +1382,7 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S8_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1370,6 +1406,7 @@ BENCHMARK_DEFINE_F(U32S8D4Decode, ddec_s8d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s8_delta_decode<CoarseDelta4AVX2>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1389,6 +1426,7 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s8_delta_decode<Max4DeltaAVX2>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1413,6 +1451,7 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S16_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1439,6 +1478,7 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         decoded = decode_simdbp128(input, EncType::S16_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
@@ -1462,6 +1502,7 @@ BENCHMARK_DEFINE_F(U32S16D4Decode, ddec_s16d4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s16_delta_decode<CoarseDelta4AVX512>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
@@ -1481,6 +1522,7 @@ BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
+        flush_cache(cache_size);
         state.ResumeTiming();
         s16_delta_decode<Max4DeltaAVX512>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
