@@ -45,7 +45,17 @@ const uint64_t Metadata::get_segment_offset(const uint64_t file_id, const uint64
 }
 
 uint64_t Metadata::get_num_segments(const uint64_t file_id) const {
-  return all_files_segment_offsets[file_id].size();
+  return all_files_segment_offsets[file_id].size() - 1;
+}
+
+std::vector<uint64_t> Metadata::get_segment_sizes(const uint64_t file_id) const {
+  std::vector<uint64_t> segment_offsets = get_all_segment_offsets()[file_id];
+  std::vector<uint64_t> segment_sizes;
+  for (uint64_t j = 1; j < segment_offsets.size(); ++j) {
+    segment_sizes.push_back(segment_offsets[j] - segment_offsets[j-1]);
+  }
+
+  return segment_sizes;
 }
 
 uint64_t Metadata::get_segment_docid_modifier(const uint64_t file_id, const uint64_t segment_id) const {
@@ -74,6 +84,10 @@ const std::string &Metadata::get_file_name(const size_t file_id) const {
 
 const std::vector<std::string> &Metadata::get_file_mappings() const {
   return file_mappings;
+}
+
+uint64_t Metadata::get_num_files() const {
+  return file_mappings.size();
 }
 
 void Metadata::update_segment_offsets(std::vector<std::vector<uint64_t>> segment_offsets) {

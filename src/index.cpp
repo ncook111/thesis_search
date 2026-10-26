@@ -22,6 +22,8 @@
 #include <mutex>
 #include <thread>
 
+constexpr size_t PARTITION_SIZE = 128 << 20;
+
 void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, 
@@ -46,46 +48,51 @@ void create_index(const std::vector<std::string> &fields,
     }
   }
 
-  // Must be sorted for later fst creation
-  std::sort(files.begin(), files.end());
-
   std::vector<std::string> file_mappings_vec(files.size());
 
   std::vector<std::vector<uint64_t>> all_segment_offsets(files.size());
   std::vector<std::vector<uint64_t>> all_segment_docid_modifiers(files.size());
 
   for (size_t file_id = 0; file_id < files.size(); ++file_id) {
-    index_file(file_id, fields, index_dir, files[file_id], enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
+    file_mappings_vec[file_id] = files[file_id].filename().string();
+
+    std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
+
+    std::vector<uint64_t> segment_offsets;
+    std::vector<uint64_t> segment_docid_modifiers;
+    partition_file(files[file_id], PARTITION_SIZE, segment_offsets, segment_docid_modifiers);
+
+    if (segment_offsets.size() < 2) continue; // Empty file
+
+    all_segment_offsets[file_id] = std::move(segment_offsets);
+    all_segment_docid_modifiers[file_id] = std::move(segment_docid_modifiers);
   }
+
+  index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
   
   Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec), enc_type);
 
   create_checksum_file(index_dir_str);
 }
 
-void index_file(const size_t file_id,
-                const std::vector<std::string> &fields,
+void index_files(const std::vector<std::string> &fields,
                 const std::filesystem::path &index_dir,
-                const std::filesystem::path &data_path,
+                const std::filesystem::path &data_dir,
                 const uint8_t enc_type,
                 std::vector<std::string> &file_mappings_vec,
                 std::vector<std::vector<uint64_t>> &all_segment_offsets,
                 std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
                 const bool run_checks) {
-  file_mappings_vec[file_id] = data_path.filename().string();
+  
+  // Build segment tasks
+  std::vector<std::pair<uint64_t, uint64_t>> segment_tasks;
+  for (uint64_t i = 0; i < all_segment_offsets.size(); ++i) {
+    for (uint64_t j = 0; j + 1 < all_segment_offsets[i].size(); ++j) {
+      segment_tasks.push_back({i, j});
+    }
+  }
 
-  std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
-
-  std::vector<uint64_t> segment_offsets;
-  std::vector<uint64_t> segment_docid_modifiers;
-  partition_file(data_path, 256 << 20, segment_offsets, segment_docid_modifiers);
-
-  const size_t num_segments = segment_offsets.size() - 1;
-
-  if (segment_offsets.size() < 2) return; // Empty file
-
-  all_segment_offsets[file_id].assign(segment_offsets.begin(), segment_offsets.end() - 1);
-  all_segment_docid_modifiers[file_id].assign(segment_docid_modifiers.begin(), segment_docid_modifiers.end());
+  uint64_t num_segments = segment_tasks.size();
 
   const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
   std::cout << "  Threads Utilized: " << n_threads << "\n";
@@ -100,17 +107,19 @@ void index_file(const size_t file_id,
 
   auto worker = [&] {
     while (!stop.stop_requested()) {
-      const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
-      if (segment_id >= num_segments) break; // Last partition marks EOF
+      const size_t task_id = next.fetch_add(1, std::memory_order_relaxed);
+      if (task_id >= num_segments) break; // Last partition marks EOF
       
       try {
-        create_segment(data_path, fields, index_dir, file_id, segment_id, segment_offsets, enc_type, run_checks);
+        auto [file_id, segment_id] = segment_tasks[task_id];
+        std::string data_path = (data_dir / file_mappings_vec[file_id]).string();
+        create_segment(data_path, fields, index_dir, file_id, segment_id, all_segment_offsets[file_id], enc_type, run_checks);
         const size_t curr_completed = num_segments_completed.fetch_add(1, std::memory_order_relaxed) + 1;
 
         // Print progress indicator
         {
           std::lock_guard lk(print_mtx);
-          std::cout << "\rProcessed: " << (100.0 * curr_completed / num_segments) << "%" << std::flush;
+          std::cout << "\r  Processed: " << (100.0 * curr_completed / num_segments) << "%" << std::flush;
         }
       } catch (...) {
         std::lock_guard lk(err_mtx);
@@ -119,11 +128,10 @@ void index_file(const size_t file_id,
       }
     }
   };
-
   {
-    std::vector<std::jthread> pool;
-    pool.reserve(n_threads);
-    for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+  std::vector<std::jthread> pool;
+  pool.reserve(n_threads);
+  for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
   }
 
   // erase progress line
@@ -164,13 +172,13 @@ void update_index(const std::vector<std::string> &fields,
 
   std::vector<std::string> new_files;
 
-for (auto &f_cur : files_current) {
-  auto name = f_cur.filename().string();
-  if (std::ranges::find(files_indexed, name) == files_indexed.end())
-    new_files.push_back(name);
-}
+  for (auto &f_cur : files_current) {
+    auto name = f_cur.filename().string();
+    if (std::ranges::find(files_indexed, name) == files_indexed.end())
+      new_files.push_back(name);
+  }
 
-for (auto &f : new_files) std::cout << "New file: " << f << '\n';
+  for (auto &f : new_files) std::cout << "New file: " << f << '\n';
 
 
   std::vector<std::string> files_to_update;
@@ -196,23 +204,34 @@ for (auto &f : new_files) std::cout << "New file: " << f << '\n';
     }
   }
 
-  // Add in new files
-  // TODO: Fileids will be invalidated as files need to be sorted
+  // Add in new files (appended, so existing file_ids are unchanged)
   std::vector<std::string> file_mappings_vec = metadata.get_file_mappings();
   uint64_t file_id = file_mappings_vec.size();
   std::vector<std::vector<uint64_t>> all_segment_offsets = metadata.get_all_segment_offsets();
   std::vector<std::vector<uint64_t>> all_segment_docid_modifiers = metadata.get_all_segment_docid_modifiers();
 
-  // Make room for the new files so index_file can write at vec[file_id]
+  // Make room for the new files so they can be written at vec[file_id]
   const size_t total_files = file_mappings_vec.size() + new_files.size();
   file_mappings_vec.resize(total_files);
   all_segment_offsets.resize(total_files);
   all_segment_docid_modifiers.resize(total_files);
+
+  // Only new files get offsets here, so index_files skips the existing ones
+  std::vector<std::vector<uint64_t>> new_segment_offsets(total_files);
   for (auto &f : new_files) {
       std::cout << data_dir.string() + '/' + f << '\n';
-    index_file(file_id, fields, index_dir, data_dir.string() + '/' + f, metadata.get_enc_type(), file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
+    file_mappings_vec[file_id] = f;
+    partition_file(data_dir / f, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
+    if (new_segment_offsets[file_id].size() >= 2) {
+      all_segment_offsets[file_id].assign(new_segment_offsets[file_id].begin(), new_segment_offsets[file_id].end() - 1);
+    } else { // Empty file
+      new_segment_offsets[file_id].clear();
+      all_segment_docid_modifiers[file_id].clear();
+    }
     ++file_id;
   }
+
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks);
 
   metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
   
@@ -222,7 +241,80 @@ for (auto &f : new_files) std::cout << "New file: " << f << '\n';
   //   uint64_t old_file_size = metadata.get_file_size();
   //   uint64_t new_file_size = 
   // }
+}
 
+void merge_index(const std::vector<std::string> &fields,
+                  const std::string &index_dir_str,
+                  const std::string &data_dir_str, 
+                  const uint8_t enc_type,
+                  const bool run_checks) {
+  const std::filesystem::path index_dir = index_dir_str;
+  const std::filesystem::path data_dir = data_dir_str;
+
+  // Determine appropriate segments to merge
+  // Appropriate segments, when combined, remain below the 
+  // max segment parition size
+  Metadata metadata = Metadata::read(index_dir);
+
+  uint64_t num_files = metadata.get_num_files();
+
+  using Merge = std::tuple<uint64_t, uint64_t, uint64_t>;
+  std::vector<std::vector<Merge>> merges(num_files);
+  for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
+    uint64_t num_segments = metadata.get_num_segments(file_id);
+    std::vector<uint64_t> segment_offsets = metadata.get_all_segment_offsets()[file_id];
+    std::vector<uint64_t> segment_sizes = metadata.get_segment_sizes(file_id);
+
+    std::vector<Merge> proposed_merges;
+    
+    // Determine all segments that are below segment partition size when combined
+    uint64_t w_min = 0;
+    for (uint64_t w_min = 0; w_min < segment_sizes.size() - 1; ++w_min) {
+      for (uint64_t i = w_min + 1; i < segment_sizes.size(); ++i) {
+        uint64_t combined_size = segment_sizes[w_min] + segment_sizes[i];
+        if (segment_sizes[w_min] + segment_sizes[i] <= PARTITION_SIZE) {
+          proposed_merges.push_back({w_min, i, combined_size});
+        }
+      }
+    }
+
+    // Choose "best" segments to combine when segments overlap
+    // E.g Segments 1,2 and 2,3 can both be combined
+    // Choose combination with sizes closest to max partition size
+    std::sort(proposed_merges.begin(), proposed_merges.end(), 
+    [&](const Merge& a, const Merge& b) 
+    { 
+        uint64_t a_size = std::get<2>(a);
+        uint64_t b_size = std::get<2>(b);
+        return (PARTITION_SIZE - a_size) < (PARTITION_SIZE - b_size); 
+    });
+
+    std::unordered_set<uint64_t> used;
+    used.reserve(proposed_merges.size() * 2);
+
+    std::vector<Merge> result;
+    for (const auto& merge : proposed_merges) {
+        auto [a, b, size] = merge;
+        if (used.count(a) || used.count(b))
+            continue;
+        used.insert(a);
+        used.insert(b);
+        result.push_back(merge);
+    }
+
+    merges[file_id] = std::move(result);
+  }
+
+  
+}
+
+void merge_segments(const std::vector<std::string> &fields,
+                  const std::string &index_dir_str,
+                  const std::string &data_dir_str, 
+                  const uint8_t enc_type,
+                  const bool run_checks) {
+  const std::filesystem::path index_dir = index_dir_str;
+  const std::filesystem::path data_dir = data_dir_str;
 }
 
 void create_segment(const std::string &data_path,

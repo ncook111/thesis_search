@@ -41,8 +41,10 @@ class Metadata {
     uint64_t get_num_documents(const uint64_t file_id) const;
     int64_t get_file_id(const std::string &file_name) const;
     uint64_t get_file_size(const uint64_t file_id) const;
+    std::vector<uint64_t> get_segment_sizes(const uint64_t file_id) const;
     const std::string &get_file_name(const size_t file_id) const;
     const std::vector<std::string> &get_file_mappings() const;
+    uint64_t get_num_files() const;
     void update_segment_offsets(std::vector<std::vector<uint64_t>> segment_offsets);
     void update_segment_docid_modifiers(std::vector<std::vector<uint64_t>> segment_docid_modifiers);
     void update_file_mappings(std::vector<std::string> file_mappings);
