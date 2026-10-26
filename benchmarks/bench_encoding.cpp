@@ -11,6 +11,7 @@
 #include <benchmark/benchmark.h>
 #include <random>
 #include <set>
+#include <map>
 
 using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
@@ -130,12 +131,20 @@ std::vector<uint32_t> generate_uint32_t_dist(size_t size) {
     return std::vector<uint32_t>(input_set.begin(), input_set.end());
 }
 
+const std::vector<uint32_t> &dataset(size_t n) {
+    static std::map<size_t, std::vector<uint32_t>> cache;
+    auto it = cache.find(n);
+    if (it == cache.end())
+        it = cache.emplace(n, generate_uint32_t_dist(n)).first;
+    return it->second;
+}
+
 class U32Vec : public benchmark::Fixture {
 public:
     std::vector<uint32_t> input;
 
     void SetUp(::benchmark::State& state) {
-        input = generate_uint32_t_dist(state.range(0));
+        input = dataset(state.range(0));
     }
 
 
@@ -148,7 +157,7 @@ public:
     aligned_vec input;
 
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> tmp = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> tmp = dataset(state.range(0));
         input.assign(tmp.begin(), tmp.end());
     }
 
@@ -162,7 +171,7 @@ public:
     std::vector<uint64_t> input;
 
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> v32 = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> v32 = dataset(state.range(0));
         input.assign(v32.begin(), v32.end());
     }
 
@@ -175,7 +184,7 @@ class U32GVBDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
     void SetUp(::benchmark::State& state) {
-        input = gvb_encode_uint32_t(generate_uint32_t_dist(state.range(0)));
+        input = gvb_encode_uint32_t(dataset(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -186,7 +195,7 @@ class U32GVBDeltaDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
     void SetUp(::benchmark::State& state) {
-        input = gvb_encode_uint32_t(delta_encode(generate_uint32_t_dist(state.range(0))));
+        input = gvb_encode_uint32_t(delta_encode(dataset(state.range(0))));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -197,7 +206,7 @@ class U32DeltaDecode : public benchmark::Fixture {
 public:
     std::vector<uint32_t> input;
     void SetUp(::benchmark::State& state) {
-        input = delta_encode(generate_uint32_t_dist(state.range(0)));
+        input = delta_encode(dataset(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -210,7 +219,7 @@ public:
     Pef_Header header;
 
     void SetUp(::benchmark::State& state) {
-        header = partitioned_ef_encode<uint32_t>(input, generate_uint32_t_dist(state.range(0)));
+        header = partitioned_ef_encode<uint32_t>(input, dataset(state.range(0)));
     }
 
     void TearDown(::benchmark::State& state) {
@@ -225,7 +234,7 @@ public:
 
     void SetUp(::benchmark::State& state) {
         input.clear();
-        std::vector<uint32_t> v32 = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> v32 = dataset(state.range(0));;
         std::vector<uint64_t> v64(v32.begin(), v32.end());
         std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(v64, input);
         num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
@@ -241,7 +250,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));;
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S4_BPD1);
     }
@@ -255,7 +264,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S4_BPD2);
     }
@@ -269,7 +278,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S4_BPD4);
     }
@@ -283,7 +292,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));;
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S4_BPDM);
     }
@@ -297,7 +306,7 @@ public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<RegularDeltaSIMD>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        s4_delta_encode<RegularDeltaSIMD>(dataset(state.range(0)).data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -309,7 +318,7 @@ public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<CoarseDelta2SIMD>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        s4_delta_encode<CoarseDelta2SIMD>(dataset(state.range(0)).data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -321,7 +330,7 @@ public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<CoarseDelta4SIMD>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        s4_delta_encode<CoarseDelta4SIMD>(dataset(state.range(0)).data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -333,7 +342,7 @@ public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
         input.resize(state.range(0));
-        s4_delta_encode<Max4DeltaSIMD>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        s4_delta_encode<Max4DeltaSIMD>(dataset(state.range(0)).data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -347,7 +356,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));;
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S8_BPD4);
     }
@@ -361,7 +370,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));;
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S8_BPDM);
     }
@@ -374,8 +383,11 @@ class U32S8D4Decode : public benchmark::Fixture {
 public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
-        input.resize(state.range(0));
-        s8_delta_encode<CoarseDelta4AVX2>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        std::vector<uint32_t> tmp = dataset(state.range(0));
+        aligned_vec src(tmp.begin(), tmp.end());
+        input.resize(src.size());
+
+        s8_delta_encode<CoarseDelta4AVX2>(src.data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -386,8 +398,11 @@ class U32S8DMDecode : public benchmark::Fixture {
 public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
-        input.resize(state.range(0));
-        s8_delta_encode<Max4DeltaAVX2>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        std::vector<uint32_t> tmp = dataset(state.range(0));
+        aligned_vec src(tmp.begin(), tmp.end());
+        input.resize(src.size());
+
+        s8_delta_encode<Max4DeltaAVX2>(src.data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -401,7 +416,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S16_BPD4);
     }
@@ -415,7 +430,7 @@ public:
     std::vector<uint32_t> input;
     size_t orig_size;
     void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> vec = generate_uint32_t_dist(state.range(0));
+        std::vector<uint32_t> vec = dataset(state.range(0));
         orig_size = vec.size();
         input = encode_simdbp128(vec, EncType::S16_BPDM);
     }
@@ -428,8 +443,11 @@ class U32S16D4Decode : public benchmark::Fixture {
 public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
-        input.resize(state.range(0));
-        s16_delta_encode<CoarseDelta4AVX512>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        std::vector<uint32_t> tmp = dataset(state.range(0));
+        aligned_vec src(tmp.begin(), tmp.end());
+        input.resize(src.size());
+
+        s16_delta_encode<CoarseDelta4AVX512>(src.data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -440,8 +458,11 @@ class U32S16DMDecode : public benchmark::Fixture {
 public:
     aligned_vec input;
     void SetUp(::benchmark::State& state) {
-        input.resize(state.range(0));
-        s16_delta_encode<Max4DeltaAVX512>(generate_uint32_t_dist(state.range(0)).data(), input.data(), input.size());
+        std::vector<uint32_t> tmp = dataset(state.range(0));
+        aligned_vec src(tmp.begin(), tmp.end());
+        input.resize(src.size());
+
+        s16_delta_encode<Max4DeltaAVX512>(src.data(), input.data(), input.size());
     }
 
     void TearDown(::benchmark::State& state) {
