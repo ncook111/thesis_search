@@ -18,7 +18,7 @@ const uint64_t vb_decode_num_uint64_t(const std::vector<uint8_t> &bytes, size_t 
 const std::vector<uint8_t>
 gvb_encode_uint32_t(const std::vector<uint32_t> &nums);
 void gvb_encode_uint32_t(const std::vector<uint32_t> &nums, std::vector<uint8_t> &encoded);
-void gvb_decode_uint32_t(const std::vector<uint8_t> &bytes, std::vector<uint32_t> &decoded)
+void gvb_decode_uint32_t(const std::vector<uint8_t> &bytes, std::vector<uint32_t> &decoded);
 const std::vector<uint32_t>
 gvb_decode_uint32_t(const std::vector<uint8_t> &bytes);
 const std::vector<uint8_t>
