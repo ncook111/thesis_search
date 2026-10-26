@@ -361,8 +361,6 @@ gvb_decode_uint32_t(const std::vector<uint8_t> &bytes) {
 
 void
 gvb_decode_uint32_t(const std::vector<uint8_t> &bytes, std::vector<uint32_t> &decoded) {
-  std::vector<uint32_t> decoded;
-
   const uint8_t *b_off = bytes.data();
 
   while (b_off < bytes.data() + bytes.size()) {
