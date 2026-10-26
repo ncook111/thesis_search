@@ -24,7 +24,7 @@ static double get_percentile(std::vector<double> timings, double percentile) {
 
 static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->RangeMultiplier(10)
-     ->Range(1000, 1000000)   // 1k, 10k, 100k, 1M
+     ->Range(10000, 10000000)   // 10k, 100k, 1M, 10M
      ->Unit(benchmark::kMicrosecond)
      ->Iterations(1)
      ->UseRealTime()
