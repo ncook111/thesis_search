@@ -42,7 +42,7 @@ template <class F> std::vector<F> delta_encode(const std::vector<F> &nums) {
   return encoded;
 }
 
-template <class F> std::vector<F> delta_encode(const std::vector<F> &nums, std::vector<F> &encoded) {
+template <class F> void delta_encode(const std::vector<F> &nums, std::vector<F> &encoded) {
   F prev = 0;
   for (const F &num : nums) {
     encoded.push_back(num - prev);
@@ -62,7 +62,7 @@ template <class F> std::vector<F> delta_decode(const std::vector<F> &nums) {
   return decoded;
 }
 
-template <class F> std::vector<F> delta_decode(const std::vector<F> &nums, std::vector<F> &decoded) {
+template <class F> void delta_decode(const std::vector<F> &nums, std::vector<F> &decoded) {
   F total = 0;
   for (const F &num : nums) {
     decoded.push_back(num + total);
