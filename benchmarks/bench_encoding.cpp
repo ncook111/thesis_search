@@ -707,7 +707,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD1);
@@ -733,7 +732,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD2);
@@ -759,7 +757,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD4);
@@ -785,7 +782,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPDM);
@@ -857,7 +853,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S8_BPD4);
@@ -883,7 +878,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S8_BPDM);
@@ -955,7 +949,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S16_BPD4);
@@ -981,7 +974,6 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S16_BPDM);
@@ -1134,7 +1126,6 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD1, orig_size);
@@ -1159,7 +1150,6 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD2, orig_size);
@@ -1184,7 +1174,6 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD4, orig_size);
@@ -1209,7 +1198,6 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPDM, orig_size);
@@ -1316,7 +1304,6 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
     
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S8_BPD4, orig_size);
@@ -1341,7 +1328,6 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S8_BPDM, orig_size);
@@ -1408,7 +1394,6 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S16_BPD4, orig_size);
@@ -1433,7 +1418,6 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        decoded.clear();
         flush_cache(cache_size);
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S16_BPDM, orig_size);
