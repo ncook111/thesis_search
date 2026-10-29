@@ -37,14 +37,14 @@ def load_results(path):
     all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset"]
     return df.reindex(columns=all_cols)
 
-def plot_compression_by_file_type(df, file_size, dataset=None):
+def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index size ({file_size})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_size}_compression_by_file_type.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_compression_by_file_type.png"
     
     data = df[df["file_size"] == file_size].copy()
     if dataset is not None:
         data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/creation/dataset_{dataset}_{file_size}_compression.png"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_compression.png"
         title = f"Index size ({file_size}, dataset_{dataset})"
  
     totals = data.groupby(["file_type", "scheme"])[["index_size", "data_size"]].sum()
@@ -52,14 +52,14 @@ def plot_compression_by_file_type(df, file_size, dataset=None):
  
     save(out, compression, title, "Encoding Schemes", "file type", "% of input")
     
-def plot_compression_by_file_size(df, file_type, dataset=None):
+def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index size ({file_type})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_type}_compression_by_file_size.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_type}_compression_by_file_size.png"
     
     data = df[df["file_type"] == file_type].copy()
     if dataset is not None:
         data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/creation/dataset_{dataset}_{file_type}_compression.png"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_compression.png"
         title = f"Index size ({file_type}, dataset_{dataset})"
  
     totals = data.groupby(["file_size", "scheme"], observed=True)[["index_size", "data_size"]].sum()
@@ -67,9 +67,9 @@ def plot_compression_by_file_size(df, file_type, dataset=None):
  
     save(out, compression, title, "Encoding Schemes", "dataset size", "% of input")
 
-def plot_compression_by_dataset(df, file_size, file_type):
+def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index size ({file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_size}_{file_type}_compression_by_dataset.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_compression_by_dataset.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
 
@@ -77,14 +77,14 @@ def plot_compression_by_dataset(df, file_size, file_type):
 
     save(out, compression, title, "Encoding Schemes", "dataset", "% of input")
     
-def plot_throughput_by_file_type(df, file_size, dataset=None):
+def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index creation throughput ({file_size})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_size}_throughput_by_file_type.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_throughput_by_file_type.png"
     
     data = df[df["file_size"] == file_size].copy()
     if dataset is not None:
         data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/creation/dataset_{dataset}_{file_size}_throughput.png"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_throughput.png"
         title = f"Index creation throughput ({file_size}, dataset_{dataset})"
 
     totals = data.groupby(["file_type", "scheme"])[["data_size", "real_time"]].sum()
@@ -92,14 +92,14 @@ def plot_throughput_by_file_type(df, file_size, dataset=None):
 
     save(out, throughput, title, "Encoding Schemes", "file type", "MB/s")
     
-def plot_throughput_by_file_size(df, file_type, dataset=None):
+def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index creation throughput ({file_type})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_type}_throughput_by_file_size.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_type}_throughput_by_file_size.png"
     
     data = df[df["file_type"] == file_type].copy()
     if dataset is not None:
         data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/creation/dataset_{dataset}_{file_type}_throughput.png"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_throughput.png"
         title = f"Index creation throughput ({file_type}, dataset_{dataset})"
 
     totals = data.groupby(["file_size", "scheme"], observed=True)[["data_size", "real_time"]].sum()
@@ -107,9 +107,9 @@ def plot_throughput_by_file_size(df, file_type, dataset=None):
 
     save(out, throughput, title, "Encoding Schemes", "dataset size", "MB/s")
     
-def plot_throughput_by_dataset(df, file_size, file_type):
+def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index creation throughput ({file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/creation/{file_size}_{file_type}_throughput_by_dataset.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_throughput_by_dataset.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
 
@@ -118,29 +118,42 @@ def plot_throughput_by_dataset(df, file_size, file_type):
 
     save(out, throughput, title, "Encoding Schemes", "dataset", "MB/s")
 
+def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
+    title = f"Index size ({file_size})"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_index_size_by_file_type.png"
+
+    data = df[df["file_size"] == file_size]
+    if dataset is not None:
+        data = data[data["dataset"] == dataset]
+        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_index_size.png"
+        title = f"Index size ({file_size}, dataset_{dataset})"
+
+    index_size = (
+        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1_000_000
+    ).unstack("scheme")
+
+    save(out, index_size, title, "Encoding Schemes", "file type", "Index size (MB)")
 
 if __name__ == "__main__":
-    df = load_results(f"{RESULTS_DIR}/creation/creation.json")
     
-    os.makedirs(f"{RESULTS_DIR}/figures/creation", exist_ok=True)
+    # Single Threaded Chart Creation
+    df = load_results(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
+    
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_single_threaded", exist_ok=True)
     
     file_sizes = df["file_size"].unique()
     file_types = df["file_type"].unique()
-    datasets = [None, 1, 2, 3, 4, 5]
+    datasets = [None, 1, 2, 3, 4]
     
     for dataset in datasets:
-        for type in file_types:
-            plot_compression_by_file_size(df, type, dataset)
-            plot_throughput_by_file_size(df, type, dataset)
+        plot_compression_by_file_type(df, "small", "creation_single_threaded", dataset)
+        plot_throughput_by_file_type(df, "small", "creation_single_threaded", dataset)
     
-        for size in file_sizes:
-            plot_compression_by_file_type(df, size, dataset)
-            plot_throughput_by_file_type(df, size, dataset)
-    
-    for type in file_types:
-        for size in file_sizes:
-            plot_compression_by_dataset(df, size, type)
-            plot_throughput_by_dataset(df, size, type)
+    plot_index_size_by_file_type(df, "small", "creation_single_threaded", None)
+
+    for file_type in file_types:
+        plot_compression_by_dataset(df, "small", file_type, "creation_single_threaded")
+        plot_throughput_by_dataset(df, "small", file_type, "creation_single_threaded")
 
 
 

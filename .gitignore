@@ -12,16 +12,4 @@
 /tests/test_data/all_indexes/*
 .DS_Store
 benchmarks/bench_data/*
-!benchmarks/bench_data/all_input_data/
-benchmarks/bench_data/all_input_data/*
-benchmarks/warc
-!benchmarks/bench_data/all_input_data/csv/
-!benchmarks/bench_data/all_input_data/json/
-benchmarks/bench_data/all_input_data/csv/*
-benchmarks/bench_data/all_input_data/json/*
-!benchmarks/bench_data/all_input_data/csv/small_data/
-!benchmarks/bench_data/all_input_data/json/small_data/
-!benchmarks/bench_data/temp_indexes/
-benchmarks/bench_data/temp_indexes/*
-!benchmarks/bench_data/temp_indexes/index_search/
-benchmarks/bench_data/temp_indexes/index_search/*
+benchmarks/bench_data/
