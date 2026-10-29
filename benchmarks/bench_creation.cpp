@@ -80,7 +80,7 @@ uint64_t get_folder_size(std::string path) {
 
 BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
     for (auto _ : state) {
-        create_mode(index_path, data_path + bench_path, {}, enc_type, partition_size, num_threads);
+        create_mode(index_path, data_path + bench_path, {}, enc_type, partition_size << 20, num_threads);
         state.PauseTiming();
         const uint64_t data_size = get_folder_size(data_path + bench_path);
         const uint64_t index_size = get_folder_size(index_path);

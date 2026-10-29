@@ -70,7 +70,7 @@ void create_index(const std::vector<std::string> &fields,
     all_segment_docid_modifiers[file_id] = std::move(segment_docid_modifiers);
   }
 
-  index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks, num_threads);
+  index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, num_threads, run_checks);
   
   Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec), enc_type);
 
@@ -234,7 +234,7 @@ void update_index(const std::vector<std::string> &fields,
     ++file_id;
   }
 
-  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks, 1);
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, 1, run_checks);
 
   metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
   
@@ -247,7 +247,7 @@ void update_index(const std::vector<std::string> &fields,
     partition_file(data_dir / f, 0, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
   }
 
-  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks, 1);
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, 1, run_checks);
   metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
 }
 
@@ -317,8 +317,6 @@ void merge_index(const std::vector<std::string> &fields,
         merge_segments(fields, index_dir_str, data_dir_str, metadata.get_enc_type());
     }
   }
-
-
 }
 
 void merge_segments(const std::vector<std::string> &fields,
