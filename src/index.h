@@ -30,6 +30,8 @@ void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str,
                   const uint8_t enc_type,
+                  const uint32_t partition_size = 128 << 20,
+                  const uint8_t num_threads = std::thread::hardware_concurrency(),
                   const bool run_checks = false);
 void update_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
@@ -42,7 +44,8 @@ void index_files(const std::vector<std::string> &fields,
                 std::vector<std::string> &file_mappings_vec,
                 std::vector<std::vector<uint64_t>> &all_segment_offsets,
                 std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
-                const bool run_checks);
+                const uint8_t num_threads,
+                const bool run_checks = false);
 void create_segment(const std::string &data_path,
                     const std::vector<std::string> &fields,
                     const std::filesystem::path &index_dir,
@@ -51,6 +54,14 @@ void create_segment(const std::string &data_path,
                     const std::vector<uint64_t> &segment_offsets,
                     const uint8_t enc_type,
                     const bool run_checks);
+void merge_index(const std::vector<std::string> &fields,
+                  const std::string &index_dir_str,
+                  const std::string &data_dir_str, 
+                  const bool run_checks);
+void merge_segments(const std::vector<std::string> &fields,
+  const std::string &index_dir_str,
+  const std::string &data_dir_str, 
+  const bool run_checks);
 const std::vector<uint32_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type);
 const std::vector<uint32_t> get_tok_offsets_from_file(

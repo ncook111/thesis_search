@@ -28,6 +28,8 @@ void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, 
                   const uint8_t enc_type,
+                  const uint32_t partition_size,
+                  const uint8_t num_threads,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path data_dir = data_dir_str;
@@ -60,7 +62,7 @@ void create_index(const std::vector<std::string> &fields,
 
     std::vector<uint64_t> segment_offsets;
     std::vector<uint64_t> segment_docid_modifiers;
-    partition_file(files[file_id], PARTITION_SIZE, segment_offsets, segment_docid_modifiers);
+    partition_file(files[file_id], 0, partition_size, segment_offsets, segment_docid_modifiers);
 
     if (segment_offsets.size() < 2) continue; // Empty file
 
@@ -68,7 +70,7 @@ void create_index(const std::vector<std::string> &fields,
     all_segment_docid_modifiers[file_id] = std::move(segment_docid_modifiers);
   }
 
-  index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks);
+  index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, run_checks, num_threads);
   
   Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec), enc_type);
 
@@ -82,6 +84,7 @@ void index_files(const std::vector<std::string> &fields,
                 std::vector<std::string> &file_mappings_vec,
                 std::vector<std::vector<uint64_t>> &all_segment_offsets,
                 std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
+                const uint8_t num_threads,
                 const bool run_checks) {
   
   // Build segment tasks
@@ -94,7 +97,7 @@ void index_files(const std::vector<std::string> &fields,
 
   uint64_t num_segments = segment_tasks.size();
 
-  const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
+  const size_t n_threads = std::min<size_t>(num_segments, num_threads);
   std::cout << "  Threads Utilized: " << n_threads << "\n";
   std::cout << "\r  Processed: " << "0.00%" << std::flush;
 
@@ -221,7 +224,7 @@ void update_index(const std::vector<std::string> &fields,
   for (auto &f : new_files) {
       std::cout << data_dir.string() + '/' + f << '\n';
     file_mappings_vec[file_id] = f;
-    partition_file(data_dir / f, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
+    partition_file(data_dir / f, 0, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
     if (new_segment_offsets[file_id].size() >= 2) {
       all_segment_offsets[file_id].assign(new_segment_offsets[file_id].begin(), new_segment_offsets[file_id].end() - 1);
     } else { // Empty file
@@ -231,22 +234,26 @@ void update_index(const std::vector<std::string> &fields,
     ++file_id;
   }
 
-  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks);
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks, 1);
 
   metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
   
-  // // Update existing files
-  // for (auto &f : files_to_update) {
-  //   uint64_t file_id = metadata.get_file_id(f);
-  //   uint64_t old_file_size = metadata.get_file_size();
-  //   uint64_t new_file_size = 
-  // }
+  // Update existing files
+  new_segment_offsets.clear();
+  for (auto &f : files_to_update) {
+    uint64_t file_id = metadata.get_file_id(f);
+    uint64_t old_file_size = metadata.get_file_size(file_id);
+    uint64_t new_file_size = std::filesystem::file_size(data_dir / f);
+    partition_file(data_dir / f, 0, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
+  }
+
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, run_checks, 1);
+  metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
 }
 
 void merge_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, 
-                  const uint8_t enc_type,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path data_dir = data_dir_str;
@@ -305,13 +312,18 @@ void merge_index(const std::vector<std::string> &fields,
     merges[file_id] = std::move(result);
   }
 
-  
+  for (auto &per_file_merges : merges) {
+    for (auto &merge : per_file_merges) {
+        merge_segments(fields, index_dir_str, data_dir_str, metadata.get_enc_type());
+    }
+  }
+
+
 }
 
 void merge_segments(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, 
-                  const uint8_t enc_type,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path data_dir = data_dir_str;

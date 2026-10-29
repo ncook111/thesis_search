@@ -13,7 +13,7 @@
 #include <filesystem>
 #include <boost/program_options.hpp>
 
-int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type) {
+int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type, const uint32_t partition_size, const uint8_t num_threads) {
   if (std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Index already exists\n";
     return 1;
@@ -25,7 +25,7 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
   }
 
   try {
-    create_index(fields, index_path, data_path, enc_type);
+    create_index(fields, index_path, data_path, enc_type, partition_size, num_threads);
   } catch (const std::exception &e) {
     std::cout << "Error when creating index: " << e.what() << "\n";
     return 1;

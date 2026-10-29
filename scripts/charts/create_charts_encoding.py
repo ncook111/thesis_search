@@ -33,7 +33,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second") / 1e9 # Convert into GB/s
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        throughput.plot(ax=ax, marker="o", logx=True, title=title, ylabel="GB/s")
+        throughput.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="GB/s")
         
         ax.legend(title=f"{key_title} Schemes")
         ax.minorticks_off()
@@ -51,7 +51,7 @@ def plot_compression(df, type, key_title):
     compression = data.pivot(index="size", columns="scheme", values="compression") * 100
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    compression.plot(ax=ax, marker="o", logx=True, title=title, ylabel="% of input")
+    compression.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="% of input")
     
     ax.legend(title=f"{key_title} Schemes")
     ax.minorticks_off()
@@ -69,7 +69,7 @@ def plot_bits_int(df, type, key_title):
     bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int")
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    bits_int.plot(ax=ax, marker="o", logx=True, title=title, ylabel="bits/int")
+    bits_int.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="bits/int")
     
     ax.legend(title=f"{key_title} Schemes")
     ax.minorticks_off()

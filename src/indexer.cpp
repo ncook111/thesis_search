@@ -46,6 +46,20 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
+  uint32_t partition_size;
+  if (vm.count("partition")) {
+    partition_size = vm["partition"].as<uint32_t>() << 20; // Convert into MB
+  } else {
+    partition_size = 128 << 20; // Default
+  }
+
+  uint32_t num_threads;
+  if (vm.count("threads")) {
+    num_threads = vm["threads"].as<uint8_t>();
+  } else {
+    num_threads = std::thread::hardware_concurrency(); // Default
+  }
+
   std::string data_path;
   if (vm.count("data-path"))
     data_path = vm["data-path"].as<std::string>();
@@ -73,7 +87,7 @@ int main(int argc, const char *argv[]) {
   }
 
   if (act_mode == "c" || act_mode == "create") { // Index create mode
-    return create_mode(index_path, data_path, fields, enc_type);
+    return create_mode(index_path, data_path, fields, enc_type, partition_size, num_threads);
   } else if (act_mode == "u" || act_mode ==  "update") { // Index update mode
     return update_mode(index_path, data_path, fields);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode

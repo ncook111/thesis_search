@@ -120,31 +120,53 @@ void update_fields_fst_pos(std::ofstream &file, const uint64_t value) {
   file.seekp(current_pos);
 }
 
-void partition_file(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifers) {
+void partition_file(const std::string &file_path, const uint64_t file_offset, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifers) {
   uint8_t type = str_to_file_type(file_path);
   switch (type) {
     case FileType::CSV:
-      return partition_file_csv(file_path, segment_size, segment_offsets, segment_docid_modifers);
+      return partition_file_csv(file_path, file_offset, segment_size, segment_offsets, segment_docid_modifers);
     case FileType::JSON:
-      return partition_file_json(file_path, segment_size, segment_offsets, segment_docid_modifers);
+      return partition_file_json(file_path, file_offset, segment_size, segment_offsets, segment_docid_modifers);
     case FileType::LOGFMT:
-      return partition_file_logfmt(file_path, segment_size, segment_offsets, segment_docid_modifers);
+      return partition_file_logfmt(file_path, file_offset, segment_size, segment_offsets, segment_docid_modifers);
     default:
       throw std::invalid_argument("File type not supported");
   }
 }
 
-void partition_file_csv(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
+void partition_file_csv(const std::string &file_path, const uint64_t file_offset, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
+  // Open at front of file to get column names
+  std::vector<std::string> col_names;
+  {
+    csv::CSVFormat format;
+    format.variable_columns(csv::VariableColumnPolicy::THROW);
+    col_names = csv::get_col_names(file_path, format);
+  }
+
+  // Reopen starting from file_offset
+  auto in = std::make_unique<std::ifstream>(file_path, std::ios::binary);
+  if (!*in) throw std::runtime_error("cannot open " + file_path);
+  in->seekg(static_cast<std::streamoff>(file_offset));
+  if (!*in) throw std::runtime_error("seek failed");
+
   csv::CSVFormat format;
-  format.variable_columns(csv::VariableColumnPolicy::THROW);
-  csv::CSVReader reader(file_path, format);
+  format.column_names(col_names)
+        .delimiter(',')
+        .variable_columns(csv::VariableColumnPolicy::THROW);
+
+  // Header already read, so disregard it if reading from start of file
+  if (file_offset == 0)
+    format.header_row(0);
+
+  csv::CSVReader reader(std::move(in), format);
 
   bool first = true;
   uint64_t segment_start = 0;
   uint64_t num_documents = 0;
   segment_docid_modifiers.push_back(num_documents);
   for (const csv::CSVRow &row : reader) { // Input iterator
-    const uint64_t pos = row.byte_offset();
+    // byte_offset() is relative to the stream start (file_offset)
+    const uint64_t pos = file_offset + row.byte_offset();
 
     if (first) { 
       segment_start = pos; 
@@ -167,7 +189,7 @@ void partition_file_csv(const std::string &file_path, const uint64_t segment_siz
   segment_docid_modifiers.push_back(num_documents);
 }
 
-void partition_file_json(const std::string &file_path, const uint64_t segment_size,
+void partition_file_json(const std::string &file_path, const uint64_t file_offset, const uint64_t segment_size,
                          std::vector<uint64_t> &segment_offsets,
                          std::vector<uint64_t> &segment_docid_modifiers) {
   using namespace simdjson;
@@ -179,7 +201,7 @@ void partition_file_json(const std::string &file_path, const uint64_t segment_si
 
   ondemand::parser parser;
   ondemand::document_stream stream;
-  auto error = parser.iterate_many(json.data(), json.size(), BATCH_SIZE).get(stream);
+  auto error = parser.iterate_many(json.data() + file_offset, json.size() - file_offset, BATCH_SIZE).get(stream);
   if (error) throw std::runtime_error(std::string("iterate_many: ") + error_message(error));
 
   uint64_t segment_start = 0;
@@ -190,7 +212,8 @@ void partition_file_json(const std::string &file_path, const uint64_t segment_si
     if (auto err = (*j).error())
       throw std::runtime_error(std::string("document error: ") + error_message(err));
 
-    const uint64_t pos = j.current_index();
+    // current_index() is relative to the stream start (file_offset)
+    const uint64_t pos = file_offset + j.current_index();
     if (num_documents == 0) {
       segment_start = pos;
     } else if (pos - segment_start > segment_size) {
@@ -206,8 +229,8 @@ void partition_file_json(const std::string &file_path, const uint64_t segment_si
   segment_docid_modifiers.push_back(num_documents);
 }
 
-void partition_file_logfmt(const std::string &file_path, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
-  LogfmtParser parser = LogfmtParser(file_path);
+void partition_file_logfmt(const std::string &file_path, const uint64_t file_offset, const uint64_t segment_size, std::vector<uint64_t> &segment_offsets, std::vector<uint64_t> &segment_docid_modifiers) {
+  LogfmtParser parser = LogfmtParser(file_path, file_offset, std::filesystem::file_size(file_path));
 
   bool first = true;
   uint64_t segment_start = 0;

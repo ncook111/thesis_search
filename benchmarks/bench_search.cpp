@@ -1,16 +1,30 @@
 #include <benchmark/benchmark.h>
 #include <filesystem>
 #include <mutex>
+#include <cstring>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <vector>
 #include "cache_flush.h"
 #include "../src/ingest.h"
 #include "../src/helper.h"
 
-constexpr size_t cache_size = 4096 * 1024;
+constexpr size_t cache_size = 2048 * 1024;
 
 static std::string csv_data_path = BENCH_DATA_DIR "/all_input_data/csv/";
 static std::string json_data_path = BENCH_DATA_DIR "/all_input_data/json/";
 static std::string logfmt_data_path = BENCH_DATA_DIR "/all_input_data/logfmt/";
 static std::string index_path = BENCH_DATA_DIR "/temp_indexes/index_search/";
+
+static void reset_rss_hwm() { std::ofstream("/proc/self/clear_refs") << "5"; }
+
+static size_t read_rss_kb(const char* key) {
+    std::ifstream f("/proc/self/status");
+    for (std::string line; std::getline(f, line);)
+        if (line.rfind(key, 0) == 0) return std::stoul(line.substr(std::strlen(key)));
+    return 0;
+}
 
 static double get_percentile(std::vector<double> timings, double percentile) {
   std::sort(timings.begin(), timings.end());

@@ -4,7 +4,7 @@
 #include "../src/ingest.h"
 #include "../src/helper.h"
 
-constexpr size_t cache_size = 4096 * 1024;
+constexpr size_t cache_size = 2048 * 1024;
 
 static std::string csv_data_path = BENCH_DATA_DIR "/all_input_data/csv/";
 static std::string json_data_path = BENCH_DATA_DIR "/all_input_data/json/";
@@ -15,13 +15,16 @@ static const std::vector<std::string> datasets = {"small", "medium", "large"};
 
 template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexCreate/") + file_size_to_str(FileSize) + "/" + file_type_to_str(FileType))
-        ->ArgNames({"file_size", "dataset", "file_type", "scheme"})
+        ->ArgNames({"file_size", "dataset", "file_type", "scheme", "partition_size", "num_threads"})
         ->ArgsProduct({
             {FileSize},
-            {0, 1, 2, 3, 4},
+            {0, 1, 2, 3},
             {FileType},
-            available_enc_types()
+            available_enc_types(),
+            {8, 16, 32, 64, 128, 256, 512, 1024},
+            {1, 2, 4, 6, 8, 10, 12, 14, 16}
         })
+        ->UseRealTime()
         ->Unit(benchmark::kSecond)
         ->Iterations(1);
 }
@@ -30,15 +33,19 @@ public:
     std::string bench_path;
     std::string data_path;
     uint8_t enc_type;
+    uint32_t partition_size;
+    uint32_t num_threads;
     void SetUp(::benchmark::State& state) {
         int dataset_size = state.range(0);
         int dataset_number = state.range(1);
         uint8_t file_type = state.range(2);
         enc_type = state.range(3);
+        partition_size = state.range(4);
+        num_threads = state.range(5);
         std::filesystem::remove_all(index_path);
         std::filesystem::create_directories(std::filesystem::path(index_path).parent_path());
         std::string dataset = datasets[dataset_size];
-        state.SetLabel(std::string(enc_type_to_str(enc_type) + ',' + file_size_to_str(dataset_size) + "," + file_type_to_str(file_type) + "," + std::to_string(dataset_number)));
+        state.SetLabel(std::string(enc_type_to_str(enc_type) + ',' + file_size_to_str(dataset_size) + "," + file_type_to_str(file_type) + "," + std::to_string(dataset_number) + "," + std::to_string(partition_size) + "," + std::to_string(num_threads)));
         bench_path = dataset + "_data/data_" + std::to_string(dataset_number+1);
         
         switch (file_type) {
@@ -73,7 +80,7 @@ uint64_t get_folder_size(std::string path) {
 
 BENCHMARK_DEFINE_F(IndexCreate, index_create)(benchmark::State& state) {
     for (auto _ : state) {
-        create_mode(index_path, data_path + bench_path, {}, enc_type);
+        create_mode(index_path, data_path + bench_path, {}, enc_type, partition_size, num_threads);
         state.PauseTiming();
         const uint64_t data_size = get_folder_size(data_path + bench_path);
         const uint64_t index_size = get_folder_size(index_path);
