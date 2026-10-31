@@ -24,7 +24,6 @@ static size_t read_rss_kb(const char* key) {
 #endif
 
 static benchmark::Counter kb_counter(double kb) {
-    // Report in bytes so the output shows KiB/MiB/GiB with 1024 scaling
     return benchmark::Counter(kb * 1024.0, benchmark::Counter::kDefaults,
                               benchmark::Counter::kIs1024);
 }

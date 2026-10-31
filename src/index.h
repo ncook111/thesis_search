@@ -329,9 +329,8 @@ bool check_offsets_file_by_type(
         }
         case EncType::FLS:
         {
-            std::vector<uint64_t> vec64(offsets.begin(), offsets.end());
             std::vector<uint8_t> enc_data;
-            std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec64, enc_data);
+            std::vector<uint8_t> enc_num_blocks = fls_encode_uint32_t(offsets, enc_data);
             const uint64_t enc_data_size = enc_data.size();
             const uint64_t enc_num_blocks_size = enc_num_blocks.size();
             local_offset += enc_data_size + enc_num_blocks_size;
