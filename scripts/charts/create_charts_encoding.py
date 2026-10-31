@@ -24,6 +24,18 @@ def load_results_encoding_decoding(path):
     all_cols = ["scheme", "size", "stat", "compression", "bytes_per_second", "bits_per_int"]
     return df.reindex(columns=all_cols)
 
+def load_results_memory_usage(path):
+    with open(path) as f:
+        df = pd.json_normalize(json.load(f)["benchmarks"])
+
+    parts = df["run_name"].str.split("/")
+    df["run_type"] = parts.str[0]
+    df["scheme"] = parts.str[1].str.split("_", n=1).str[1]
+    df["size"] = parts.str[2].astype(int)
+    
+    all_cols = ["scheme", "size", "peak_delta", "run_name"]
+    return df.reindex(columns=all_cols)
+
 def plot_throughput(df, chart_type, key_title, title_type):
     stats = ["median", "p10", "p1"]
     for stat in stats:
@@ -79,6 +91,9 @@ def plot_bits_int(df, type, key_title):
     plt.close(fig)
     print(f"wrote {out}")
     
+def plot_memory_usage_by_scheme(df, type_filter, type_name, key_title, title_type):
+    title = f"{title_type} Memory Usage By Scheme"
+    pass
     
 
 if __name__ == "__main__":
@@ -86,6 +101,7 @@ if __name__ == "__main__":
     df_comp_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/compression_decoding.json")
     df_delta_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_encoding.json")
     df_delta_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_decoding.json")
+    df_memory_usage = load_results_memory_usage(f"{RESULTS_DIR}/encodings/memory_usage.json")
     
     os.makedirs(f"{RESULTS_DIR}/figures/encoding", exist_ok=True)
     
@@ -95,4 +111,8 @@ if __name__ == "__main__":
     plot_bits_int(df_comp_dec, "compression_decoding", "Compression")
     plot_throughput(df_delta_enc, "delta_encoding", "Delta", "Encoding")
     plot_throughput(df_delta_dec, "delta_decoding", "Delta", "Decoding")
+    plot_memory_usage_by_scheme(df_memory_usage, "cenc", "compression_encoding", "Compression", "Compression Encoding")
+    plot_memory_usage_by_scheme(df_memory_usage, "cdec", "compression_decoding", "Compression", "Compression Decoding")
+    plot_memory_usage_by_scheme(df_memory_usage, "denc", "delta_encoding", "Delta", "Delta Encoding")
+    plot_memory_usage_by_scheme(df_memory_usage, "ddec", "delta_decoding", "Delta", "Delta Decoding")
     

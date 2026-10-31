@@ -31,6 +31,11 @@ static size_t read_rss_kb(const char* key) {
 }
 #endif
 
+static benchmark::Counter kb_counter(double kb) {
+    return benchmark::Counter(kb * 1024.0, benchmark::Counter::kDefaults,
+                              benchmark::Counter::kIs1024);
+}
+
 static double get_percentile(std::vector<double> timings, double percentile) {
   std::sort(timings.begin(), timings.end());
   return timings[static_cast<size_t>(percentile * (timings.size() - 1))];
