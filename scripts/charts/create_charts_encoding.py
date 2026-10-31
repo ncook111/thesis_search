@@ -29,18 +29,18 @@ def load_results_memory_usage(path):
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
     parts = df["run_name"].str.split("/")
-    df["run_type"] = parts.str[0]
+    df["run_type"] = parts.str[1].str.split("_", n=1).str[0]
     df["scheme"] = parts.str[1].str.split("_", n=1).str[1]
     df["size"] = parts.str[2].astype(int)
-    
-    all_cols = ["scheme", "size", "peak_delta", "run_name"]
+
+    all_cols = ["run_type", "scheme", "size", "peak_delta", "run_name"]
     return df.reindex(columns=all_cols)
 
 def plot_throughput(df, chart_type, key_title, title_type):
     stats = ["median", "p10", "p1"]
     for stat in stats:
         title = f"{title_type} Throughput ({stat})"
-        out = f"{RESULTS_DIR}/figures/encoding/{chart_type}_throughput_{stat}.png"
+        out = f"{RESULTS_DIR}/figures/encodings_warm/{chart_type}_throughput_{stat}.png"
         data = df[df["stat"] == stat]
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second") / 1e9 # Convert into GB/s
 
@@ -57,7 +57,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
 
 def plot_compression(df, type, key_title):
     title = "Compressed Size"
-    out = f"{RESULTS_DIR}/figures/encoding/{type}_compression.png"
+    out = f"{RESULTS_DIR}/figures/encodings_warm/{type}_compression.png"
     
     data = df[df["stat"] == "median"]
     compression = data.pivot(index="size", columns="scheme", values="compression") * 100
@@ -75,7 +75,7 @@ def plot_compression(df, type, key_title):
     
 def plot_bits_int(df, type, key_title):
     title = "Bits Per Int"
-    out = f"{RESULTS_DIR}/figures/encoding/{type}_bits_int.png"
+    out = f"{RESULTS_DIR}/figures/encodings_warm/{type}_bits_int.png"
     
     data = df[df["stat"] == "median"]
     bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int")
@@ -93,17 +93,30 @@ def plot_bits_int(df, type, key_title):
     
 def plot_memory_usage_by_scheme(df, type_filter, type_name, key_title, title_type):
     title = f"{title_type} Memory Usage By Scheme"
-    pass
+    out = f"{RESULTS_DIR}/figures/encodings_memory_usage/{type_name}_memory_usage.png"
+
+    data = df[df["run_type"] == type_filter]
+    memory = data.groupby("scheme")["peak_delta"].mean() / 1e6 # Convert into MB
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    memory.plot.bar(ax=ax, rot=0, title=title, xlabel=f"{key_title} Scheme", ylabel="Peak memory (MB)")
+
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out, dpi=300)
+    plt.close(fig)
+    print(f"wrote {out}")
     
 
 if __name__ == "__main__":
-    df_comp_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/compression_encoding.json")
-    df_comp_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/compression_decoding.json")
-    df_delta_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_encoding.json")
-    df_delta_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings/delta_decoding.json")
-    df_memory_usage = load_results_memory_usage(f"{RESULTS_DIR}/encodings/memory_usage.json")
+    df_comp_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings_warm/compression_encoding.json")
+    df_comp_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings_warm/compression_decoding.json")
+    df_delta_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings_warm/delta_encoding.json")
+    df_delta_dec = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings_warm/delta_decoding.json")
+    df_memory_usage = load_results_memory_usage(f"{RESULTS_DIR}/encodings_memory_usage/encodings_memory_usage.json")
     
-    os.makedirs(f"{RESULTS_DIR}/figures/encoding", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/encodings_warm", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/encodings_memory_usage", exist_ok=True)
     
     plot_throughput(df_comp_enc, "compression_encoding", "Compression", "Encoding")
     plot_compression(df_comp_enc, "compression_encoding", "Compression")
@@ -115,4 +128,3 @@ if __name__ == "__main__":
     plot_memory_usage_by_scheme(df_memory_usage, "cdec", "compression_decoding", "Compression", "Compression Decoding")
     plot_memory_usage_by_scheme(df_memory_usage, "denc", "delta_encoding", "Delta", "Delta Encoding")
     plot_memory_usage_by_scheme(df_memory_usage, "ddec", "delta_decoding", "Delta", "Delta Decoding")
-    

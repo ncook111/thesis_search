@@ -54,56 +54,6 @@ static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
      ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 }
 
-std::vector<uint64_t> generate_int_dist(size_t size) {
-    std::mt19937_64 eng(42);
-    std::uniform_int_distribution<uint64_t> distr_64;
-
-    std::set<uint64_t> input_set;
-    std::vector<uint64_t> input;
-
-    const int per_range = size / 8;
-
-    const uint64_t moduli[] = {
-        0xFF,
-        0xFFFF,
-        0xFFFFFF,
-        0xFFFFFFFF,
-        0xFFFFFFFFFF,
-        0xFFFFFFFFFFFF,
-        0xFFFFFFFFFFFFFF,
-        0xFFFFFFFFFFFFFFFF
-    };
-
-    for (uint64_t mod : moduli) {
-        int added = 0;
-
-        if (mod < per_range) {
-            // Start at 1 to skip 0
-            for (uint64_t i = 1; i < mod; ++i) {
-                input_set.insert(i);
-            }
-        } else {
-            while (added < per_range) {
-                uint64_t val = distr_64(eng) % mod;
-                if (val != 0 && input_set.insert(val).second) {
-                    ++added;
-                }
-            }
-        }
-    }
-
-    // Likely will be short some values, insert the rest
-    size_t leftover = size - input_set.size();
-    while (leftover > 0) {
-        uint64_t val = distr_64(eng); // full 64-bit range, no modulo bias
-        if (val != 0 && input_set.insert(val).second) {
-            --leftover;
-        }
-    }
-
-    return std::vector<uint64_t>(input_set.begin(), input_set.end());
-}
-
 std::vector<uint32_t> generate_uint32_t_dist(size_t size) {
     std::mt19937 eng(42);
     std::uniform_int_distribution<uint32_t> distr_32;
@@ -185,20 +135,6 @@ public:
     }
 };
 
-class U64Vec : public benchmark::Fixture {
-public:
-    std::vector<uint64_t> input;
-
-    void SetUp(::benchmark::State& state) {
-        std::vector<uint32_t> v32 = dataset(state.range(0));
-        input.assign(v32.begin(), v32.end());
-    }
-
-
-    void TearDown(::benchmark::State& state) {
-    }
-};
-
 class U32GVBDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
@@ -245,7 +181,7 @@ public:
     }
 };
 
-class U64FLSDecode : public benchmark::Fixture {
+class U32FLSDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
     size_t num_consumed;
@@ -253,9 +189,7 @@ public:
 
     void SetUp(::benchmark::State& state) {
         input.clear();
-        std::vector<uint32_t> v32 = dataset(state.range(0));;
-        std::vector<uint64_t> v64(v32.begin(), v32.end());
-        std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(v64, input);
+        std::vector<uint8_t> enc_num_blocks = fls_encode_uint32_t(dataset(state.range(0)), input);
         num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     }
 
@@ -668,11 +602,11 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_pef)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(input_bytes));
 }
 
-BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32Vec, cenc_fls)(benchmark::State& state) {
     {
         std::vector<uint8_t> encoded;
         std::vector<uint8_t> num_blocks;
-        num_blocks = fls_encode_uint64_t(input, encoded);
+        num_blocks = fls_encode_uint32_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::DoNotOptimize(num_blocks);
         benchmark::ClobberMemory();
@@ -694,7 +628,7 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
         reset_rss_hwm();
         #endif
         state.ResumeTiming();
-        num_blocks = fls_encode_uint64_t(input, encoded);
+        num_blocks = fls_encode_uint32_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
@@ -1559,10 +1493,10 @@ BENCHMARK_DEFINE_F(U32PEFDecode, cdec_pef)(benchmark::State& state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * output_bytes);
 }
 
-BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(U32FLSDecode, cdec_fls)(benchmark::State& state) {
     {
-        std::vector<uint64_t> decoded;
-        decoded = fls_decode_uint64_t(input, num_blocks);
+        std::vector<uint32_t> decoded;
+        decoded = fls_decode_uint32_t(input, num_blocks);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -1571,7 +1505,7 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
     malloc_trim(0);
     const double rss_before = read_rss_kb("VmRSS:");
     #endif
-    std::vector<uint64_t> decoded;
+    std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -1580,7 +1514,7 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
         reset_rss_hwm();
         #endif
         state.ResumeTiming();
-        decoded = fls_decode_uint64_t(input, num_blocks);
+        decoded = fls_decode_uint32_t(input, num_blocks);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
@@ -2253,7 +2187,7 @@ BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm)(benchmark::State& state) {
 BENCHMARK_REGISTER_F(U32Vec, cenc_gvb)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, cenc_gvb_delta)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32Vec, cenc_pef)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64Vec, cenc_fls)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32Vec, cenc_fls)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_REGISTER_F(U32Vec, cenc_s4_bpd4)->Apply(StandardBenchArgs);
@@ -2273,7 +2207,7 @@ BENCHMARK_REGISTER_F(U32Vec, cenc_s16_bpdm)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32GVBDecode, cdec_gvb)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32GVBDeltaDecode, cdec_gvb_delta)->Apply(StandardBenchArgs);
 BENCHMARK_REGISTER_F(U32PEFDecode, cdec_pef)->Apply(StandardBenchArgs);
-BENCHMARK_REGISTER_F(U64FLSDecode, cdec_fls)->Apply(StandardBenchArgs);
+BENCHMARK_REGISTER_F(U32FLSDecode, cdec_fls)->Apply(StandardBenchArgs);
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_REGISTER_F(U32S4BPD4Decode, cdec_s4_bpd4)->Apply(StandardBenchArgs);

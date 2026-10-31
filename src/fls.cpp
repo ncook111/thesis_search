@@ -11,30 +11,30 @@
 #include "fls.h"
 
 constexpr size_t N = 1024;
-constexpr size_t N_LANES = 1024 / (sizeof(uint64_t) * 8);
+constexpr size_t N_LANES = 1024 / (sizeof(uint32_t) * 8);
 
-const uint16_t n_encoded_bytes_uint64_t(const uint8_t bw) {
+const uint16_t n_encoded_bytes_uint32_t(const uint8_t bw) {
     return bw * 128;
 }
 
-const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &input, std::vector<uint8_t> &output) {
+const std::vector<uint8_t> fls_encode_uint32_t(const std::vector<uint32_t> &input, std::vector<uint8_t> &output) {
     size_t num_blocks = 0;
     size_t i = N;
     
     for (; i <= input.size(); i += N) {
-        const std::span<const uint64_t> input_view(input.data() + (i - N), N);
-        FlsEncodedBlockU64 block = fls_encode_block_uint64_t(input_view);
+        const std::span<const uint32_t> input_view(input.data() + (i - N), N);
+        FlsEncodedBlockU32 block = fls_encode_block_uint32_t(input_view);
 
         size_t old_size = output.size();
-        size_t data_bytes = block.encoded_data.size() * sizeof(uint64_t);
-        output.resize(old_size + 8 + 1 + N_LANES*8 + data_bytes);
+        size_t data_bytes = block.encoded_data.size() * sizeof(uint32_t);
+        output.resize(old_size + sizeof(uint32_t) + 1 + N_LANES * sizeof(uint32_t) + data_bytes);
         uint8_t* pos = output.data() + old_size;
-        std::memcpy(pos, &block.ffor_base, 8);
-        pos += 8;
+        std::memcpy(pos, &block.ffor_base, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
         std::memcpy(pos, &block.bw, 1);
         pos += 1;
-        std::memcpy(pos, block.delta_base.data(), N_LANES * 8);
-        pos += N_LANES * 8;
+        std::memcpy(pos, block.delta_base.data(), N_LANES * sizeof(uint32_t));
+        pos += N_LANES * sizeof(uint32_t);
         std::memcpy(pos, block.encoded_data.data(), data_bytes);
 
         ++num_blocks;
@@ -44,8 +44,8 @@ const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &inpu
     std::vector<uint8_t> remainder;
     if (i - N < input.size()) {
         size_t remaining_num = input.size() - (i - N);
-        std::vector<uint64_t> input_rem_view(input.begin() + (i - N), input.begin() + (i - N) + remaining_num); // Copy can be avoided by using span, unsupported by gvb_encode_unit64_t() however
-        remainder = gvb_encode_uint64_t(cvrt_1(std::move(input_rem_view)));
+        std::vector<uint32_t> input_rem_view(input.begin() + (i - N), input.begin() + (i - N) + remaining_num); // Copy can be avoided by using span, unsupported by gvb_encode_uint32_t() however
+        remainder = gvb_encode_uint32_t(cvrt_1(std::move(input_rem_view)));
 
         output.insert(output.end(), std::make_move_iterator(remainder.begin()), std::make_move_iterator(remainder.end()));
     }
@@ -55,62 +55,62 @@ const std::vector<uint8_t> fls_encode_uint64_t(const std::vector<uint64_t> &inpu
     return var_byte_nb;
 }
 
-const FlsEncodedBlockU64 fls_encode_block_uint64_t(const std::span<const uint64_t> &input) {
-    FlsEncodedBlockU64 encoded;
+const FlsEncodedBlockU32 fls_encode_block_uint32_t(const std::span<const uint32_t> &input) {
+    FlsEncodedBlockU32 encoded;
 
-    std::vector<uint64_t> transposed(N);
+    std::vector<uint32_t> transposed(N);
     generated::transpose::fallback::scalar::transpose_i(input.data(), transposed.data());
 
-    encoded.delta_base = std::vector<uint64_t>(transposed.begin(), transposed.begin() + N_LANES); 
+    encoded.delta_base = std::vector<uint32_t>(transposed.begin(), transposed.begin() + N_LANES); 
 
     generated::unrsum::fallback::scalar::unrsum_inplace(transposed.data());
 
     encoded.ffor_base = *std::min_element(transposed.begin(), transposed.end());
     encoded.bw = std::bit_width(*std::max_element(transposed.begin(), transposed.end()) - encoded.ffor_base);
     
-    encoded.encoded_data.resize(n_encoded_bytes_uint64_t(encoded.bw) / 8, 0);
+    encoded.encoded_data.resize(n_encoded_bytes_uint32_t(encoded.bw) / sizeof(uint32_t), 0);
     generated::ffor::fallback::scalar::ffor(transposed.data(), encoded.encoded_data.data(), encoded.bw, &encoded.ffor_base);
 
     return encoded;
 }
 
-const std::vector<uint64_t> fls_decode_uint64_t(const std::vector<uint8_t> &input, const size_t num_blocks) {
-    std::vector<uint64_t> all_decoded;
+const std::vector<uint32_t> fls_decode_uint32_t(const std::vector<uint8_t> &input, const size_t num_blocks) {
+    std::vector<uint32_t> all_decoded;
 
     size_t offset = 0;
     for (size_t i = 0; i < num_blocks; ++i) {
-        FlsEncodedBlockU64 encoded_block = construct_encoded_block(input, offset);
-        std::vector<uint64_t> decoded = fls_decode_block_uint64_t(encoded_block);
+        FlsEncodedBlockU32 encoded_block = construct_encoded_block(input, offset);
+        std::vector<uint32_t> decoded = fls_decode_block_uint32_t(encoded_block);
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
     }
 
     if (offset < input.size()) { // gvb encoded remainder
         std::vector<uint8_t> remainder(input.begin() + offset, input.end());
-        std::vector<uint64_t> decoded = cvrt_0(gvb_decode_uint64_t(remainder));
+        std::vector<uint32_t> decoded = cvrt_0(gvb_decode_uint32_t(remainder));
         all_decoded.insert(all_decoded.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
     }
 
     return all_decoded;
 }
 
-const FlsEncodedBlockU64 construct_encoded_block(const std::vector<uint8_t> &input, size_t &offset) {
-    FlsEncodedBlockU64 encoded_block;
-    std::memcpy(&encoded_block.ffor_base, &input[offset], sizeof(uint64_t));
+const FlsEncodedBlockU32 construct_encoded_block(const std::vector<uint8_t> &input, size_t &offset) {
+    FlsEncodedBlockU32 encoded_block;
+    std::memcpy(&encoded_block.ffor_base, &input[offset], sizeof(uint32_t));
 
-    offset += sizeof(uint64_t);
+    offset += sizeof(uint32_t);
 
     std::memcpy(&encoded_block.bw, &input[offset], sizeof(uint8_t));
 
     offset += sizeof(uint8_t);
 
     encoded_block.delta_base.resize(N_LANES, 0);
-    std::memcpy(encoded_block.delta_base.data(), &input[offset], N_LANES * sizeof(uint64_t));
+    std::memcpy(encoded_block.delta_base.data(), &input[offset], N_LANES * sizeof(uint32_t));
 
-    offset += N_LANES * sizeof(uint64_t);
+    offset += N_LANES * sizeof(uint32_t);
 
-    size_t n_bytes = n_encoded_bytes_uint64_t(encoded_block.bw);
+    size_t n_bytes = n_encoded_bytes_uint32_t(encoded_block.bw);
 
-    encoded_block.encoded_data.resize(n_bytes / sizeof(uint64_t), 0);
+    encoded_block.encoded_data.resize(n_bytes / sizeof(uint32_t), 0);
     std::memcpy(encoded_block.encoded_data.data(), &input[offset], n_bytes);
 
     offset += n_bytes;
@@ -118,19 +118,19 @@ const FlsEncodedBlockU64 construct_encoded_block(const std::vector<uint8_t> &inp
     return encoded_block;
 }
 
-const std::vector<uint64_t> fls_decode_block_uint64_t(const FlsEncodedBlockU64 &encoded) {
-    const std::vector<uint64_t> deltas = select_unffor_decoder(encoded.encoded_data, encoded.ffor_base, encoded.bw);
+const std::vector<uint32_t> fls_decode_block_uint32_t(const FlsEncodedBlockU32 &encoded) {
+    const std::vector<uint32_t> deltas = select_unffor_decoder(encoded.encoded_data, encoded.ffor_base, encoded.bw);
 
-    const std::vector<uint64_t> decoded = select_delta_decoder(deltas, encoded.delta_base);
+    const std::vector<uint32_t> decoded = select_delta_decoder(deltas, encoded.delta_base);
 
-    std::vector<uint64_t> untransposed(N, 0);
+    std::vector<uint32_t> untransposed(N, 0);
     generated::untranspose::fallback::scalar::untranspose_i(decoded.data(), untransposed.data());
 
     return untransposed;
 }
 
-const std::vector<uint64_t> select_unffor_decoder(const std::vector<uint64_t> &encoded, const uint64_t base, const uint8_t bw) {
-    std::vector<uint64_t> decoded(N, 0);
+const std::vector<uint32_t> select_unffor_decoder(const std::vector<uint32_t> &encoded, const uint32_t base, const uint8_t bw) {
+    std::vector<uint32_t> decoded(N, 0);
     
     #if defined(SIMD_TARGET_AVX512BW)
         generated::unffor::x86_64::avx512bw::unffor(encoded.data(), decoded.data(), bw, &base);
@@ -147,8 +147,8 @@ const std::vector<uint64_t> select_unffor_decoder(const std::vector<uint64_t> &e
     return decoded;
 }
 
-const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &encoded, const std::vector<uint64_t> &base) {
-   std::vector<uint64_t> decoded(N, 0);
+const std::vector<uint32_t> select_delta_decoder(const std::vector<uint32_t> &encoded, const std::vector<uint32_t> &base) {
+   std::vector<uint32_t> decoded(N, 0);
 
     #if defined(SIMD_TARGET_AVX512BW)
         generated::rsum::x86_64::avx512bw::rsum(encoded.data(), decoded.data(), base.data());
@@ -166,9 +166,8 @@ const std::vector<uint64_t> select_delta_decoder(const std::vector<uint64_t> &en
 }
 
 uint64_t write_fls_to_file(const std::vector<uint32_t> &vec, std::ostream &file) {
-  std::vector<uint64_t> vec64(vec.begin(), vec.end());
   std::vector<uint8_t> enc_data;
-  std::vector<uint8_t> enc_num_blocks = fls_encode_uint64_t(vec64, enc_data);
+  std::vector<uint8_t> enc_num_blocks = fls_encode_uint32_t(vec, enc_data);
   const uint64_t enc_data_size = enc_data.size();
   const uint64_t enc_num_blocks_size = enc_num_blocks.size();
   
@@ -188,7 +187,5 @@ std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_
 
   std::memcpy(reinterpret_cast<char *>(encoded_fls.data()), file + num_bytes, size_to_read - num_bytes);
 
-  std::vector<uint64_t> decoded = fls_decode_uint64_t(encoded_fls, num_blocks);
-
-  return std::vector<uint32_t>(decoded.begin(), decoded.end());
+  return fls_decode_uint32_t(encoded_fls, num_blocks);
 }

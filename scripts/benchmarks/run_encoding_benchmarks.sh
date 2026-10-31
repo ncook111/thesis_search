@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# reps=${1:-1000}
+reps=${1:-1000}
 
-# source "$(dirname "$0")/../misc/paths.sh"
-# OUT_DIR="$RESULTS_DIR/encodings"
-# mkdir -p "$OUT_DIR"
+source "$(dirname "$0")/../misc/paths.sh"
+OUT_DIR="$RESULTS_DIR/encodings_warm"
+mkdir -p "$OUT_DIR"
 
 # ### Benchmark comparing schemes, capturing tail latencies ###
 # # Compression Encoding
@@ -45,6 +45,9 @@ set -euo pipefail
 # --benchmark_repetitions="$reps"
 
 ### Benchmark comparing schemes, capturing memory usage ###
+OUT_DIR="$RESULTS_DIR/encodings_memory_usage"
+mkdir -p "$OUT_DIR"
+
 FILTER="(cenc|cdec|denc|ddec).*/1000000/"
 TMP=$(mktemp -d)
 
@@ -56,5 +59,5 @@ TMP=$(mktemp -d)
     --benchmark_repetitions=1 </dev/null
 done
 
-jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/compression_memory_usage.json"
+jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/encodings_memory_usage.json"
 rm -rf "$TMP"
