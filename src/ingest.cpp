@@ -92,7 +92,9 @@ int parse_options(po::options_description &desc, po::variables_map &vm, const in
   try {
     desc.add_options()
     ("help", "produce help message")
-    ("mode,m", po::value<std::string>(), "set operation mode [create/update/search/verify] or [c/r/s/v]")
+    ("mode,m", po::value<std::string>(), "set operation mode [create/update/search/verify] or [c/u/s/v]")
+    ("partition,p", po::value<uint32_t>(), "set partition size [create] or [c]")
+    ("threads,t", po::value<uint8_t>(), "set number of threads to utilise [create/update/search] or [c/u/s]")
     ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
     ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/update, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")

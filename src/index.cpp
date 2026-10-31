@@ -342,9 +342,9 @@ void create_segment(const std::string &data_path,
 
   Tokenizer tokenizer = Tokenizer::from_file(data_path, fields, segment_offset, segment_size);
 
-  std::vector<char> output_buf(16 << 20); 
+  std::unique_ptr<char[]> output_buf(new char[16 << 20]);
   std::ofstream segment_file;
-  segment_file.rdbuf()->pubsetbuf(output_buf.data(), output_buf.size());
+  segment_file.rdbuf()->pubsetbuf(output_buf.get(), 16 << 20);
   segment_file.open(segment_path, std::ios::binary);
 
 

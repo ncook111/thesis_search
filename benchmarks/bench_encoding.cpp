@@ -12,10 +12,24 @@
 #include <random>
 #include <set>
 #include <map>
+#if defined(__linux__)
+#include <malloc.h>
+#endif
 
 using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
 constexpr size_t cache_size = 2048 * 1024;
+
+#if defined(__linux__)
+static void reset_rss_hwm() { std::ofstream("/proc/self/clear_refs") << "5"; }
+
+static size_t read_rss_kb(const char* key) {
+    std::ifstream f("/proc/self/status");
+    for (std::string line; std::getline(f, line);)
+        if (line.rfind(key, 0) == 0) return std::stoul(line.substr(std::strlen(key)));
+    return 0;
+}
+#endif
 
 static double get_percentile(std::vector<double> timings, double percentile) {
   std::sort(timings.begin(), timings.end());
@@ -471,6 +485,10 @@ public:
 #endif
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint8_t> encoded;
     encoded = gvb_encode_uint32_t(input);
     benchmark::DoNotOptimize(encoded);
@@ -480,11 +498,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
         state.PauseTiming();
         encoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         gvb_encode_uint32_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
@@ -497,6 +529,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = delta_encode(input);
     benchmark::DoNotOptimize(encoded);
@@ -506,11 +542,25 @@ BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
         state.PauseTiming();
         encoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         delta_encode(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -520,6 +570,10 @@ BENCHMARK_DEFINE_F(U32Vec, denc_delta)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint8_t> encoded;
     encoded = gvb_encode_uint32_t(delta_encode(input));
     benchmark::DoNotOptimize(encoded);
@@ -529,11 +583,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_gvb_delta)(benchmark::State& state) {
         state.PauseTiming();
         encoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         gvb_encode_uint32_t(delta_encode(input), encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
@@ -555,17 +623,35 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_pef)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     succinct::bit_vector encoded;
     Pef_Header header;
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         header = partitioned_ef_encode<uint32_t>(encoded, input);
         benchmark::DoNotOptimize(encoded);
         benchmark::DoNotOptimize(header);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * 4);
     const double encoded_bytes = static_cast<double>(encoded.data().size() * sizeof(uint64_t) + sizeof(header));
@@ -587,6 +673,10 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint8_t> encoded;
     std::vector<uint8_t> num_blocks;
     for (auto _ : state) {
@@ -594,11 +684,25 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
         flush_cache(cache_size);
         encoded.clear();
         num_blocks.clear();
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         num_blocks = fls_encode_uint64_t(input, encoded);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size());
@@ -612,6 +716,10 @@ BENCHMARK_DEFINE_F(U64Vec, cenc_fls)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d1)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s4_delta_encode<RegularDeltaSIMD>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -620,11 +728,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d1)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_encode<RegularDeltaSIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -634,6 +756,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d2)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s4_delta_encode<CoarseDelta2SIMD>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -642,11 +768,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d2)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_encode<CoarseDelta2SIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -656,6 +796,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s4_delta_encode<CoarseDelta4SIMD>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -664,11 +808,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_encode<CoarseDelta4SIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -678,6 +836,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s4dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s4_delta_encode<Max4DeltaSIMD>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -686,11 +848,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_encode<Max4DeltaSIMD>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -700,6 +876,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s4dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S4_BPD1);
     benchmark::DoNotOptimize(encoded);
@@ -708,11 +888,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD1);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -725,6 +919,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S4_BPD2);
     benchmark::DoNotOptimize(encoded);
@@ -733,11 +931,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD2);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -750,6 +962,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S4_BPD4);
     benchmark::DoNotOptimize(encoded);
@@ -758,11 +974,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -775,6 +1005,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S4_BPDM);
     benchmark::DoNotOptimize(encoded);
@@ -783,11 +1017,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S4_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -802,6 +1050,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s4_bpdm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX2)
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s8d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s8_delta_encode<CoarseDelta4AVX2>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -810,11 +1062,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s8_delta_encode<CoarseDelta4AVX2>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -824,6 +1090,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s8dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s8_delta_encode<Max4DeltaAVX2>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -832,11 +1102,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s8_delta_encode<Max4DeltaAVX2>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -846,6 +1130,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s8dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S8_BPD4);
     benchmark::DoNotOptimize(encoded);
@@ -854,11 +1142,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S8_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -871,6 +1173,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S8_BPDM);
     benchmark::DoNotOptimize(encoded);
@@ -879,11 +1185,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S8_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -898,6 +1218,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s8_bpdm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX512BW)
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s16d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s16_delta_encode<CoarseDelta4AVX512>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -906,11 +1230,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s16_delta_encode<CoarseDelta4AVX512>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -920,6 +1258,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32VecAligned, denc_s16dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec encoded(state.range(0));
     s16_delta_encode<Max4DeltaAVX512>(input.data(), encoded.data(), input.size());
     benchmark::DoNotOptimize(encoded);
@@ -928,11 +1270,25 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s16_delta_encode<Max4DeltaAVX512>(input.data(), encoded.data(), input.size());
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
 
@@ -942,6 +1298,10 @@ BENCHMARK_DEFINE_F(U32VecAligned, denc_s16dm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S16_BPD4);
     benchmark::DoNotOptimize(encoded);
@@ -950,11 +1310,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S16_BPD4);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -967,6 +1341,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> encoded;
     encoded = encode_simdbp128(input, EncType::S16_BPDM);
     benchmark::DoNotOptimize(encoded);
@@ -975,11 +1353,25 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         encode_simdbp128(input, encoded, EncType::S16_BPDM);
         benchmark::DoNotOptimize(encoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
     const double encoded_bytes = static_cast<double>(encoded.size() * sizeof(uint32_t));
@@ -993,6 +1385,10 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_s16_bpdm)(benchmark::State& state) {
 #endif
 
 BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = gvb_decode_uint32_t(input);
     benchmark::DoNotOptimize(decoded);
@@ -1002,11 +1398,25 @@ BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
         state.PauseTiming();
         decoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         gvb_decode_uint32_t(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1018,6 +1428,10 @@ BENCHMARK_DEFINE_F(U32GVBDecode, cdec_gvb)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = delta_decode(input);
     benchmark::DoNotOptimize(decoded);
@@ -1027,11 +1441,25 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
         state.PauseTiming();
         decoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         delta_decode(input, decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1039,6 +1467,10 @@ BENCHMARK_DEFINE_F(U32DeltaDecode, ddec_delta)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = delta_decode(gvb_decode_uint32_t(input));
     benchmark::DoNotOptimize(decoded);
@@ -1048,11 +1480,25 @@ BENCHMARK_DEFINE_F(U32GVBDeltaDecode, cdec_gvb_delta)(benchmark::State& state) {
         state.PauseTiming();
         decoded.clear();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         delta_decode(gvb_decode_uint32_t(input), decoded);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1071,15 +1517,33 @@ BENCHMARK_DEFINE_F(U32PEFDecode, cdec_pef)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
 
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decoded = partitioned_ef_decode<uint32_t>(input, header.universe, header.n);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.data().size() * sizeof(uint64_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1098,15 +1562,33 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
         benchmark::ClobberMemory();
     }
     
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint64_t> decoded;
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decoded = fls_decode_uint64_t(input, num_blocks);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1119,6 +1601,10 @@ BENCHMARK_DEFINE_F(U64FLSDecode, cdec_fls)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_NEON) || defined(SIMD_TARGET_SSE)
 BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S4_BPD1, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1127,11 +1613,25 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD1, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1143,6 +1643,10 @@ BENCHMARK_DEFINE_F(U32S4BPD1Decode, cdec_s4_bpd1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S4_BPD2, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1151,11 +1655,25 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD2, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1167,6 +1685,10 @@ BENCHMARK_DEFINE_F(U32S4BPD2Decode, cdec_s4_bpd2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S4_BPD4, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1175,11 +1697,25 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1191,6 +1727,10 @@ BENCHMARK_DEFINE_F(U32S4BPD4Decode, cdec_s4_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S4_BPDM, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1199,11 +1739,25 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S4_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1215,6 +1769,10 @@ BENCHMARK_DEFINE_F(U32S4BPDMDecode, cdec_s4_bpdm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D1Decode, ddec_s4d1)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s4_delta_decode<RegularDeltaSIMD>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1223,11 +1781,25 @@ BENCHMARK_DEFINE_F(U32S4D1Decode, ddec_s4d1)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_decode<RegularDeltaSIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1235,6 +1807,10 @@ BENCHMARK_DEFINE_F(U32S4D1Decode, ddec_s4d1)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D2Decode, ddec_s4d2)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s4_delta_decode<CoarseDelta2SIMD>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1243,11 +1819,25 @@ BENCHMARK_DEFINE_F(U32S4D2Decode, ddec_s4d2)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_decode<CoarseDelta2SIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1255,6 +1845,10 @@ BENCHMARK_DEFINE_F(U32S4D2Decode, ddec_s4d2)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4D4Decode, ddec_s4d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s4_delta_decode<CoarseDelta4SIMD>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1263,11 +1857,25 @@ BENCHMARK_DEFINE_F(U32S4D4Decode, ddec_s4d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_decode<CoarseDelta4SIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1275,6 +1883,10 @@ BENCHMARK_DEFINE_F(U32S4D4Decode, ddec_s4d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s4_delta_decode<Max4DeltaSIMD>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1283,11 +1895,25 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s4_delta_decode<Max4DeltaSIMD>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1297,6 +1923,10 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX2)
 BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S8_BPD4, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1305,11 +1935,25 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S8_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1321,6 +1965,10 @@ BENCHMARK_DEFINE_F(U32S8BPD4Decode, cdec_s8_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S8_BPDM, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1329,11 +1977,25 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S8_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1345,6 +2007,10 @@ BENCHMARK_DEFINE_F(U32S8BPDMDecode, cdec_s8_bpdm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8D4Decode, ddec_s8d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s8_delta_decode<CoarseDelta4AVX2>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1353,11 +2019,25 @@ BENCHMARK_DEFINE_F(U32S8D4Decode, ddec_s8d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s8_delta_decode<CoarseDelta4AVX2>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1365,6 +2045,10 @@ BENCHMARK_DEFINE_F(U32S8D4Decode, ddec_s8d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s8_delta_decode<Max4DeltaAVX2>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1373,11 +2057,25 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s8_delta_decode<Max4DeltaAVX2>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1387,6 +2085,10 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
 
 #if defined(SIMD_TARGET_AVX512BW)
 BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S16_BPD4, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1395,11 +2097,25 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S16_BPD4, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1411,6 +2127,10 @@ BENCHMARK_DEFINE_F(U32S16BPD4Decode, cdec_s16_bpd4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     std::vector<uint32_t> decoded;
     decoded = decode_simdbp128(input, EncType::S16_BPDM, orig_size);
     benchmark::DoNotOptimize(decoded);
@@ -1419,11 +2139,25 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         decode_simdbp128(input, decoded, EncType::S16_BPDM, orig_size);
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const double input_bytes = static_cast<double>(input.size() * sizeof(uint32_t));
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
@@ -1435,6 +2169,10 @@ BENCHMARK_DEFINE_F(U32S16BPDMDecode, cdec_s16_bpdm)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16D4Decode, ddec_s16d4)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s16_delta_decode<CoarseDelta4AVX512>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1443,11 +2181,25 @@ BENCHMARK_DEFINE_F(U32S16D4Decode, ddec_s16d4)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s16_delta_decode<CoarseDelta4AVX512>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
@@ -1455,6 +2207,10 @@ BENCHMARK_DEFINE_F(U32S16D4Decode, ddec_s16d4)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm)(benchmark::State& state) {
+    #if defined(__linux__)
+    malloc_trim(0);
+    const double rss_before = read_rss_kb("VmRSS:");
+    #endif
     aligned_vec decoded(state.range(0));
     s16_delta_decode<Max4DeltaAVX512>(input.data(), decoded.data(), input.size());
     benchmark::DoNotOptimize(decoded);
@@ -1463,11 +2219,25 @@ BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);
+        reset_rss_hwm();
+        #endif
         state.ResumeTiming();
         s16_delta_decode<Max4DeltaAVX512>(input.data(), decoded.data(), input.size());
         benchmark::DoNotOptimize(decoded);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
