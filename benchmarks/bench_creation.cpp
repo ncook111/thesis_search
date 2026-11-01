@@ -46,7 +46,7 @@ template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benc
             {FileType},
             available_enc_types(),
             {8, 16, 32, 64, 128, 256, 512, 1024},
-            {1, 2, 4, 6, 8, 10, 12, 14, 16}
+            {1, 2, 4, 6, 8, 10, 12, 14, 16, 32}
         })
         ->UseRealTime()
         ->Unit(benchmark::kSecond)
