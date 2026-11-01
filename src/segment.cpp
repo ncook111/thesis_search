@@ -152,7 +152,8 @@ void partition_file_csv(const std::string &file_path, const uint64_t file_offset
   csv::CSVFormat format;
   format.column_names(col_names)
         .delimiter(',')
-        .variable_columns(csv::VariableColumnPolicy::THROW);
+        .variable_columns(csv::VariableColumnPolicy::THROW)
+        .threading(false); // Bug in library when using row.byte_offset() later
 
   // Header already read, so disregard it if reading from start of file
   if (file_offset == 0)

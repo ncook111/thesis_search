@@ -64,14 +64,6 @@ void create_index(const std::vector<std::string> &fields,
     std::vector<uint64_t> segment_docid_modifiers;
     partition_file(files[file_id], 0, partition_size, segment_offsets, segment_docid_modifiers);
 
-  {
-    const MappedFile mf = open_mmap_r(files[file_id]);
-    const char *p = static_cast<const char *>(mf.addr());
-    for (size_t k = 1; k + 1 < segment_offsets.size(); ++k)
-      if (p[segment_offsets[k] - 1] != '\n')
-        std::cerr << "bad boundary " << k << " at byte " << segment_offsets[k] << '\n';
-  }
-
     if (segment_offsets.size() < 2) continue; // Empty file
 
     all_segment_offsets[file_id] = std::move(segment_offsets);
