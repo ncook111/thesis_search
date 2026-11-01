@@ -15,6 +15,8 @@
 #include <vector>
 #include <filesystem>
 
+typedef std::map<uint32_t, std::vector<uint32_t>> FieldDocs;
+
 struct Fields_header {
   uint16_t num_fields; // Number of fields that will contain docids
   std::vector<uint16_t> field_ids; // ID of fields
@@ -64,16 +66,16 @@ void merge_segments(const std::vector<std::string> &fields,
   const bool run_checks);
 const std::vector<uint32_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type);
-const std::vector<uint32_t> get_tok_offsets_from_file(
+const FieldDocs get_tok_offsets_from_file(
     const uint64_t token_id, const std::vector<uint32_t> &id_to_offset, const std::vector<uint32_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type);
-const std::vector<uint32_t> get_tok_offsets_from_file(
+const FieldDocs get_tok_offsets_from_file(
     const Range token_ids, const std::vector<uint32_t> &id_to_offset, const std::vector<uint32_t> &field_ids,
     const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t>
 get_tok_offsets_setup(const std::vector<uint32_t> &id_to_offset,
                       const uint8_t *file, const uint8_t type);
-const std::vector<uint32_t>
+const FieldDocs
 get_tok_offsets(const uint64_t token_id,
                 const std::vector<uint32_t> &id_to_offset,
                 const std::vector<uint32_t> &req_field_ids,
@@ -384,9 +386,9 @@ bool check_offsets_file_by_type(
     const auto &fields = *fields_ptr;
 
     for (const auto &[field_id, docids] : fields) {
-      std::vector<uint32_t> from_file = get_tok_offsets_from_file(token_id, id_to_offset, std::vector<uint32_t>{field_id}, file_name, type, enc_type);
-      if (from_file != docids) {
-        std::cout << "from_file size: " << from_file.size() << std::endl;
+      FieldDocs from_file = get_tok_offsets_from_file(token_id, id_to_offset, std::vector<uint32_t>{field_id}, file_name, type, enc_type);
+      if (from_file[field_id] != docids) {
+        std::cout << "from_file size: " << from_file[field_id].size() << std::endl;
         std::cout << "docids size: " << docids.size() << std::endl;
         std::cout << "docids incorrect" << std::endl;
         return false;

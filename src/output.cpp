@@ -34,12 +34,13 @@ void output_counts(const FieldMap &matches, const Metadata &metadata, const std:
   if (output_path.size())
     output_file.open(output_path);
 
-  for (const auto &[file_id, docids] : matches) {
+  for (const auto &[file_id, fields] : matches) {
     const std::string file_name = metadata.get_file_name(file_id);
+    const size_t count = get_docids(fields).size();
     if (output_path.size()) {
-      counts_to_file(output_file, file_name, docids.size());
+      counts_to_file(output_file, file_name, count);
     } else {
-      counts_to_cout(file_name, docids.size());
+      counts_to_cout(file_name, count);
     }
   }
 }

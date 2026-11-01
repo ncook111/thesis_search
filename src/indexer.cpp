@@ -55,7 +55,7 @@ int main(int argc, const char *argv[]) {
 
   uint32_t num_threads;
   if (vm.count("threads")) {
-    num_threads = vm["threads"].as<uint8_t>();
+    num_threads = vm["threads"].as<uint32_t>();
   } else {
     num_threads = std::thread::hardware_concurrency(); // Default
   }

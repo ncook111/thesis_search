@@ -228,9 +228,9 @@ TEST_F(parse_queries_basic_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test2) {
@@ -241,9 +241,9 @@ TEST_F(parse_queries_basic_test, test2) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test3) {
@@ -254,9 +254,9 @@ TEST_F(parse_queries_basic_test, test3) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,2};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test4) {
@@ -267,9 +267,9 @@ TEST_F(parse_queries_basic_test, test4) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {1,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test5) {
@@ -280,9 +280,9 @@ TEST_F(parse_queries_basic_test, test5) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test6) {
@@ -293,9 +293,9 @@ TEST_F(parse_queries_basic_test, test6) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test7) {
@@ -306,9 +306,9 @@ TEST_F(parse_queries_basic_test, test7) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_basic_test, test8) {
@@ -319,9 +319,9 @@ TEST_F(parse_queries_basic_test, test8) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 // Compliment
@@ -333,9 +333,9 @@ TEST_F(parse_queries_compliment_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_compliment_test, test2) {
@@ -346,9 +346,9 @@ TEST_F(parse_queries_compliment_test, test2) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_compliment_test, test3) {
@@ -359,9 +359,9 @@ TEST_F(parse_queries_compliment_test, test3) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_compliment_test, test4) {
@@ -372,9 +372,9 @@ TEST_F(parse_queries_compliment_test, test4) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_compliment_test, test5) {
@@ -385,9 +385,9 @@ TEST_F(parse_queries_compliment_test, test5) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_union_test, test1) {
@@ -398,9 +398,9 @@ TEST_F(parse_queries_union_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_union_test, test2) {
@@ -411,9 +411,9 @@ TEST_F(parse_queries_union_test, test2) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_union_test, test3) {
@@ -424,9 +424,9 @@ TEST_F(parse_queries_union_test, test3) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_intersection_test, test1) {
@@ -437,9 +437,9 @@ TEST_F(parse_queries_intersection_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {1,3};
         ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_intersection_test, test2) {
@@ -450,9 +450,9 @@ TEST_F(parse_queries_intersection_test, test2) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {2};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_intersection_test, test3) {
@@ -463,9 +463,9 @@ TEST_F(parse_queries_intersection_test, test3) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_diff_test, test1) {
@@ -476,9 +476,9 @@ TEST_F(parse_queries_diff_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_sym_diff_test, test1) {
@@ -489,9 +489,9 @@ TEST_F(parse_queries_sym_diff_test, test1) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 TEST_F(parse_queries_sym_diff_test, test2) {
@@ -502,9 +502,9 @@ TEST_F(parse_queries_sym_diff_test, test2) {
     FieldMap out_gvb = parse_queries(in, metadata_gvb);
     std::vector<uint64_t> expected = {0,1,2,3};
     ASSERT_EQ(out_pef.size(), 1);
-    ASSERT_EQ(out_pef.at(0), expected);
+    ASSERT_EQ(get_docids(out_pef.at(0)), expected);
     ASSERT_EQ(out_gvb.size(), 1);
-    ASSERT_EQ(out_gvb.at(0), expected);
+    ASSERT_EQ(get_docids(out_gvb.at(0)), expected);
 }
 
 /* test get_next_token */

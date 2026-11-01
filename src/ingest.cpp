@@ -13,7 +13,7 @@
 #include <filesystem>
 #include <boost/program_options.hpp>
 
-int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type, const uint32_t partition_size, const uint8_t num_threads) {
+int create_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint8_t enc_type, const uint32_t partition_size, const uint32_t num_threads) {
   if (std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Index already exists\n";
     return 1;
@@ -94,7 +94,7 @@ int parse_options(po::options_description &desc, po::variables_map &vm, const in
     ("help", "produce help message")
     ("mode,m", po::value<std::string>(), "set operation mode [create/update/search/verify] or [c/u/s/v]")
     ("partition,p", po::value<uint32_t>(), "set partition size [create] or [c]")
-    ("threads,t", po::value<uint8_t>(), "set number of threads to utilise [create/update/search] or [c/u/s]")
+    ("threads,t", po::value<uint32_t>(), "set number of threads to utilise [create/update/search] or [c/u/s]")
     ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
     ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/update, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")

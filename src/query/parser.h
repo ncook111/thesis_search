@@ -5,8 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include "ast.h"
-
-using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
+#include "../search.h"
 
 namespace QueryTokType {
     enum Value : uint8_t { 

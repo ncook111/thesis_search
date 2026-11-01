@@ -614,7 +614,7 @@ get_id_offsets_from_file(const std::string &file_name, const uint8_t type,
   }
 }
 
-const std::vector<uint32_t> get_tok_offsets_from_file(
+const FieldDocs get_tok_offsets_from_file(
   const uint64_t token_id, const std::vector<uint32_t> &id_to_offset, const std::vector<uint32_t> &field_ids,
   const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
@@ -625,7 +625,7 @@ const std::vector<uint32_t> get_tok_offsets_from_file(
   return get_tok_offsets(token_id, id_to_offset, field_ids, length, file + offset, enc_type);
 }
 
-const std::vector<uint32_t> get_tok_offsets_from_file(
+const FieldDocs get_tok_offsets_from_file(
   const Range token_ids, const std::vector<uint32_t> &id_to_offset, const std::vector<uint32_t> &field_ids,
   const std::string &file_name, const uint8_t type, const uint8_t enc_type) {
   const MappedFile mf = open_mmap_r(file_name);
@@ -634,17 +634,21 @@ const std::vector<uint32_t> get_tok_offsets_from_file(
 
   const auto [length, offset] = get_tok_offsets_setup(id_to_offset, file, type);
 
-  std::vector<uint32_t> offsets;
+  FieldDocs offsets;
 
   const auto [min, max] = token_ids;
   for (size_t id = min; id <= max; ++id) {
-    std::vector<uint32_t> cur_offsets =
+    FieldDocs cur_offsets =
         get_tok_offsets(id, id_to_offset, field_ids, length, file + offset, enc_type);
-    offsets.insert(offsets.end(), std::make_move_iterator(cur_offsets.begin()),
-                   std::make_move_iterator(cur_offsets.end()));
+    for (auto &[field_id, field_offsets] : cur_offsets)
+      offsets[field_id].insert(offsets[field_id].end(), std::make_move_iterator(field_offsets.begin()),
+                               std::make_move_iterator(field_offsets.end()));
   }
 
-  std::sort(offsets.begin(), offsets.end());
+  for (auto &[field_id, field_offsets] : offsets) {
+    std::sort(field_offsets.begin(), field_offsets.end());
+    field_offsets = remove_dups_sorted(field_offsets);
+  }
 
   return offsets;
 }
@@ -709,8 +713,7 @@ get_tok_offsets_setup(const std::vector<uint32_t> &id_to_offset,
   return {tok_offsets_length, offset};
 }
 
-// Output converts offsets values from file from 1 indexing back to 0 indexing
-const std::vector<uint32_t>
+const FieldDocs
 get_tok_offsets(const uint64_t token_id,
                 const std::vector<uint32_t> &id_to_offset,
                 const std::vector<uint32_t> &req_field_ids,
@@ -746,7 +749,7 @@ get_tok_offsets(const uint64_t token_id,
 
   field_sizes.push_back(size_to_read - (f_header.field_offsets[f_header.num_fields - 1] - id_to_offset[token_id]));
 
-  std::vector<uint32_t> all_docids;
+  FieldDocs all_docids;
   for (uint64_t i = 0; i < f_header.field_ids.size(); ++i) {
 
     // Continue if requesting specific field_ids but not found in postings list
@@ -776,15 +779,10 @@ get_tok_offsets(const uint64_t token_id,
         throw std::invalid_argument("Not a valid encoding type");
     }
 
-    std::vector<uint32_t> merged;
-    merged.reserve(docids.size() + all_docids.size());
-    std::merge(docids.begin(), docids.end(), all_docids.begin(), all_docids.end(), std::back_inserter(merged));
-    all_docids = merged;
+    all_docids[f_header.field_ids[i]] = std::move(docids);
   }
 
-  std::vector<uint32_t> dedup = remove_dups_sorted(all_docids);
-
-  return dedup;
+  return all_docids;
 }
 
 const std::vector<uint32_t> read_entry_offsets_gvb(const uint8_t *file, const size_t size_to_read) {

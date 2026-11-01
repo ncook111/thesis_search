@@ -174,7 +174,8 @@ void Tokenizer::tokenize_csv(const uint64_t segment_start, const uint64_t segmen
   csv::CSVFormat format;
   format.column_names(col_names)
         .delimiter(',')
-        .variable_columns(csv::VariableColumnPolicy::THROW);
+        .variable_columns(csv::VariableColumnPolicy::THROW)
+        .threading(false); // Bug in library when using row.byte_offset() later
 
   // Header already read, so disregard it if reading from start of file
   if (segment_start == 0)

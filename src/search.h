@@ -7,7 +7,10 @@
 #include <filesystem>
 #include <map>
 
-typedef std::unordered_map<size_t, std::vector<uint64_t>> FieldMap;
+inline constexpr uint32_t NO_FIELD = UINT32_MAX;
+
+typedef std::map<uint32_t, std::vector<uint64_t>> FieldDocids;
+typedef std::unordered_map<size_t, FieldDocids> FieldMap;
 typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 const FieldMap search_index(const std::vector<std::string> &fields,
@@ -29,6 +32,8 @@ const FieldMap get_entries_offsets_union(const FieldMap &entries_1,
 const FieldMap get_entries_offsets_difference(const FieldMap &entries_1, const FieldMap &entries_2);
 const FieldMap get_entries_offsets_sym_difference(const FieldMap &entries_1, const FieldMap &entries_2);
 const FieldMap get_entries_offsets_compliment(const FieldMap &entries, const Metadata &metadata);
+const std::vector<uint64_t> get_docids(const FieldDocids &fields);
+bool no_matches(const FieldMap &offsets);
 const std::vector<uint64_t>
 get_docid_intersection(const std::vector<uint64_t> &docids,
                        const std::vector<uint64_t> &docids_cmp);
@@ -90,7 +95,10 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
   
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);
-    std::vector<std::vector<uint64_t>> results(num_segments);
+    std::vector<FieldDocids> results(num_segments);
+
+    // Read in field ids from fst
+    const std::vector<uint32_t> field_ids = num_segments ? get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields) : std::vector<uint32_t>{};
 
     const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
 
@@ -113,20 +121,17 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
           // // No token id found for current token, continue
           if (!id) continue;
 
-          // Read in field ids from fst
-          const std::vector<uint32_t> field_ids = get_field_ids(segment_path, fields);
-
           const std::vector<uint32_t> id_offsets_map = get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
           if (id_offsets_map.size()) {
-            std::vector<uint32_t> offsets_cmp = get_tok_offsets_from_file(*id, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
+            const FieldDocs offsets_cmp = get_tok_offsets_from_file(*id, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
 
             // Reconstruct actual doc_ids using per-segment modifier value
             uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
-            std::vector<uint64_t> doc_ids;
-            doc_ids.reserve(offsets_cmp.size());
-            for (auto& off : offsets_cmp) doc_ids.push_back(off + segment_modifier);
-
-            results[segment_id] = std::move(doc_ids);
+            for (const auto &[field_id, field_offsets] : offsets_cmp) {
+              std::vector<uint64_t> &doc_ids = results[segment_id][field_id];
+              doc_ids.reserve(field_offsets.size());
+              for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
+            }
           }
         } catch (...) {
           std::lock_guard lk(err_mtx);
@@ -145,13 +150,18 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
     if (first_error) std::rethrow_exception(first_error);
 
     // Flatten and merge into a list of offsets gathered from all segments
-    std::vector<uint64_t> combined_results;
-    for (const auto &vec : results)
-      combined_results.insert(combined_results.end(), vec.begin(), vec.end());
+    FieldDocids combined_results;
+    for (const auto &seg : results)
+      for (const auto &[field_id, vec] : seg)
+        combined_results[field_id].insert(combined_results[field_id].end(), vec.begin(), vec.end());
 
     // Get intersection if second token in string query, ie query such as "big mac"
     if (auto it = offsets.find(file_id); it != offsets.end()) {
-      offsets[file_id] = get_docid_intersection(it->second, combined_results);
+      FieldDocids intersection;
+      for (const auto &[field_id, docids] : it->second)
+        if (auto cmp = combined_results.find(field_id); cmp != combined_results.end())
+          intersection[field_id] = get_docid_intersection(docids, cmp->second);
+      it->second = std::move(intersection);
     } else {
       offsets[file_id] = std::move(combined_results);
     }
@@ -172,7 +182,10 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
 
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);
-    std::vector<std::vector<uint64_t>> results(num_segments);
+    std::vector<FieldDocids> results(num_segments);
+
+    // Read in field ids from fst
+    const std::vector<uint32_t> field_ids = num_segments ? get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields) : std::vector<uint32_t>{};
 
     const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
     std::cout << "number of threads used: " << n_threads << std::endl;
@@ -203,20 +216,17 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
           // No token id found for current query
           if (!ids) continue;
 
-          // Read in field ids from fst
-          const std::vector<uint32_t> field_ids = get_field_ids(segment_path, fields);
-
           const std::vector<uint32_t> id_offsets_map =
               get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
-          const std::vector<uint32_t> offsets_cmp = get_tok_offsets_from_file(*ids, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
+          const FieldDocs offsets_cmp = get_tok_offsets_from_file(*ids, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
 
           // Reconstruct actual doc_ids using per-segment modifier value
           uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
-          std::vector<uint64_t> doc_ids;
-          doc_ids.reserve(offsets_cmp.size());
-          for (auto& off : offsets_cmp) doc_ids.push_back(off + segment_modifier);
-
-          results[segment_id] = std::move(doc_ids);
+          for (const auto &[field_id, field_offsets] : offsets_cmp) {
+            std::vector<uint64_t> &doc_ids = results[segment_id][field_id];
+            doc_ids.reserve(field_offsets.size());
+            for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
+          }
         } catch (...) {
           std::lock_guard lk(err_mtx);
           if (!first_error) first_error = std::current_exception();
@@ -234,9 +244,10 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
     if (first_error) std::rethrow_exception(first_error);
 
     // Flatten and merge into a list of offsets gathered from all segments
-    std::vector<uint64_t> combined_results;
-    for (const auto &vec : results)
-      combined_results.insert(combined_results.end(), vec.begin(), vec.end());
+    FieldDocids combined_results;
+    for (const auto &seg : results)
+      for (const auto &[field_id, vec] : seg)
+        combined_results[field_id].insert(combined_results[field_id].end(), vec.begin(), vec.end());
 
     offsets[file_id] = std::move(combined_results);
   }

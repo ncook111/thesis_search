@@ -5,8 +5,6 @@
 #include <memory>
 #include <regex>
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
-
 const FieldMap parse_queries(const std::string &queries, const Metadata &metadata) {
     std::vector<std::pair<uint8_t, std::string>> tokens = tokenize(queries);
     std::unique_ptr<ASTNode> ast = build_ast(tokens, metadata);

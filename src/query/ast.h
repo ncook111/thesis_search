@@ -7,8 +7,6 @@
 #include "../search.h"
 #include "../metadata.h"
 
-using FieldMap = std::unordered_map<size_t, std::vector<uint64_t>>;
-
 class ASTNode {
   public:
     virtual ~ASTNode() = default;
