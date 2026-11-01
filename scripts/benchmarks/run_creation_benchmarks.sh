@@ -28,7 +28,7 @@ mkdir -p "$OUT_DIR"
 
 ### Creation benchmarking comparing threads and memory usage###
 T_SIZES="4|8|16|32"
-FILTER="IndexCreate/large/csv/.*/.*/num_threads:($T_SIZES)/"
+FILTER="IndexCreate/large/csv/.*/partition_size:256/num_threads:16/"
 TMP=$(mktemp -d)
 
 "$BENCH_BIN" --benchmark_list_tests --benchmark_filter="$FILTER" | while read -r name; do

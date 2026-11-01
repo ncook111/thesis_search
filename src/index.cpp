@@ -58,7 +58,7 @@ void create_index(const std::vector<std::string> &fields,
   for (size_t file_id = 0; file_id < files.size(); ++file_id) {
     file_mappings_vec[file_id] = files[file_id].filename().string();
 
-    std::cout << "Indexing File: " << file_mappings_vec[file_id] << "\n";
+    std::cout << "Segmenting File: " << file_mappings_vec[file_id] << "\n";
 
     std::vector<uint64_t> segment_offsets;
     std::vector<uint64_t> segment_docid_modifiers;
@@ -96,6 +96,8 @@ void index_files(const std::vector<std::string> &fields,
   }
 
   uint64_t num_segments = segment_tasks.size();
+
+  std::cout << " Indexing " + std::to_string(file_mappings_vec.size()) + "File\\s:\n";
 
   const size_t n_threads = std::min<size_t>(num_segments, num_threads);
   std::cout << "  Threads Utilized: " << n_threads << "\n";
