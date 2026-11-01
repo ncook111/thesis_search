@@ -174,8 +174,7 @@ void partition_file_csv(const std::string &file_path, const uint64_t file_offset
     } else if (pos - segment_start > segment_size) {
       segment_offsets.push_back(segment_start);
       segment_start = pos;
-      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
-      num_documents = 0;
+      segment_docid_modifiers.push_back(num_documents);
     }
 
     num_documents++;
@@ -248,8 +247,7 @@ void partition_file_logfmt(const std::string &file_path, const uint64_t file_off
     } else if (pos - segment_start > segment_size) {
       segment_offsets.push_back(segment_start);
       segment_start = static_cast<uint64_t>(pos);
-      segment_docid_modifiers.push_back(segment_docid_modifiers.back() + num_documents);
-      num_documents = 0;
+      segment_docid_modifiers.push_back(num_documents);
     }
 
     num_documents++;
