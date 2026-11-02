@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
 #include "ast.h"
 #include "../search.h"
 
@@ -32,7 +33,7 @@ namespace QueryTokType {
     };
 }
 
-const FieldMap parse_queries(const std::string &queries, const Metadata &metadata);
+const FieldMap parse_queries(const std::string &queries, const Metadata &metadata, const uint32_t num_threads = std::max(1u, std::thread::hardware_concurrency()));
 const std::vector<std::pair<uint8_t, std::string>> tokenize(const std::string &queries);
 void tokenize_std_query(bool &in_std_query, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);
 void tokenize_rng_query(bool &in_rng_query, const char c, std::vector<std::pair<uint8_t, std::string>> &tokens, std::string &curr_token);

@@ -5,6 +5,7 @@
 #include "segment.h"
 #include "metadata.h"
 #include <filesystem>
+#include <algorithm>
 #include <map>
 
 inline constexpr uint32_t NO_FIELD = UINT32_MAX;
@@ -15,7 +16,8 @@ typedef std::unordered_map<size_t, std::vector<uint64_t>> EntryMap;
 
 const FieldMap search_index(const std::vector<std::string> &fields,
                             const std::string &query,
-                            const Metadata &metadata);
+                            const Metadata &metadata,
+                            const size_t num_threads = std::max(1u, std::thread::hardware_concurrency()));
 const FieldMap process_queries(const std::vector<std::string> &fields,
                                const std::vector<std::string> &queries,
                                const Metadata &metadata,
@@ -90,7 +92,7 @@ get_id(const Q &query, const std::string &segment_path, const uint8_t type) {
 }
 
 template <QueryType Q>
-void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fields, const Q &token, const uint8_t type, const Metadata &metadata) {
+void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fields, const Q &token, const uint8_t type, const Metadata &metadata, const size_t num_threads = std::max(1u, std::thread::hardware_concurrency())) {
   const size_t files_indexed = metadata.get_file_mappings().size();
 
   // Build segment tasks across all files
@@ -110,9 +112,9 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
   }
 
   const size_t num_tasks = segment_tasks.size();
-  const size_t n_threads = std::min<size_t>(num_tasks, std::max(1u, std::thread::hardware_concurrency()));
+  const size_t n_threads = std::min<size_t>(num_tasks, num_threads);
   std::cout << "number of threads used: " << n_threads << std::endl;
-  
+
   std::atomic<size_t> next{0};
   std::mutex err_mtx;
   std::exception_ptr first_error;
@@ -186,7 +188,8 @@ void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fie
 template <class Q>
 void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fields, const Q &range,
                            const uint8_t type,
-                           const Metadata &metadata) {
+                           const Metadata &metadata,
+                           const size_t num_threads = std::max(1u, std::thread::hardware_concurrency())) {
   if constexpr (std::is_same_v<Q, Range>) {
     std::cout << "Range: " << range.min << " : " << range.max << std::endl;
   } else {
@@ -212,7 +215,7 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
   }
 
   const size_t num_tasks = segment_tasks.size();
-  const size_t n_threads = std::min<size_t>(num_tasks, std::max(1u, std::thread::hardware_concurrency()));
+  const size_t n_threads = std::min<size_t>(num_tasks, num_threads);
   std::cout << "number of threads used: " << n_threads << std::endl;
 
   std::atomic<size_t> next{0};

@@ -8,7 +8,8 @@
 
 const FieldMap search_index(const std::vector<std::string> &fields,
                             const std::string &query,
-                            const Metadata &metadata) { 
+                            const Metadata &metadata,
+                            const size_t num_threads) { 
   const Tokenizer tokens = Tokenizer::from_string(query);                         
   // If a range query, create a range
   Range range; // Construct dummy range
@@ -30,50 +31,50 @@ const FieldMap search_index(const std::vector<std::string> &fields,
   // If range only need to process this, then return
   if (range_type != TokenType::INVALID) {
     if (range_type == TokenType::FLOAT)
-      search_index_by_range(offsets, fields, range_float, range_type, metadata);
+      search_index_by_range(offsets, fields, range_float, range_type, metadata, num_threads);
     else
-      search_index_by_range(offsets, fields, range, range_type, metadata);
+      search_index_by_range(offsets, fields, range, range_type, metadata, num_threads);
     return offsets;
   }
 
   for (const auto &t : tokens.alpha_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::ALPHA, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::ALPHA, metadata, num_threads);
     if (no_matches(offsets)) {
       return offsets;
     }
   }
 
   for (const auto t : tokens.num_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::PINT, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::PINT, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }
 
   for (const auto t : tokens.neg_num_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::NINT, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::NINT, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }
 
   for (const auto t : tokens.float_tokens_q) {
-    search_index_by_type(offsets, fields, to_bytes(t), TokenType::FLOAT, metadata);
+    search_index_by_type(offsets, fields, to_bytes(t), TokenType::FLOAT, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }
 
   for (const auto t : tokens.d_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::DATE, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::DATE, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }
 
   for (const auto t : tokens.t_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::TIME, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::TIME, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }
   for (const auto t : tokens.ipv4_tokens_q) {
-    search_index_by_type(offsets, fields, t, TokenType::IPV4, metadata);
+    search_index_by_type(offsets, fields, t, TokenType::IPV4, metadata, num_threads);
     if (no_matches(offsets))
       return offsets;
   }

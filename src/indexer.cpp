@@ -57,7 +57,7 @@ int main(int argc, const char *argv[]) {
   if (vm.count("threads")) {
     num_threads = vm["threads"].as<uint32_t>();
   } else {
-    num_threads = std::thread::hardware_concurrency(); // Default
+    num_threads = std::max(1u, std::thread::hardware_concurrency()); // Default
   }
 
   std::string data_path;
@@ -89,9 +89,9 @@ int main(int argc, const char *argv[]) {
   if (act_mode == "c" || act_mode == "create") { // Index create mode
     return create_mode(index_path, data_path, fields, enc_type, partition_size, num_threads);
   } else if (act_mode == "u" || act_mode ==  "update") { // Index update mode
-    return update_mode(index_path, data_path, fields);
+    return update_mode(index_path, data_path, fields, num_threads);
   } else if (act_mode == "s" || act_mode ==  "search") { // Index search mode
-    return search_mode(index_path, data_path, output_path, queries);
+    return search_mode(index_path, data_path, output_path, queries, num_threads);
   } else if (act_mode == "v" || act_mode ==  "verify") { // Index verify
     return verify_mode(index_path);
   } else {

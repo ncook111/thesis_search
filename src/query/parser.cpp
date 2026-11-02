@@ -5,10 +5,10 @@
 #include <memory>
 #include <regex>
 
-const FieldMap parse_queries(const std::string &queries, const Metadata &metadata) {
+const FieldMap parse_queries(const std::string &queries, const Metadata &metadata, const uint32_t num_threads) {
     std::vector<std::pair<uint8_t, std::string>> tokens = tokenize(queries);
     std::unique_ptr<ASTNode> ast = build_ast(tokens, metadata);
-    return ast->evaluate();
+    return ast->evaluate(num_threads);
 }
 
 const std::vector<std::pair<uint8_t, std::string>> tokenize(const std::string &queries) {

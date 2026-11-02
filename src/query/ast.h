@@ -4,13 +4,17 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <thread>
+#include <memory>
+#include <iostream>
+#include <algorithm>
 #include "../search.h"
 #include "../metadata.h"
 
 class ASTNode {
   public:
     virtual ~ASTNode() = default;
-    virtual const FieldMap evaluate() const = 0;
+    virtual const FieldMap evaluate(const size_t num_threads = std::max(1u, std::thread::hardware_concurrency())) const = 0;
     virtual void print_type() = 0;
 };
 
@@ -19,8 +23,8 @@ class QueryNode : public ASTNode {
     QueryNode(std::vector<std::string> f, std::string q, const Metadata &i)
             : fields(f), query(q), metadata(i) {}
     
-    const FieldMap evaluate() const override {
-      return search_index(fields, query, metadata);
+    const FieldMap evaluate(const size_t num_threads) const override {
+      return search_index(fields, query, metadata, num_threads);
     }
 
     void print_type() override {
@@ -74,8 +78,8 @@ class UnaryOpNode : public ASTNode {
 class ComplimentNode : public UnaryOpNode {
   public:
     using UnaryOpNode::UnaryOpNode;
-    const FieldMap evaluate() const override {
-      return get_entries_offsets_compliment(node->evaluate(), metadata);
+    const FieldMap evaluate(const size_t num_threads) const override {
+      return get_entries_offsets_compliment(node->evaluate(num_threads), metadata);
     }
 
     void print_type() override {
@@ -87,8 +91,8 @@ class ComplimentNode : public UnaryOpNode {
 class UnionNode : public BinaryOpNode {
   public:
     using BinaryOpNode::BinaryOpNode;
-    const FieldMap evaluate() const override {
-      return get_entries_offsets_union(left->evaluate(), right->evaluate());
+    const FieldMap evaluate(const size_t num_threads) const override {
+      return get_entries_offsets_union(left->evaluate(num_threads), right->evaluate(num_threads));
     }
 
     void print_type() override {
@@ -101,8 +105,8 @@ class UnionNode : public BinaryOpNode {
 class DifferenceNode : public BinaryOpNode {
   public:
     using BinaryOpNode::BinaryOpNode;
-    const FieldMap evaluate() const override {
-      return get_entries_offsets_difference(left->evaluate(), right->evaluate());
+    const FieldMap evaluate(const size_t num_threads) const override {
+      return get_entries_offsets_difference(left->evaluate(num_threads), right->evaluate(num_threads));
     }
 
     void print_type() override {
@@ -115,8 +119,8 @@ class DifferenceNode : public BinaryOpNode {
 class SymDifferenceNode : public BinaryOpNode {
   public:
     using BinaryOpNode::BinaryOpNode;
-    const FieldMap evaluate() const override {
-      return get_entries_offsets_sym_difference(left->evaluate(), right->evaluate());
+    const FieldMap evaluate(const size_t num_threads) const override {
+      return get_entries_offsets_sym_difference(left->evaluate(num_threads), right->evaluate(num_threads));
     }
 
     void print_type() override {
@@ -129,8 +133,8 @@ class SymDifferenceNode : public BinaryOpNode {
 class IntersectionNode : public BinaryOpNode {
     public:
       using BinaryOpNode::BinaryOpNode;
-      const FieldMap evaluate() const override {
-        return get_entries_offsets_intersection(left->evaluate(), right->evaluate());
+      const FieldMap evaluate(const size_t num_threads) const override {
+        return get_entries_offsets_intersection(left->evaluate(num_threads), right->evaluate(num_threads));
       }
 
       void print_type() override {

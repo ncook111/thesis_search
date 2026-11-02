@@ -34,7 +34,7 @@ int create_mode(const std::string &index_path, const std::string &data_path, con
   return 0;
 }
 
-int update_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields) {
+int update_mode(const std::string &index_path, const std::string &data_path, const std::vector<std::string> &fields, const uint32_t num_threads) {
   if (!std::filesystem::exists(index_path + "/.metadata")) {
     std::cout << "Not a valid existing index folder\n";
     return 1;
@@ -55,7 +55,7 @@ int update_mode(const std::string &index_path, const std::string &data_path, con
   return 0;
 }
 
-int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query) {
+int search_mode(const std::string &index_path, const std::string &data_path, const std::string &output_path, const std::string &query, const uint32_t num_threads) {
   if (query.empty()) {
     std::cout << "No query values. Usage: ./ingest --help\n";
     return 1;
@@ -63,7 +63,7 @@ int search_mode(const std::string &index_path, const std::string &data_path, con
 
   try {
     const Metadata metadata = Metadata::read(index_path);
-    const FieldMap matches = parse_queries(query, metadata);
+    const FieldMap matches = parse_queries(query, metadata, num_threads);
     if (data_path.size()) {
       output_entries(matches, metadata, data_path, output_path);
     } else {
