@@ -43,7 +43,7 @@ std::vector<std::string> search_types =
 
 template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType) + '/' + search_types[SearchType])
-        ->ArgNames({"size", "dataset", "type", "enc", "partition_size", "num_threads"})
+        ->ArgNames({"size", "dataset", "type", "enc", "partition_size", "num_threads", "query_type"})
         ->ArgsProduct({
             {FileSize},
             {0, 1, 2, 3},
@@ -62,7 +62,7 @@ template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void St
 static const std::vector<std::vector<std::string>> queries = {
         // simple_search
         {
-            "[reviewtext] = \"book\"", 
+            "[reviewText] = \"book\"", 
             "[type] = \"IssueCommentEvent\"", 
             "[page_title] = \"germany\"", 
             "[publication_year] = \"2026\""
@@ -70,7 +70,7 @@ static const std::vector<std::vector<std::string>> queries = {
 
         // union_search
         {
-            "[reviewtext] = \"book\" | [reviewtext] = \"television\"",
+            "[reviewText] = \"book\" | [reviewText] = \"television\"",
             "[type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\"",
             "[page_title] = \"germany\" | [page_title] = \"england\"",
             "[publication_year] = \"2026\" | [publication_year] = \"2025\""
@@ -78,7 +78,7 @@ static const std::vector<std::vector<std::string>> queries = {
 
         // intersection_search
         {
-            "[reviewtext] = \"book\" & [reviewtext] = \"paperback\"",
+            "[reviewText] = \"book\" & [reviewText] = \"paperback\"",
             "[type] = \"IssueCommentEvent\" & [created_at] = \"2026-01-01\"",
             "[timestamp] = \"2026-01-01\" & [page_title] = \"germany\"",
             "[publication_year] = \"2026\" & [language] = \"en\""
@@ -86,7 +86,7 @@ static const std::vector<std::vector<std::string>> queries = {
 
         // combination_search
         {
-            "([overall] = \"5.0\" & [reviewtext] = \"book\") & [reviewtext] = \"paperback\"",
+            "([overall] = \"5.0\" & [reviewText] = \"book\") & [reviewText] = \"paperback\"",
             "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = \"2026-01-01\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = \"2026-01-01\"",
             "([publication_year] = \"2026\" | [publication_year] = \"2025\") & [language] = \"en\""
@@ -94,7 +94,7 @@ static const std::vector<std::vector<std::string>> queries = {
 
         // complex combination_search
         {
-            "([overall] = \"5.0\" & [reviewtext] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewtext] = \"television\" & ![reviewtext] = \"terrible\")",
+            "([overall] = \"5.0\" & [reviewText] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewText] = \"television\" & ![reviewText] = \"terrible\")",
             "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = {2025-01-01, 2026-01-01} & ![created_at] = \"2025-12-25\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
             "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![title] = \"LLM\")"
@@ -103,7 +103,7 @@ static const std::vector<std::vector<std::string>> queries = {
 
 static const std::vector<std::vector<std::string>> dataset_fields = {
         // Dataset 1
-        {"overall", "reviewtext"},
+        {"overall", "reviewText"},
 
         // Dataset 2
         {"type", "created_at"},
@@ -171,6 +171,7 @@ std::once_flag IndexSearch::wipe_flag;
 
 BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     std::string query = queries[0][dataset_number];
+    std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -184,6 +185,7 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     std::string query = queries[1][dataset_number];
+    std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -197,6 +199,7 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     std::string query = queries[2][dataset_number];
+    std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -210,6 +213,7 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     std::string query = queries[3][dataset_number];
+    std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
@@ -223,6 +227,7 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& state) {
     std::string query = queries[4][dataset_number];
+    std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
         flush_cache(cache_size);
