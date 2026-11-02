@@ -13,7 +13,7 @@ def load_results_encoding_decoding(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
-    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p90", "p99", "p10", "p1"])].copy()
+    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p95", "p5"])].copy()
 
     parts = df["run_name"].str.split("/")
     df["scheme"] = parts.str[1].str.split("_", n=1).str[1]

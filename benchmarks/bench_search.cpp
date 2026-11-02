@@ -44,62 +44,71 @@ template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void St
     args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType) + '/' + search_types[SearchType])
         ->ArgsProduct({
             {FileSize},
-            {0, 1, 2, 3, 4},
+            {0, 1, 2, 3},
             {FileType},
             available_enc_types()
         })
         ->Iterations(1)
+        ->UseRealTime()
         ->Unit(benchmark::kMicrosecond)
-        ->ComputeStatistics("p90", [](const std::vector<double>& v) { return get_percentile(v, 0.90); })
-        ->ComputeStatistics("p99", [](const std::vector<double>& v) { return get_percentile(v, 0.99); })
+        ->ComputeStatistics("p95", [](const std::vector<double>& v) { return get_percentile(v, 0.95); })
         ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 }
 
 static const std::vector<std::vector<std::string>> queries = {
         // simple_search
         {
-            "[*] = \"male\"", 
-            "[*] = \"1994-01-01\"", 
-            "[*] = \"Pavel\"", 
-            "[*] = \"53\"",
-            "[*] = \"html\""
+            "[reviewtext] = \"book\"", 
+            "[type] = \"IssueCommentEvent\"", 
+            "[page_title] = \"germany\"", 
+            "[publication_year] = \"2026\""
         },
 
         // union_search
         {
-            "[sex] = \"male\" | [sex] = \"female\"",
-            "[dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}",
-            "[authors] = \"Pavel\" | [authors] = \"Louis\"",
-            "[time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\"",
-            "[*] = \"html\" | [*] = \"2024-11-01\""
+            "[reviewtext] = \"book\" | [reviewtext] = \"television\"",
+            "[type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\"",
+            "[page_title] = \"germany\" | [page_title] = \"england\"",
+            "[publication_year] = \"2026\" | [publication_year] = \"2025\""
         },
 
         // intersection_search
         {
-            "[sex] = \"male\" & [first_name] = \"bob\"",
-            "[dob] = {1994-01-01,1995-12-31} & [acc_bal] = {0.1,2000.1}",
-            "[authors] = \"Pavel\" & [authors] = \"Dimitry\"",
-            "[time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\"",
-            "[*] = \"html\" & [*] = \"2024-11-01\""
+            "[reviewtext] = \"book\" & [reviewtext] = \"paperback\"",
+            "[type] = \"IssueCommentEvent\" & [created_at] = \"2026-01-01\"",
+            "[timestamp] = \"2026-01-01\" & [page_title] = \"germany\"",
+            "[publication_year] = \"2026\" & [language] = \"en\""
         },
 
         // combination_search
         {
-            "([sex] = \"male\" | [sex] = \"female\") & [first_name] = \"bob\"",
-            "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1}",
-            "([authors] = \"Pavel\" | [authors] = \"Louis\") & [title] = \"Graph Decompositions\"",
-            "([time_stamp] = \"2025-09-30\" | [time_stamp] = \"2025-10-01\") | [time_stamp] = \"07:00:00\"",
-            "[*] = \"html\" | [*] = \"2024-11-01\" | [*] = \"19:14:42\""
+            "([overall] = \"5.0\" & [reviewtext] = \"book\") & [reviewtext] = \"paperback\"",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = \"2026-01-01\"",
+            "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = \"2026-01-01\"",
+            "([publication_year] = \"2026\" | [publication_year] = \"2025\") & [language] = \"en\""
         },
 
         // complex combination_search
         {
-            "([sex] = \"male\" & [first_name] = \"bob\") | ([sex] = \"female\" & [first_name] = \"Gloria\" & ![city] = \"Kingsport\")",
-            "([dob] = {1994-01-01,1995-12-31} | [dob] = {1984-01-01,1985-12-31}) & [acc_bal] = {0.1,2000.1} & ![acc_num] = \"74578716\"",
-            "([authors] = \"Pavel\" | [authors] = \"Dimitry\" | [authors] = \"Alejandro\") & ([title] = \"Graph Decompositions\" | [title] = \"prompt diphoton\") & ![authors] = \"Berger\"",
-            "([time_stamp] = \"2025-09-30\" & [time_stamp] = \"07:00:00\") | ([time_stamp] = \"2025-10-01\" | [time_stamp] = \"07:00:00\") & [sensor_0_max] = {,63.0}",
-            "([*] = \"html\" | [*] = \"2024-11-01\" | [*] = \"19:14:42\") & [*] = \"{0, 99999}\""
+            "([overall] = \"5.0\" & [reviewtext] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewtext] = \"television\" & ![reviewtext] = \"terrible\")",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = {2025-01-01, 2026-01-01} & ![created_at] = \"2025-12-25\"",
+            "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
+            "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![title] = \"LLM\")"
         }
+};
+
+static const std::vector<std::vector<std::string>> dataset_fields = {
+        // Dataset 1
+        {"overall", "reviewtext"},
+
+        // Dataset 2
+        {"type", "created_at"},
+
+        // Dataset 3
+        {"page_title", "timestamp"},
+
+        // Dataset 4
+        {"publication_year", "language", "title"}
 }; 
 
 class IndexSearch : public benchmark::Fixture {
@@ -140,12 +149,13 @@ public:
                "_data/data_5"
             };
 
-            for (auto bench_path : bench_paths) {
+            for (size_t i = 0; i < bench_paths.size(); ++ i) {
+                std::string bench_path = bench_paths[i];
                 std::string full_data_path = data_path + dataset_size + bench_path;
                 std::string full_index_path = index_path + file_type_to_str(file_type) + '/' + dataset_size + bench_path;
 
                 for (auto enc_type : available_enc_types()) {
-                    create_mode(full_index_path + '_' + enc_type_to_str(enc_type), full_data_path, {}, enc_type);
+                    create_mode(full_index_path + '_' + enc_type_to_str(enc_type), full_data_path, dataset_fields[i], enc_type);
                 }
             }
         });
@@ -167,8 +177,9 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query);
         benchmark::ClobberMemory();
-
     }
+
+    state.SetItemsProcessed(state.iterations());
 }
 
 BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
@@ -180,6 +191,8 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
         search_mode(index_path + bench_path, "", {}, query);
         benchmark::ClobberMemory();
     }
+
+    state.SetItemsProcessed(state.iterations());
 }
 
 BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
@@ -191,6 +204,8 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
         search_mode(index_path + bench_path, "", {}, query);
         benchmark::ClobberMemory();
     }
+
+    state.SetItemsProcessed(state.iterations());
 }
 
 BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
@@ -202,6 +217,8 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
         search_mode(index_path + bench_path, "", {}, query);
         benchmark::ClobberMemory();
     }
+
+    state.SetItemsProcessed(state.iterations());
 }
 
 BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& state) {
@@ -213,50 +230,67 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
         search_mode(index_path + bench_path, "", {}, query);
         benchmark::ClobberMemory();
     }
+
+    state.SetItemsProcessed(state.iterations());
 }
 
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV, 0>);
+BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON, 0>);
+BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT, 0>);
+BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT, 0>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV, 1>);
+BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON, 1>);
+BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT, 1>);
+BENCHMARK_REGISTER_F(IndexSearch, union_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT, 1>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV, 2>);
+BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON, 2>);
+BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT, 2>);
+BENCHMARK_REGISTER_F(IndexSearch, intersection_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT, 2>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV, 3>);
+BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON, 3>);
+BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT, 3>);
+BENCHMARK_REGISTER_F(IndexSearch, combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT, 3>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV, 4>);
+BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON, 4>);
+BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT, 4>);
 BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT, 4>);
+BENCHMARK_REGISTER_F(IndexSearch, complex_combination_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT, 4>);

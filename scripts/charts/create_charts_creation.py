@@ -46,9 +46,10 @@ def load_results(path):
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
-    df["partition_size"] = pd.to_numeric(parts.str[4], errors="coerce")
+    df["partition_size"] = parts.str[4].astype(int)
+    df["thread_count"] = parts.str[5].astype(int)
 
-    all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size"]
+    all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size", "thread_count"]
     return df.reindex(columns=all_cols)
 
 def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
@@ -163,7 +164,6 @@ def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, sch
     data["throughput"] = data["data_size"] / 1_000_000 / data["real_time"]
 
     throughput = data.groupby("partition_size")["throughput"].mean()
-    throughput.index = throughput.index.map(lambda p: f"{p:g}")
 
     if scheme is None:
         save_no_legend(out, throughput, title, "Partition Size (MB)", "MB/s")
@@ -186,7 +186,6 @@ def plot_compression_by_partition_size(df, file_size, file_type, folder_name, sc
     data["compression_pct"] = data["index_size"] / data["data_size"] * 100
 
     compression = data.groupby("partition_size")["compression_pct"].mean()
-    compression.index = compression.index.map(lambda p: f"{p:g}")
 
     if scheme is None:
         save_no_legend(out, compression, title, "Partition Size (MB)", "% of input")
@@ -210,7 +209,6 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
     data["peak_mb"] = data["peak_delta"] / 1_000_000
 
     memory = data.groupby("partition_size")["peak_mb"].mean()
-    memory.index = memory.index.map(lambda p: f"{p:g}")
 
     if scheme is None:
         save_no_legend(out, memory, title, "Partition Size (MB)", "Peak memory (MB)")
@@ -218,7 +216,7 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
         save(out, memory.to_frame(scheme), title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
 
 
-def plot_memory_usage_by_scheme_size(df, file_size, file_type, folder_name, partition_size=None):
+def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name, partition_size=None):
     # Average of all datasets, average of all partition_sizes unless partition_sizes set
     if partition_size is None:
         tag = "all_partitions"
@@ -238,6 +236,51 @@ def plot_memory_usage_by_scheme_size(df, file_size, file_type, folder_name, part
         save_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
     else:
         save(out, memory.to_frame(label), title, "Partition Size", "Encoding Scheme", "Peak memory (MB)")
+        
+def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
+    # Average of all datasets, average of all schemes unless scheme set
+    tag = scheme or "all_schemes"
+    title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_throughput_by_thread_count.png"
+
+    data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
+    data["throughput"] = data["data_size"] / 1_000_000 / data["real_time"]
+
+    if scheme is None:
+        throughput = data.groupby(["thread_count", "scheme"])["throughput"].mean().unstack("scheme").sort_index()
+        save(out, throughput, title, "Encoding Schemes", "Thread Count", "MB/s")
+        return
+
+    if scheme == "average":
+        title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, average of schemes)"
+    else:
+        data = data[data["scheme"] == scheme]
+        title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, {scheme})"
+
+    throughput = data.groupby("thread_count")["throughput"].mean().sort_index()
+    save_no_legend(out, throughput, title, "Thread Count", "MB/s")
+
+
+def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
+    # Average of all datasets, average of all schemes unless scheme set
+    if scheme is None:
+        tag = "all_schemes"
+        title = f"Peak Memory By Thread Count ({file_size}, {file_type})"
+    else:
+        tag = scheme
+        title = f"Peak Memory By Thread Count ({file_size}, {file_type}, {scheme})"
+    
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_memory_by_thread_count.png"
+
+    data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
+    if scheme is not None:
+        data = data[data["scheme"] == scheme]
+    data = data.dropna(subset=["thread_count"])
+    data["peak_mb"] = data["peak_delta"] / 1_000_000
+
+    memory = data.groupby("thread_count")["peak_mb"].mean().sort_index()
+
+    save_no_legend(out, memory, title, "Thread Count", "Peak memory (MB)")
     
 if __name__ == "__main__":
     
@@ -270,4 +313,20 @@ if __name__ == "__main__":
     plot_throughput_by_partition_size(df, "medium", "csv", "creation_partitioned")
     plot_compression_by_partition_size(df, "medium", "csv", "creation_partitioned")
     plot_memory_usage_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    plot_memory_usage_by_scheme_size(df, "medium", "csv", "creation_partitioned")
+    plot_memory_usage_by_scheme(df, "medium", "csv", "creation_partitioned")
+    
+    # Multi-threaded Chart Creation
+    
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_multi_threaded", exist_ok=True)
+
+    df_0 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_1.json")
+    df_1 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_2.json")
+    df_2 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_4.json")
+    df_3 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_8.json")
+    df_4 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_16.json")
+    df_5 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_32.json")
+
+    df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
+    
+    plot_throughput_by_thread_count(df, "large", "csv", "creation_multi_threaded")
+    plot_memory_usage_by_thread_count(df, "large", "csv", "creation_multi_threaded")

@@ -92,66 +92,81 @@ get_id(const Q &query, const std::string &segment_path, const uint8_t type) {
 template <QueryType Q>
 void search_index_by_type(FieldMap &offsets, const std::vector<std::string> &fields, const Q &token, const uint8_t type, const Metadata &metadata) {
   const size_t files_indexed = metadata.get_file_mappings().size();
-  
+
+  // Build segment tasks across all files
+  std::vector<std::pair<size_t, size_t>> segment_tasks;
+  std::vector<std::vector<FieldDocids>> results(files_indexed);
+  std::vector<std::vector<uint32_t>> all_field_ids(files_indexed);
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);
-    std::vector<FieldDocids> results(num_segments);
+    results[file_id].resize(num_segments);
 
     // Read in field ids from fst
-    const std::vector<uint32_t> field_ids = num_segments ? get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields) : std::vector<uint32_t>{};
+    if (num_segments)
+      all_field_ids[file_id] = get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields);
 
-    const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
+    for (size_t segment_id = 0; segment_id < num_segments; ++segment_id)
+      segment_tasks.push_back({file_id, segment_id});
+  }
 
-    std::atomic<size_t> next{0};
-    std::mutex err_mtx;
-    std::exception_ptr first_error;
-    std::stop_source stop;
-    auto worker = [&] {
-      while (!stop.stop_requested()) {
-        const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
-        if (segment_id >= num_segments) break;
+  const size_t num_tasks = segment_tasks.size();
+  const size_t n_threads = std::min<size_t>(num_tasks, std::max(1u, std::thread::hardware_concurrency()));
+  std::cout << "number of threads used: " << n_threads << std::endl;
+  
+  std::atomic<size_t> next{0};
+  std::mutex err_mtx;
+  std::exception_ptr first_error;
+  std::stop_source stop;
+  auto worker = [&] {
+    while (!stop.stop_requested()) {
+      const size_t task_id = next.fetch_add(1, std::memory_order_relaxed);
+      if (task_id >= num_tasks) break;
 
-        try {
-          const std::string segment_path = metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg";
-          if (!std::filesystem::exists(segment_path)) {
-              throw std::invalid_argument("Segment file does not exist: " + segment_path);
+      try {
+        const auto [file_id, segment_id] = segment_tasks[task_id];
+        const std::vector<uint32_t> &field_ids = all_field_ids[file_id];
+
+        const std::string segment_path = metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg";
+        if (!std::filesystem::exists(segment_path)) {
+            throw std::invalid_argument("Segment file does not exist: " + segment_path);
+        }
+
+        const std::optional<uint64_t> id = get_id(token, segment_path, type);
+        // // No token id found for current token, continue
+        if (!id) continue;
+
+        const std::vector<uint32_t> id_offsets_map = get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
+        if (id_offsets_map.size()) {
+          const FieldDocs offsets_cmp = get_tok_offsets_from_file(*id, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
+
+          // Reconstruct actual doc_ids using per-segment modifier value
+          uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
+          for (const auto &[field_id, field_offsets] : offsets_cmp) {
+            std::vector<uint64_t> &doc_ids = results[file_id][segment_id][field_id];
+            doc_ids.reserve(field_offsets.size());
+            for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
           }
-
-          const std::optional<uint64_t> id = get_id(token, segment_path, type);
-          // // No token id found for current token, continue
-          if (!id) continue;
-
-          const std::vector<uint32_t> id_offsets_map = get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
-          if (id_offsets_map.size()) {
-            const FieldDocs offsets_cmp = get_tok_offsets_from_file(*id, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
-
-            // Reconstruct actual doc_ids using per-segment modifier value
-            uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
-            for (const auto &[field_id, field_offsets] : offsets_cmp) {
-              std::vector<uint64_t> &doc_ids = results[segment_id][field_id];
-              doc_ids.reserve(field_offsets.size());
-              for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
-            }
-          }
-        } catch (...) {
-          std::lock_guard lk(err_mtx);
-          if (!first_error) first_error = std::current_exception();
-          stop.request_stop();
-        } 
-      }
-    };
-    
-    {
-      std::vector<std::jthread> pool;
-      pool.reserve(n_threads);
-      for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+        }
+      } catch (...) {
+        std::lock_guard lk(err_mtx);
+        if (!first_error) first_error = std::current_exception();
+        stop.request_stop();
+      } 
     }
+  };
+  
+  {
+    std::vector<std::jthread> pool;
+    pool.reserve(n_threads);
+    for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+  }
 
-    if (first_error) std::rethrow_exception(first_error);
+  if (first_error) std::rethrow_exception(first_error);
 
+  for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     // Flatten and merge into a list of offsets gathered from all segments
     FieldDocids combined_results;
-    for (const auto &seg : results)
+    for (const auto &seg : results[file_id])
       for (const auto &[field_id, vec] : seg)
         combined_results[field_id].insert(combined_results[field_id].end(), vec.begin(), vec.end());
 
@@ -180,76 +195,91 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
 
   const size_t files_indexed = metadata.get_file_mappings().size();
 
+  // Build segment tasks across all files
+  std::vector<std::pair<size_t, size_t>> segment_tasks;
+  std::vector<std::vector<FieldDocids>> results(files_indexed);
+  std::vector<std::vector<uint32_t>> all_field_ids(files_indexed);
   for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     const size_t num_segments = metadata.get_num_segments(file_id);
-    std::vector<FieldDocids> results(num_segments);
+    results[file_id].resize(num_segments);
 
     // Read in field ids from fst
-    const std::vector<uint32_t> field_ids = num_segments ? get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields) : std::vector<uint32_t>{};
+    if (num_segments)
+      all_field_ids[file_id] = get_field_ids(metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_0.seg", fields);
 
-    const size_t n_threads = std::min<size_t>(num_segments, std::max(1u, std::thread::hardware_concurrency()));
-    std::cout << "number of threads used: " << n_threads << std::endl;
+    for (size_t segment_id = 0; segment_id < num_segments; ++segment_id)
+      segment_tasks.push_back({file_id, segment_id});
+  }
 
-    std::atomic<size_t> next{0};
-    std::mutex err_mtx;
-    std::exception_ptr first_error;
-    std::stop_source stop;
+  const size_t num_tasks = segment_tasks.size();
+  const size_t n_threads = std::min<size_t>(num_tasks, std::max(1u, std::thread::hardware_concurrency()));
+  std::cout << "number of threads used: " << n_threads << std::endl;
 
-    auto worker = [&] {
-      while (!stop.stop_requested()) {
-        const size_t segment_id = next.fetch_add(1, std::memory_order_relaxed);
-        if (segment_id >= num_segments) break;
+  std::atomic<size_t> next{0};
+  std::mutex err_mtx;
+  std::exception_ptr first_error;
+  std::stop_source stop;
 
-        try {
-          const std::string segment_path = metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg";
-          if (!std::filesystem::exists(segment_path))
-            throw std::invalid_argument("Segment file does not exist: " + segment_path);
+  auto worker = [&] {
+    while (!stop.stop_requested()) {
+      const size_t task_id = next.fetch_add(1, std::memory_order_relaxed);
+      if (task_id >= num_tasks) break;
 
-          std::optional<Range> ids;
-          if constexpr (std::is_same_v<Q, Range>) {
-            ids = get_range_id_pef(range, segment_path, type);
-          } else {
-            std::unique_ptr<StdCompactFst> fst = read_from_disk(segment_path, get_float_fst_pos(segment_path));
-            ids = get_id_range_from_fst(*fst, range);
-          }
+      try {
+        const auto [file_id, segment_id] = segment_tasks[task_id];
+        const std::vector<uint32_t> &field_ids = all_field_ids[file_id];
 
-          // No token id found for current query
-          if (!ids) continue;
+        const std::string segment_path = metadata.get_index_path() + '/' + std::to_string(file_id) + "_segment_" + std::to_string(segment_id) + ".seg";
+        if (!std::filesystem::exists(segment_path))
+          throw std::invalid_argument("Segment file does not exist: " + segment_path);
 
-          const std::vector<uint32_t> id_offsets_map =
-              get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
-          const FieldDocs offsets_cmp = get_tok_offsets_from_file(*ids, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
-
-          // Reconstruct actual doc_ids using per-segment modifier value
-          uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
-          for (const auto &[field_id, field_offsets] : offsets_cmp) {
-            std::vector<uint64_t> &doc_ids = results[segment_id][field_id];
-            doc_ids.reserve(field_offsets.size());
-            for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
-          }
-        } catch (...) {
-          std::lock_guard lk(err_mtx);
-          if (!first_error) first_error = std::current_exception();
-          stop.request_stop();
+        std::optional<Range> ids;
+        if constexpr (std::is_same_v<Q, Range>) {
+          ids = get_range_id_pef(range, segment_path, type);
+        } else {
+          std::unique_ptr<StdCompactFst> fst = read_from_disk(segment_path, get_float_fst_pos(segment_path));
+          ids = get_id_range_from_fst(*fst, range);
         }
+
+        // No token id found for current query
+        if (!ids) continue;
+
+        const std::vector<uint32_t> id_offsets_map =
+            get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
+        const FieldDocs offsets_cmp = get_tok_offsets_from_file(*ids, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
+
+        // Reconstruct actual doc_ids using per-segment modifier value
+        uint64_t segment_modifier = metadata.get_segment_docid_modifier(file_id, segment_id);
+        for (const auto &[field_id, field_offsets] : offsets_cmp) {
+          std::vector<uint64_t> &doc_ids = results[file_id][segment_id][field_id];
+          doc_ids.reserve(field_offsets.size());
+          for (auto& off : field_offsets) doc_ids.push_back(off + segment_modifier);
+        }
+      } catch (...) {
+        std::lock_guard lk(err_mtx);
+        if (!first_error) first_error = std::current_exception();
+        stop.request_stop();
       }
-    };
-
-    {
-      std::vector<std::jthread> pool;
-      pool.reserve(n_threads);
-      for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
     }
+  };
 
-    if (first_error) std::rethrow_exception(first_error);
+  {
+    std::vector<std::jthread> pool;
+    pool.reserve(n_threads);
+    for (size_t t = 0; t < n_threads; ++t) pool.emplace_back(worker);
+  }
 
+  if (first_error) std::rethrow_exception(first_error);
+
+  for (size_t file_id = 0; file_id < files_indexed; ++file_id) {
     // Flatten and merge into a list of offsets gathered from all segments
     FieldDocids combined_results;
-    for (const auto &seg : results)
+    for (const auto &seg : results[file_id])
       for (const auto &[field_id, vec] : seg)
         combined_results[field_id].insert(combined_results[field_id].end(), vec.begin(), vec.end());
 
     offsets[file_id] = std::move(combined_results);
   }
 }
+
 #endif

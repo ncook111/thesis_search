@@ -33,7 +33,7 @@ def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
-    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p90", "p99"])].copy()
+    df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p95"])].copy()
     
     parts = df["label"].str.split(",")
     df["scheme"] = pd.Categorical(parts.str[0], categories=["gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"], ordered=True)
@@ -44,11 +44,19 @@ def load_results(path):
 
     df = df.rename(columns={"aggregate_name": "stat"})
 
-    all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "index_size", "data_size", "dataset", "query_type"]
+    # Throughput (queries/s) straight from Google Benchmark's items_per_second
+    # counter. Each aggregate row holds that statistic of the per-repetition
+    # rates, e.g. p95 = 95th-percentile throughput (the fast end).
+    # stddev/cv rows are not rates, so they are blanked.
+    timed = df["stat"].isin(["mean", "median", "p95"])
+    df["throughput"] = df["items_per_second"].where(timed)
+
+    all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
+                "index_size", "data_size", "dataset", "query_type"]
     return df.reindex(columns=all_cols)
 
 def plot_latency_by_dataset(df, query_type, file_type, file_size):
-    stats = ["median", "p90", "p99"]
+    stats = ["median", "p95"]
     for stat in stats:
         title = f"Query Latency ({stat}, {query_type}, {file_size}, {file_type})"
         out = f"{RESULTS_DIR}/figures/search/{query_type}_{stat}_{file_size}_{file_type}_latency_by_dataset.png"
@@ -61,7 +69,7 @@ def plot_latency_by_dataset(df, query_type, file_type, file_size):
         save(out, latency, title, "Encoding Schemes", "dataset", "microseconds")
 
 def plot_latency_by_query_type(df, dataset, file_type, file_size):
-    stats = ["median", "p90", "p99"]
+    stats = ["median", "p95"]
     for stat in stats:
         title = f"Query Latency ({stat}, {dataset}, {file_size}, {file_type})"
         out = f"{RESULTS_DIR}/figures/search/dataset_{dataset}_{stat}_{file_size}_{file_type}_latency_by_query.png"
@@ -73,16 +81,73 @@ def plot_latency_by_query_type(df, dataset, file_type, file_size):
         save(out, latency, title, "Encoding Schemes", "query type", "microseconds")
 
 def plot_latency_by_scheme(df, query_type, dataset, file_type, file_size):
-    title = f"Query Latency ({query_type}, dataset {dataset}, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search/{query_type}_dataset_{dataset}_{file_size}_{file_type}_latency_by_scheme.png"
+    if dataset is None:
+        ds_title, ds_file = "all datasets (mean)", "all_datasets"
+    else:
+        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
 
-    data = df[(df["query_type"] == query_type) & (df["dataset"] == dataset)
+    title = f"Query Latency ({query_type}, {ds_title}, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/{query_type}_{ds_file}_{file_size}_{file_type}_latency_by_scheme.png"
+
+    data = df[(df["query_type"] == query_type)
               & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+    if dataset is not None:
+        data = data[data["dataset"] == dataset]
 
-    latency = data.pivot(index="scheme", columns="stat", values="real_time")
-    latency = latency.reindex(columns=["median", "p90", "p99"]).dropna(axis=1, how="all")
+    # Arithmetic mean of each statistic across datasets (a no-op for a single dataset)
+    latency = data.pivot_table(index="scheme", columns="stat", values="real_time",
+                               aggfunc="mean", observed=True)
+    latency = latency.reindex(columns=["median", "p95"]).dropna(axis=1, how="all")
 
     save(out, latency, title, "Statistic", "encoding scheme", "microseconds")
+    
+def plot_throughput_by_dataset(df, query_type, file_type, file_size):
+    stats = ["median", "p95"]
+    for stat in stats:
+        title = f"Query Throughput ({stat}, {query_type}, {file_size}, {file_type})"
+        out = f"{RESULTS_DIR}/figures/search/{query_type}_{stat}_{file_size}_{file_type}_throughput_by_dataset.png"
+        data = df[df["stat"] == stat].copy()
+        data = data[data["query_type"] == query_type]
+        data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
+
+        throughput = data.pivot(index="dataset", columns="scheme", values="throughput")
+
+        save(out, throughput, title, "Encoding Schemes", "dataset", "queries/s")
+    
+def plot_throughput_by_query_type(df, dataset, file_type, file_size):
+    stats = ["median", "p95"]
+    for stat in stats:
+        title = f"Query Throughput ({stat}, dataset {dataset}, {file_size}, {file_type})"
+        out = f"{RESULTS_DIR}/figures/search/dataset_{dataset}_{stat}_{file_size}_{file_type}_throughput_by_query.png"
+        data = df[df["stat"] == stat].copy()
+        data = data[data["dataset"] == dataset]
+        data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
+
+        throughput = data.pivot(index="query_type", columns="scheme", values="throughput")
+        save(out, throughput, title, "Encoding Schemes", "query type", "queries/s")
+    
+def plot_throughput_by_scheme(df, query_type, dataset, file_type, file_size):
+    if dataset is None:
+        ds_title, ds_file = "all datasets (mean)", "all_datasets"
+    else:
+        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
+
+    title = f"Query Throughput ({query_type}, {ds_title}, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/{query_type}_{ds_file}_{file_size}_{file_type}_throughput_by_scheme.png"
+
+    data = df[(df["query_type"] == query_type)
+              & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+    if dataset is not None:
+        data = data[data["dataset"] == dataset]
+
+    # Harmonic mean across datasets: the right way to average rates over
+    # equal amounts of work (a no-op for a single dataset)
+    harmonic_mean = lambda s: len(s) / (1.0 / s).sum()
+    throughput = data.pivot_table(index="scheme", columns="stat", values="throughput",
+                                  aggfunc=harmonic_mean, observed=True)
+    throughput = throughput.reindex(columns=["median", "p95"]).dropna(axis=1, how="all")
+
+    save(out, throughput, title, "Statistic", "encoding scheme", "queries/s")
 
 def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     if query_type is not None:
@@ -93,7 +158,7 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
         out = f"{RESULTS_DIR}/figures/search/all_queries_{file_size}_{file_type}_decrease_vs_{baseline}.png"
 
     results = {}
-    for stat in ["median", "p90", "p99"]:
+    for stat in ["median", "p95"]:
         data = df[(df["stat"] == stat) & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
         if query_type is not None:
             data = data[data["query_type"] == query_type]
@@ -125,5 +190,3 @@ if __name__ == "__main__":
         for file_type in file_types:
             for file_size in file_sizes:
                 plot_latency_decrease_by_scheme(df, query, file_type, file_size)
-
-

@@ -27,8 +27,7 @@ mkdir -p "$OUT_DIR"
 # rm -rf "$TMP"
 
 ### Creation benchmarking comparing threads and memory usage###
-T_SIZES="4|8|16|32"
-FILTER="IndexCreate/large/csv/.*/partition_size:256/num_threads:16/"
+FILTER="IndexCreate/large/csv/.*/partition_size:256/num_threads:1/"
 TMP=$(mktemp -d)
 
 "$BENCH_BIN" --benchmark_list_tests --benchmark_filter="$FILTER" | while read -r name; do
@@ -38,5 +37,18 @@ TMP=$(mktemp -d)
     --benchmark_out_format=json </dev/null
 done
 
-jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/creation_multithreaded.json"
+jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/creation_multithreaded_1.json"
+rm -rf "$TMP"
+
+FILTER="IndexCreate/large/csv/.*/partition_size:256/num_threads:2/"
+TMP=$(mktemp -d)
+
+"$BENCH_BIN" --benchmark_list_tests --benchmark_filter="$FILTER" | while read -r name; do
+    "$BENCH_BIN" \
+    --benchmark_filter="^${name}\$" \
+    --benchmark_out="$TMP/$(echo "$name" | tr '/:' '__').json" \
+    --benchmark_out_format=json </dev/null
+done
+
+jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/creation_multithreaded_2.json"
 rm -rf "$TMP"

@@ -22,7 +22,7 @@ enum Value : uint8_t { CSV = 0, JSON = 1, LOGFMT = 2, INVALID = 3 };
 }
 
 namespace FileSize {
-enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2 };
+enum Value : uint8_t { SMALL = 0, MEDIUM = 1, LARGE = 2, XLARGE = 3 };
 }
 
 namespace FstType {
