@@ -139,7 +139,7 @@ public:
         std::call_once(wipe_flag, [] { std::filesystem::remove_all(index_path); });
 
         std::string data_file = data_dir_for(file_type) + dataset_size + "_data/data_" + std::to_string(dataset_number + 1);
-        ensure_index(bench_path, data_file, dataset_fields[dataset_number], enc_type, partition_size);
+        ensure_index(bench_path, data_file, dataset_fields[dataset_number], enc_type, partition_size << 20);
     
     }
 
