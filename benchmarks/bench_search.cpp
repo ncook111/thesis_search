@@ -3,6 +3,7 @@
 #include <mutex>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -10,6 +11,10 @@
 #include "cache_flush.h"
 #include "../src/ingest.h"
 #include "../src/helper.h"
+
+#if defined(__linux__)
+#include <malloc.h>
+#endif
 
 constexpr size_t cache_size = 2048 * 1024;
 
@@ -179,14 +184,17 @@ std::once_flag IndexSearch::wipe_flag;
 BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     std::string query = queries[0][dataset_number];
     std::cout << query << "\n";
+    #if defined(__linux__)
+    double rss_before = 0;
+    #endif
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
         malloc_trim(0);  
         reset_rss_hwm();
-        const double rss_before  = read_rss_kb("VmRSS:");
+        rss_before = read_rss_kb("VmRSS:");
         #endif
-        // flush_cache(cache_size);
+        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -208,13 +216,31 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     std::string query = queries[1][dataset_number];
     std::cout << query << "\n";
+    #if defined(__linux__)
+    double rss_before = 0;
+    #endif
     for (auto _ : state) {
         state.PauseTiming();
-        // flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     state.SetItemsProcessed(state.iterations());
 }
@@ -222,13 +248,31 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     std::string query = queries[2][dataset_number];
     std::cout << query << "\n";
+    #if defined(__linux__)
+    double rss_before = 0;
+    #endif
     for (auto _ : state) {
         state.PauseTiming();
-        // flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     state.SetItemsProcessed(state.iterations());
 }
@@ -236,13 +280,31 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     std::string query = queries[3][dataset_number];
     std::cout << query << "\n";
+    #if defined(__linux__)
+    double rss_before = 0;
+    #endif
     for (auto _ : state) {
         state.PauseTiming();
-        // flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     state.SetItemsProcessed(state.iterations());
 }
@@ -250,13 +312,31 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& state) {
     std::string query = queries[4][dataset_number];
     std::cout << query << "\n";
+    #if defined(__linux__)
+    double rss_before = 0;
+    #endif
     for (auto _ : state) {
         state.PauseTiming();
-        // flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     state.SetItemsProcessed(state.iterations());
 }
