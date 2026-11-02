@@ -109,7 +109,7 @@ static const std::vector<std::vector<std::string>> queries = {
             "([overall] = \"5.0\" & [reviewText] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewText] = \"television\" & ![reviewText] = \"terrible\")",
             "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {5162772598, 5862772598} & ![created_at] = \"5562772598\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
-            "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![title] = \"LLM\")"
+            "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![language] = \"en\")"
         }
 };
 
@@ -118,13 +118,13 @@ static const std::vector<std::vector<std::string>> dataset_fields = {
         {"overall", "reviewText"},
 
         // Dataset 2
-        {"type", "created_at"},
+        {"type", "id"},
 
         // Dataset 3
         {"page_title", "timestamp"},
 
         // Dataset 4
-        {"publication_year", "language", "title"}
+        {"publication_year", "language"}
 }; 
 
 class IndexSearch : public benchmark::Fixture {
