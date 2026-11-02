@@ -107,7 +107,7 @@ static const std::vector<std::vector<std::string>> queries = {
         // complex combination_search
         {
             "([overall] = \"5.0\" & [reviewText] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewText] = \"television\" & ![reviewText] = \"terrible\")",
-            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {5162772598, 5862772598} & ![created_at] = \"5562772598\"",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {5162772598, 5862772598} & ![id] = \"5562772598\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
             "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![language] = \"en\")"
         }
