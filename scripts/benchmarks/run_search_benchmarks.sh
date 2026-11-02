@@ -7,7 +7,7 @@ source "$(dirname "$0")/../misc/paths.sh"
 OUT_DIR="$RESULTS_DIR/search"
 mkdir -p "$OUT_DIR"
 
-FILTER="IndexSearch/small/csv/.*/enc:${enc}/partition_size:256/num_threads:32/"
+FILTER="IndexSearch/large/csv/.*/partition_size:256/num_threads:8/"
 
 "$BENCH_BIN" \
 --benchmark_filter="$FILTER" \

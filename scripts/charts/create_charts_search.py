@@ -122,7 +122,7 @@ def plot_throughput_by_query_type(df, dataset, file_type, file_size):
         throughput = data.pivot(index="query_type", columns="scheme", values="throughput")
         save(out, throughput, title, "Encoding Schemes", "queries/s")
 
-def plot_throughput_by_scheme(df, query_type, file_type, file_size):
+def plot_throughput_by_scheme_threads(df, query_type, file_type, file_size):
     title = f"Median Query Throughput by Thread Count ({query_type}, all datasets, {file_size}, {file_type})"
     out = f"{RESULTS_DIR}/figures/search/{query_type}_all_datasets_{file_size}_{file_type}_throughput_by_scheme_threads.png"
 
@@ -131,10 +131,9 @@ def plot_throughput_by_scheme(df, query_type, file_type, file_size):
               & (df["file_size"] == file_size)
               & (df["file_type"] == file_type)]
 
-    # Harmonic mean across datasets
-    harmonic_mean = lambda s: len(s) / (1.0 / s).sum()
+    # Arithmetic mean across datasets
     throughput = data.pivot_table(index="scheme", columns="thread_count", values="throughput",
-                                  aggfunc=harmonic_mean, observed=True)
+                                  aggfunc="mean", observed=True)
 
     save(out, throughput, title, "Threads", "encoding scheme", "queries/s")
     
@@ -190,16 +189,30 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
     save(out, avg, title, "Statistic", "encoding scheme", f"% lower latency than {baseline}", True)
 
 if __name__ == "__main__":
-    df = load_results(f"{RESULTS_DIR}/search/search.json")
+    # df = load_results(f"{RESULTS_DIR}/search/search.json")
+    
+    # os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
+    
+    # file_sizes = df["file_size"].unique()
+    # file_types = df["file_type"].unique()
+    # datasets = df["dataset"].unique()
+    # query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
+
+    # for query in query_types:
+    #     for file_type in file_types:
+    #         for file_size in file_sizes:
+    #             plot_throughput_by_scheme(df, query, file_type, file_size)
+                
+    # Multithreading
+    df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreading_1.json")
+    df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreading_2.json")
+    df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreading_4.json")
+    df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreading_8.json")
+    df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreading_16.json")
+    df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreading_32.json")
     
     os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
     
-    file_sizes = df["file_size"].unique()
-    file_types = df["file_type"].unique()
-    datasets = df["dataset"].unique()
-    query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
-
+    df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
     for query in query_types:
-        for file_type in file_types:
-            for file_size in file_sizes:
-                plot_throughput_by_scheme(df, query, file_type, file_size)
+        plot_throughput_by_scheme_threads(df, query, "csv", "large")
