@@ -18,6 +18,7 @@ static std::string json_data_path = BENCH_DATA_DIR "/all_input_data/json/";
 static std::string logfmt_data_path = BENCH_DATA_DIR "/all_input_data/logfmt/";
 static std::string index_path = BENCH_DATA_DIR "/temp_indexes/index_search/";
 
+#if defined(__linux__)
 static void reset_rss_hwm() { std::ofstream("/proc/self/clear_refs") << "5"; }
 
 static size_t read_rss_kb(const char* key) {
@@ -25,6 +26,12 @@ static size_t read_rss_kb(const char* key) {
     for (std::string line; std::getline(f, line);)
         if (line.rfind(key, 0) == 0) return std::stoul(line.substr(std::strlen(key)));
     return 0;
+}
+#endif
+
+static benchmark::Counter kb_counter(double kb) {
+    return benchmark::Counter(kb * 1024.0, benchmark::Counter::kDefaults,
+                              benchmark::Counter::kIs1024);
 }
 
 static double get_percentile(std::vector<double> timings, double percentile) {
@@ -174,11 +181,26 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
-        flush_cache(cache_size);
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        const double rss_before  = read_rss_kb("VmRSS:");
+        #endif
+        // flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
+
+    #if defined(__linux__)
+    const double peak_kb = read_rss_kb("VmHWM:");
+    malloc_trim(0);
+    const double rss_trimmed = read_rss_kb("VmRSS:");
+
+    state.counters["peak_rss"]       = kb_counter(peak_kb);
+    state.counters["peak_delta"]     = kb_counter(peak_kb - rss_before);
+    state.counters["residual"]       = kb_counter(rss_trimmed - rss_before);
+    #endif
 
     state.SetItemsProcessed(state.iterations());
 }
@@ -188,7 +210,7 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
-        flush_cache(cache_size);
+        // flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -202,7 +224,7 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
-        flush_cache(cache_size);
+        // flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -216,7 +238,7 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
-        flush_cache(cache_size);
+        // flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -230,7 +252,7 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
     std::cout << query << "\n";
     for (auto _ : state) {
         state.PauseTiming();
-        flush_cache(cache_size);
+        // flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
