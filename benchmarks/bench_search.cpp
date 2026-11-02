@@ -43,6 +43,7 @@ std::vector<std::string> search_types =
 
 template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType) + '/' + search_types[SearchType])
+        ->ArgNames({"size", "dataset", "type", "enc", "partition_size", "num_threads"})
         ->ArgsProduct({
             {FileSize},
             {0, 1, 2, 3},
