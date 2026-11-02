@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <set>
 #include "cache_flush.h"
 #include "../src/ingest.h"
 #include "../src/helper.h"
@@ -46,7 +47,9 @@ template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void St
             {FileSize},
             {0, 1, 2, 3},
             {FileType},
-            available_enc_types()
+            available_enc_types(),
+            {8, 16, 32, 64, 128, 256, 512, 1024},
+            {1, 2, 4, 6, 8, 10, 12, 14, 16, 32}
         })
         ->Iterations(1)
         ->UseRealTime()
@@ -116,58 +119,54 @@ public:
     int dataset_number;
     std::string bench_path;
     uint8_t enc_type;
+    size_t partition_size;
+    size_t num_threads;
     void SetUp(::benchmark::State& state) {
         std::string dataset_size = file_size_to_str(state.range(0));
         dataset_number = state.range(1);
         uint8_t file_type = state.range(2);
         enc_type = state.range(3);
-        state.SetLabel(std::string(enc_type_to_str(enc_type) + ',' + dataset_size + "," + file_type_to_str(file_type) + "," + std::to_string(dataset_number)));
-        bench_path = file_type_to_str(file_type) + '/' + dataset_size + "_data/data_" + std::to_string(dataset_number + 1) + '_' + enc_type_to_str(enc_type);
-        // Initialise required indexes
+        partition_size = state.range(4);
+        num_threads = state.range(5);
+        state.SetLabel(enc_type_to_str(enc_type) + ',' + dataset_size + ',' + file_type_to_str(file_type) + ',' +
+                       std::to_string(dataset_number) + ',' + std::to_string(partition_size) + ',' + std::to_string(num_threads));
+
+        // partition_size part of the index location
+        bench_path = file_type_to_str(file_type) + '/' + dataset_size + "_data/partition_" + std::to_string(partition_size) +
+                     "/data_" + std::to_string(dataset_number + 1) + '_' + enc_type_to_str(enc_type);
+
         std::call_once(wipe_flag, [] { std::filesystem::remove_all(index_path); });
-        std::call_once(init_flags[state.range(0)][file_type], [dataset_size, file_type] {
-            std::filesystem::create_directories(index_path + file_type_to_str(file_type) + '/' + dataset_size + "_data/");
 
-            std::string data_path;
-            switch (file_type) {
-                case FileType::CSV:
-                    data_path = csv_data_path;
-                    break;
-                case FileType::JSON:
-                    data_path = json_data_path;
-                    break;
-                case FileType::LOGFMT: default:
-                    data_path = logfmt_data_path;
-                    break;
-            }
-
-            const std::vector<std::string> bench_paths = {
-               "_data/data_1",
-               "_data/data_2",
-               "_data/data_3",
-               "_data/data_4",
-               "_data/data_5"
-            };
-
-            for (size_t i = 0; i < bench_paths.size(); ++ i) {
-                std::string bench_path = bench_paths[i];
-                std::string full_data_path = data_path + dataset_size + bench_path;
-                std::string full_index_path = index_path + file_type_to_str(file_type) + '/' + dataset_size + bench_path;
-
-                for (auto enc_type : available_enc_types()) {
-                    create_mode(full_index_path + '_' + enc_type_to_str(enc_type), full_data_path, dataset_fields[i], enc_type);
-                }
-            }
-        });
+        std::string data_file = data_dir_for(file_type) + dataset_size + "_data/data_" + std::to_string(dataset_number + 1);
+        ensure_index(bench_path, data_file, dataset_fields[dataset_number], enc_type, partition_size);
+    
     }
 
-    private:
+private:
+    static std::string data_dir_for(uint8_t file_type) {
+        switch (file_type) {
+            case FileType::CSV:  return csv_data_path;
+            case FileType::JSON: return json_data_path;
+            default:             return logfmt_data_path;
+        }
+    }
+
+    // Builds each distinct index (size, type, dataset, enc, partition_size) exactly once.
+    static void ensure_index(const std::string& rel_path, const std::string& data_file,
+                             const std::vector<std::string>& fields, uint8_t enc, size_t part) {
+        static std::set<std::string> built;
+        if (built.count(rel_path)) return;
+
+        std::string full = index_path + rel_path;
+        std::filesystem::create_directories(std::filesystem::path(full).parent_path());
+        create_mode(full, data_file, fields, enc, part);
+        built.insert(rel_path);   // only mark as built after create_mode succeeds
+    }
+
     static std::once_flag wipe_flag;
-    static std::once_flag init_flags[3][3];  // Indexed by [file_size][file_type]
 };
 
 std::once_flag IndexSearch::wipe_flag;
-std::once_flag IndexSearch::init_flags[3][3];
 
 BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     std::string query = queries[0][dataset_number];
@@ -175,7 +174,7 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
 
@@ -188,7 +187,7 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
 
@@ -201,7 +200,7 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
 
@@ -214,7 +213,7 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
 
@@ -227,7 +226,7 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
         state.PauseTiming();
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
     }
 

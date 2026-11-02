@@ -102,10 +102,10 @@ rm -f "$RATIOS" "$TIMES" "$MATCHES" "$BENCH_OUT"
 
 setup_compress_data
 
-queries=("Male" "1994-01-01" "Pavel" "2025-09-30" "class")
-for data_set in {1..5}; do 
-  for size in medium; do
-    for file_type in csv json logfmt; do
+queries=("book" "IssueCommentEvent" "germany" "2026")
+for data_set in {1..4}; do 
+  for size in large; do
+    for file_type in csv; do
       run_bench "${size}" "${file_type}" "${data_set}" "${queries[data_set-1]}"
     done
   done
