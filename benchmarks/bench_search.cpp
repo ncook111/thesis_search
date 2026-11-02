@@ -79,7 +79,7 @@ static const std::vector<std::vector<std::string>> queries = {
         // intersection_search
         {
             "[reviewText] = \"book\" & [reviewText] = \"paperback\"",
-            "[type] = \"IssueCommentEvent\" & [created_at] = \"2026-01-01\"",
+            "[type] = \"IssueCommentEvent\" & [id] = \"5562772598\"",
             "[timestamp] = \"2026-01-01\" & [page_title] = \"germany\"",
             "[publication_year] = \"2026\" & [language] = \"en\""
         },
@@ -87,7 +87,7 @@ static const std::vector<std::vector<std::string>> queries = {
         // combination_search
         {
             "([overall] = \"5.0\" & [reviewText] = \"book\") & [reviewText] = \"paperback\"",
-            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = \"2026-01-01\"",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = \"5562772598\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = \"2026-01-01\"",
             "([publication_year] = \"2026\" | [publication_year] = \"2025\") & [language] = \"en\""
         },
@@ -95,7 +95,7 @@ static const std::vector<std::vector<std::string>> queries = {
         // complex combination_search
         {
             "([overall] = \"5.0\" & [reviewText] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewText] = \"television\" & ![reviewText] = \"terrible\")",
-            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [created_at] = {2025-01-01, 2026-01-01} & ![created_at] = \"2025-12-25\"",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {5162772598, 5862772598} & ![created_at] = \"5562772598\"",
             "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
             "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![title] = \"LLM\")"
         }
