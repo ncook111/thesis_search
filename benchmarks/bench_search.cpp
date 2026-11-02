@@ -188,16 +188,16 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        state.PauseTiming();
-        #if defined(__linux__)
-        malloc_trim(0);  
-        reset_rss_hwm();
-        rss_before = read_rss_kb("VmRSS:");
-        #endif
-        flush_cache(cache_size);
-        state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query, num_threads);
-        benchmark::ClobberMemory();
+        // state.PauseTiming();
+        // #if defined(__linux__)
+        // malloc_trim(0);  
+        // reset_rss_hwm();
+        // rss_before = read_rss_kb("VmRSS:");
+        // #endif
+        // flush_cache(cache_size);
+        // state.ResumeTiming();
+        // search_mode(index_path + bench_path, "", {}, query, num_threads);
+        // benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -220,16 +220,16 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        state.PauseTiming();
-        #if defined(__linux__)
-        malloc_trim(0);  
-        reset_rss_hwm();
-        rss_before = read_rss_kb("VmRSS:");
-        #endif
-        flush_cache(cache_size);
-        state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query, num_threads);
-        benchmark::ClobberMemory();
+        // state.PauseTiming();
+        // #if defined(__linux__)
+        // malloc_trim(0);  
+        // reset_rss_hwm();
+        // rss_before = read_rss_kb("VmRSS:");
+        // #endif
+        // flush_cache(cache_size);
+        // state.ResumeTiming();
+        // search_mode(index_path + bench_path, "", {}, query, num_threads);
+        // benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -252,16 +252,16 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        state.PauseTiming();
-        #if defined(__linux__)
-        malloc_trim(0);  
-        reset_rss_hwm();
-        rss_before = read_rss_kb("VmRSS:");
-        #endif
-        flush_cache(cache_size);
-        state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query, num_threads);
-        benchmark::ClobberMemory();
+        // state.PauseTiming();
+        // #if defined(__linux__)
+        // malloc_trim(0);  
+        // reset_rss_hwm();
+        // rss_before = read_rss_kb("VmRSS:");
+        // #endif
+        // flush_cache(cache_size);
+        // state.ResumeTiming();
+        // search_mode(index_path + bench_path, "", {}, query, num_threads);
+        // benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -284,16 +284,16 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        state.PauseTiming();
-        #if defined(__linux__)
-        malloc_trim(0);  
-        reset_rss_hwm();
-        rss_before = read_rss_kb("VmRSS:");
-        #endif
-        flush_cache(cache_size);
-        state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query, num_threads);
-        benchmark::ClobberMemory();
+        // state.PauseTiming();
+        // #if defined(__linux__)
+        // malloc_trim(0);  
+        // reset_rss_hwm();
+        // rss_before = read_rss_kb("VmRSS:");
+        // #endif
+        // flush_cache(cache_size);
+        // state.ResumeTiming();
+        // search_mode(index_path + bench_path, "", {}, query, num_threads);
+        // benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
