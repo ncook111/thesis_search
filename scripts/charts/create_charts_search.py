@@ -39,6 +39,8 @@ def load_results(path):
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
+    df["partition_size"] = parts.str[4].astype(int)
+    df["thread_count"] = parts.str[5].astype(int)
     df["query_type"] = df["name"].str.split("/").str[3]
 
     df = df.rename(columns={"aggregate_name": "stat"})
@@ -47,7 +49,7 @@ def load_results(path):
     df["throughput"] = df["items_per_second"].where(timed)
 
     all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
-                "index_size", "data_size", "dataset", "query_type"]
+                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count"]
     return df.reindex(columns=all_cols)
 
 def plot_latency_by_dataset(df, query_type, file_type, file_size):
@@ -119,6 +121,22 @@ def plot_throughput_by_query_type(df, dataset, file_type, file_size):
 
         throughput = data.pivot(index="query_type", columns="scheme", values="throughput")
         save(out, throughput, title, "Encoding Schemes", "queries/s")
+
+def plot_throughput_by_scheme(df, query_type, file_type, file_size):
+    title = f"Median Query Throughput by Thread Count ({query_type}, all datasets, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/{query_type}_all_datasets_{file_size}_{file_type}_throughput_by_scheme_threads.png"
+
+    data = df[(df["stat"] == "median")
+              & (df["query_type"] == query_type)
+              & (df["file_size"] == file_size)
+              & (df["file_type"] == file_type)]
+
+    # Harmonic mean across datasets
+    harmonic_mean = lambda s: len(s) / (1.0 / s).sum()
+    throughput = data.pivot_table(index="scheme", columns="thread_count", values="throughput",
+                                  aggfunc=harmonic_mean, observed=True)
+
+    save(out, throughput, title, "Threads", "encoding scheme", "queries/s")
     
 def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     if query_type is not None:
@@ -184,5 +202,4 @@ if __name__ == "__main__":
     for query in query_types:
         for file_type in file_types:
             for file_size in file_sizes:
-                #plot_latency_decrease_by_scheme(df, None, file_type, file_size)
-                plot_throughput_increase_by_scheme(df, query, file_type, file_size)
+                plot_throughput_by_scheme(df, query, file_type, file_size)

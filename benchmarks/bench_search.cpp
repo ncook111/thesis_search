@@ -92,7 +92,7 @@ static const std::vector<std::vector<std::string>> queries = {
         {
             "[reviewText] = \"book\" & [reviewText] = \"paperback\"",
             "[type] = \"IssueCommentEvent\" & [id] = \"5562772598\"",
-            "[timestamp] = \"2026-01-01\" & [page_title] = \"germany\"",
+            "[page_title] = \"pdf\" & [page_title] = \"germany\"",
             "[publication_year] = \"2026\" & [language] = \"en\""
         },
 
@@ -100,16 +100,16 @@ static const std::vector<std::vector<std::string>> queries = {
         {
             "([overall] = \"5.0\" & [reviewText] = \"book\") & [reviewText] = \"paperback\"",
             "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = \"5562772598\"",
-            "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = \"2026-01-01\"",
+            "([page_title] = \"germany\" | [page_title] = \"england\") | [page_title] = \"pdf\"",
             "([publication_year] = \"2026\" | [publication_year] = \"2025\") & [language] = \"en\""
         },
 
         // complex combination_search
         {
-            "([overall] = \"5.0\" & [reviewText] = \"paperback\") | ([overall] = {2.0,4.0} & [reviewText] = \"television\" & ![reviewText] = \"terrible\")",
-            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {1162772598, 5862772598} & ![id] = \"5562772598\"",
-            "([page_title] = \"germany\" | [page_title] = \"england\") | [timestamp] = {2026-01-01,2026-01-12} & ![timestamp] = \"2026-01-06\"",
-            "([publication_year] = {2020,2025} & [language] = \"en\") | ([publication_year] = \"2019\" & ![language] = \"en\")"
+            "([overall] = \"5.0\" & [reviewText] = \"paperback\") | [overall] = {3.0,4.0}",
+            "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {1162772598,5862772598}",
+            "([page_title] = \"germany\" | [page_title] = \"england\") & ([page_title] = \"pdf\" | [page_title] = \".html\")",
+            "([publication_year] = {2020,2025} & [language] = \"en\") | [publication_year] = \"2019\""
         }
 };
 
@@ -148,7 +148,7 @@ public:
         bench_path = file_type_to_str(file_type) + '/' + dataset_size + "_data/partition_" + std::to_string(partition_size) +
                      "/data_" + std::to_string(dataset_number + 1) + '_' + enc_type_to_str(enc_type);
 
-        std::call_once(wipe_flag, [] { std::filesystem::remove_all(index_path); });
+        //std::call_once(wipe_flag, [] { std::filesystem::remove_all(index_path); });
 
         std::string data_file = data_dir_for(file_type) + dataset_size + "_data/data_" + std::to_string(dataset_number + 1);
         ensure_index(bench_path, data_file, dataset_fields[dataset_number], enc_type, partition_size << 20);
@@ -188,16 +188,16 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        // state.PauseTiming();
-        // #if defined(__linux__)
-        // malloc_trim(0);  
-        // reset_rss_hwm();
-        // rss_before = read_rss_kb("VmRSS:");
-        // #endif
-        // flush_cache(cache_size);
-        // state.ResumeTiming();
-        // search_mode(index_path + bench_path, "", {}, query, num_threads);
-        // benchmark::ClobberMemory();
+        state.PauseTiming();
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
+        benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -220,16 +220,16 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        // state.PauseTiming();
-        // #if defined(__linux__)
-        // malloc_trim(0);  
-        // reset_rss_hwm();
-        // rss_before = read_rss_kb("VmRSS:");
-        // #endif
-        // flush_cache(cache_size);
-        // state.ResumeTiming();
-        // search_mode(index_path + bench_path, "", {}, query, num_threads);
-        // benchmark::ClobberMemory();
+        state.PauseTiming();
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
+        benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -252,16 +252,16 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        // state.PauseTiming();
-        // #if defined(__linux__)
-        // malloc_trim(0);  
-        // reset_rss_hwm();
-        // rss_before = read_rss_kb("VmRSS:");
-        // #endif
-        // flush_cache(cache_size);
-        // state.ResumeTiming();
-        // search_mode(index_path + bench_path, "", {}, query, num_threads);
-        // benchmark::ClobberMemory();
+        state.PauseTiming();
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
+        benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
@@ -284,16 +284,16 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     double rss_before = 0;
     #endif
     for (auto _ : state) {
-        // state.PauseTiming();
-        // #if defined(__linux__)
-        // malloc_trim(0);  
-        // reset_rss_hwm();
-        // rss_before = read_rss_kb("VmRSS:");
-        // #endif
-        // flush_cache(cache_size);
-        // state.ResumeTiming();
-        // search_mode(index_path + bench_path, "", {}, query, num_threads);
-        // benchmark::ClobberMemory();
+        state.PauseTiming();
+        #if defined(__linux__)
+        malloc_trim(0);  
+        reset_rss_hwm();
+        rss_before = read_rss_kb("VmRSS:");
+        #endif
+        flush_cache(cache_size);
+        state.ResumeTiming();
+        search_mode(index_path + bench_path, "", {}, query, num_threads);
+        benchmark::ClobberMemory();
     }
 
     #if defined(__linux__)
