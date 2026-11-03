@@ -24,7 +24,8 @@ const std::string file_size_to_str(const uint8_t size) {
     switch (size) { 
         case FileSize::SMALL: return "small";
         case FileSize::MEDIUM: return "medium";
-        default: return "large"; 
+        case FileSize::LARGE: return "large"; 
+        default: return "xlarge";
     }
 }
 const std::string file_type_to_str(const uint8_t type) {

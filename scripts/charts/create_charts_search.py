@@ -17,7 +17,7 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
     data.plot.bar(ax=ax, rot=0, title=chart_title,
                   xlabel=xlabel, ylabel=ylabel, legend=bool(legend_title))
     if legend_title:
-        ax.legend(title=legend_title)
+        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
 
     if zero_line:
         ax.axhline(0, color="black", linewidth=0.8)
@@ -49,7 +49,7 @@ def load_results(path):
     df["throughput"] = df["items_per_second"].where(timed)
 
     all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
-                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count"]
+                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
     return df.reindex(columns=all_cols)
 
 def plot_latency_by_dataset(df, query_type, file_type, file_size):
@@ -152,14 +152,16 @@ def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, bas
     else:
         throughput = data.pivot(index=["dataset", "query_type"], columns="scheme", values="throughput")
 
+    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
     if throughput.empty or baseline not in throughput.columns:
         return
 
-    base = throughput[baseline]
-    extra = throughput.sub(base, axis=0)   # queries/s gained over baseline, per cell
-    avg = extra.mean().drop(baseline).to_frame("median")
+    # throughput assuming every dataset-query combination runs once, one after another
+    combined = len(throughput) / (1.0 / throughput).sum()
 
-    save(out, avg, title, None, "Encoding Schemes", f"extra queries/s vs {baseline}", True)
+    extra = (combined - combined[baseline]).drop(baseline).to_frame("median")
+
+    save(out, extra, title, None, "Encoding Schemes", f"extra queries/s vs {baseline}", True)
 
 def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     if query_type is not None:
@@ -188,31 +190,47 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
     avg = pd.DataFrame(results)   # rows = schemes, columns = statistics
     save(out, avg, title, "Statistic", "encoding scheme", f"% lower latency than {baseline}", True)
 
-if __name__ == "__main__":
-    # df = load_results(f"{RESULTS_DIR}/search/search.json")
-    
-    # os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
-    
-    # file_sizes = df["file_size"].unique()
-    # file_types = df["file_type"].unique()
-    # datasets = df["dataset"].unique()
-    # query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
+def plot_memory_usage_by_scheme(df, file_type, file_size):
+    title = f"Median Peak Memory Usage During Search (all datasets, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/all_datasets_{file_size}_{file_type}_memory_by_scheme.png"
 
-    # for query in query_types:
-    #     for file_type in file_types:
-    #         for file_size in file_sizes:
-    #             plot_throughput_by_scheme(df, query, file_type, file_size)
-                
-    # Multithreading
-    df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreading_1.json")
-    df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreading_2.json")
-    df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreading_4.json")
-    df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreading_8.json")
-    df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreading_16.json")
-    df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreading_32.json")
+    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+
+    # Arithmetic mean across datasets, bytes -> MiB
+    memory = data.pivot_table(index="scheme", columns="query_type", values="peak_delta",
+                              aggfunc="mean", observed=True) / (1024 ** 2)
+    order = ["simple", "union", "intersection", "combination", "complex_combination"]
+    memory = memory.reindex(columns=[q for q in order if q in memory.columns])
+
+    save(out, memory, title, "Query Type", "Encoding Scheme", "Peak Memory Uncrease (MiB)")
+    
+if __name__ == "__main__":
+    df = load_results(f"{RESULTS_DIR}/search/search_multithreaded_8.json")
     
     os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
     
-    df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
+    file_sizes = df["file_size"].unique()
+    file_types = df["file_type"].unique()
+    datasets = df["dataset"].unique()
+    query_types = ["simple", "union", "intersection", "combination", "complex_combination"]
+
     for query in query_types:
-        plot_throughput_by_scheme_threads(df, query, "csv", "large")
+        for file_type in file_types:
+            for file_size in file_sizes:
+                plot_throughput_increase_by_scheme(df, query, file_type, file_size)
+    
+    plot_memory_usage_by_scheme(df, file_type, file_size)            
+    # Multithreading
+    # df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreading_1.json")
+    # df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreading_2.json")
+    # df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreading_4.json")
+    # df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreading_8.json")
+    # df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreading_16.json")
+    # df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreading_32.json")
+    
+    # os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
+    
+    # query_types = ["simple", "union", "intersection", "combination", "complex_combination"]
+    # df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
+    # for query in query_types:
+    #     plot_throughput_by_scheme_threads(df, query, "csv", "large")
