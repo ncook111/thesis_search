@@ -63,7 +63,7 @@ def plot_latency_by_dataset(df, query_type, file_type, file_size):
 
         latency = data.pivot(index="dataset", columns="scheme", values="real_time")
 
-        save(out, latency, title, "Encoding Schemes", "dataset", "microseconds")
+        save(out, latency, title, "Encoding Schemes", "Datasets", "Microseconds")
 
 def plot_latency_by_query_type(df, dataset, file_type, file_size):
     stats = ["median", "p95"]
@@ -75,7 +75,7 @@ def plot_latency_by_query_type(df, dataset, file_type, file_size):
         data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
 
         latency = data.pivot(index="query_type", columns="scheme", values="real_time")
-        save(out, latency, title, "Encoding Schemes", "query type", "microseconds")
+        save(out, latency, title, "Encoding Schemes", "Query Type", "Microseconds")
 
 def plot_latency_by_scheme(df, query_type, dataset, file_type, file_size):
     if dataset is None:
@@ -95,7 +95,7 @@ def plot_latency_by_scheme(df, query_type, dataset, file_type, file_size):
                                aggfunc="mean", observed=True)
     latency = latency.reindex(columns=["median", "p95"]).dropna(axis=1, how="all")
 
-    save(out, latency, title, "Statistics", "encoding scheme", "microseconds")
+    save(out, latency, title, "Statistics", "Encoding Scheme", "Microseconds")
     
 def plot_throughput_by_dataset(df, query_type, file_type, file_size):
     stats = ["median"]
@@ -108,7 +108,7 @@ def plot_throughput_by_dataset(df, query_type, file_type, file_size):
 
         throughput = data.pivot(index="dataset", columns="scheme", values="throughput")
 
-        save(out, throughput, title, "Encoding Schemes", "encoding scheme", "queries/s")
+        save(out, throughput, title, "Encoding Schemes", "Datasets", "Queries/s")
     
 def plot_throughput_by_query_type(df, dataset, file_type, file_size):
     stats = ["median"]
@@ -120,29 +120,63 @@ def plot_throughput_by_query_type(df, dataset, file_type, file_size):
         data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
 
         throughput = data.pivot(index="query_type", columns="scheme", values="throughput")
-        save(out, throughput, title, "Encoding Schemes", "queries/s")
+        save(out, throughput, title, "Encoding Schemes", "Queries/s")
 
 def plot_throughput_by_scheme_threads(df, query_type, file_type, file_size):
-    title = f"Median Query Throughput by Thread Count ({query_type}, all datasets, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search/{query_type}_all_datasets_{file_size}_{file_type}_throughput_by_scheme_threads.png"
+    qt_title = query_type if query_type is not None else "all queries"
+    qt_file = query_type if query_type is not None else "all_queries"
 
-    data = df[(df["stat"] == "median")
-              & (df["query_type"] == query_type)
-              & (df["file_size"] == file_size)
-              & (df["file_type"] == file_type)]
+    title = f"Median Query Throughput by Thread Count ({qt_title}, all datasets, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/{qt_file}_all_datasets_{file_size}_{file_type}_throughput_by_scheme_threads.png"
 
-    # Arithmetic mean across datasets
-    throughput = data.pivot_table(index="scheme", columns="thread_count", values="throughput",
-                                  aggfunc="mean", observed=True)
+    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+    if query_type is not None:
+        data = data[data["query_type"] == query_type]
+        index = ["dataset", "thread_count"]
+    else:
+        index = ["dataset", "query_type", "thread_count"]
 
-    save(out, throughput, title, "Threads", "encoding scheme", "queries/s")
+    throughput = data.pivot(index=index, columns="scheme", values="throughput")
+    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
+    if throughput.empty:
+        return
+
+    inv = (1.0 / throughput).groupby(level="thread_count")
+    combined = (inv.count() / inv.sum()).T
+
+    save(out, combined, title, "Threads", "Encoding Scheme", "Queries/s")
+
+def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
+    qt_title = query_type if query_type is not None else "all queries"
+    qt_file = query_type if query_type is not None else "all_queries"
+
+    title = f"Median Query Throughput by Thread Count ({qt_title}, all datasets, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/{qt_file}_all_datasets_{file_size}_{file_type}_throughput_by_threads_schemes.png"
+
+    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+    if query_type is not None:
+        data = data[data["query_type"] == query_type]
+        index = ["dataset", "thread_count"]
+    else:
+        index = ["dataset", "query_type", "thread_count"]
+
+    throughput = data.pivot(index=index, columns="scheme", values="throughput")
+    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
+    if throughput.empty:
+        return
+
+    # Each (dataset[, query_type]) cell run once, one after another, per thread count
+    inv = (1.0 / throughput).groupby(level="thread_count")
+    combined = inv.count() / inv.sum()   # rows = thread counts, cols = schemes
+
+    save(out, combined, title, "Encoding Schemes", "Thread Count", "Queries/s")
     
 def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     if query_type is not None:
-        title = f"Median extra throughput vs {baseline} ({query_type}, {file_size}, {file_type})"
+        title = f"Median Extra Throughput vs {baseline} ({query_type}, {file_size}, {file_type})"
         out = f"{RESULTS_DIR}/figures/search/{query_type}_{file_size}_{file_type}_extra_throughput_vs_{baseline}.png"
     else:
-        title = f"Median extra throughput vs {baseline} ({file_size}, {file_type}, all queries)"
+        title = f"Median Extra Throughput vs {baseline} ({file_size}, {file_type}, all queries)"
         out = f"{RESULTS_DIR}/figures/search/all_queries_{file_size}_{file_type}_extra_throughput_vs_{baseline}.png"
 
     data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
@@ -161,14 +195,14 @@ def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, bas
 
     extra = (combined - combined[baseline]).drop(baseline).to_frame("median")
 
-    save(out, extra, title, None, "Encoding Schemes", f"extra queries/s vs {baseline}", True)
+    save(out, extra, title, None, "Encoding Schemes", f"Extra Queries/s vs {baseline}", True)
 
 def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     if query_type is not None:
-        title = f"Latency decrease vs {baseline} ({query_type}, {file_size}, {file_type})"
+        title = f"Latency Decrease vs {baseline} ({query_type}, {file_size}, {file_type})"
         out = f"{RESULTS_DIR}/figures/search/{query_type}_{file_size}_{file_type}_decrease_vs_{baseline}.png"
     else:
-        title = f"Latency decrease vs {baseline} ({file_size}, {file_type}, all queries)"
+        title = f"Latency Decrease vs {baseline} ({file_size}, {file_type}, all queries)"
         out = f"{RESULTS_DIR}/figures/search/all_queries_{file_size}_{file_type}_decrease_vs_{baseline}.png"
 
     results = {}
@@ -188,7 +222,7 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
         results[stat] = decrease.mean().drop(baseline)
 
     avg = pd.DataFrame(results)   # rows = schemes, columns = statistics
-    save(out, avg, title, "Statistic", "encoding scheme", f"% lower latency than {baseline}", True)
+    save(out, avg, title, "Statistic", "Encoding Scheme", f"% Lower Latency than {baseline}", True)
 
 def plot_memory_usage_by_scheme(df, file_type, file_size):
     title = f"Median Peak Memory Usage During Search (all datasets, {file_size}, {file_type})"
@@ -204,33 +238,45 @@ def plot_memory_usage_by_scheme(df, file_type, file_size):
 
     save(out, memory, title, "Query Type", "Encoding Scheme", "Peak Memory Uncrease (MiB)")
     
-if __name__ == "__main__":
-    df = load_results(f"{RESULTS_DIR}/search/search_multithreaded_8.json")
-    
-    os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
-    
-    file_sizes = df["file_size"].unique()
-    file_types = df["file_type"].unique()
-    datasets = df["dataset"].unique()
-    query_types = ["simple", "union", "intersection", "combination", "complex_combination"]
+def plot_memory_usage_by_threads(df, file_type, file_size):
+    title = f"Median Peak Memory Usage During Search (all datasets/queries/schemes, {file_size}, {file_type})"
+    out = f"{RESULTS_DIR}/figures/search/all_{file_size}_{file_type}_memory_by_threads.png"
 
-    for query in query_types:
-        for file_type in file_types:
-            for file_size in file_sizes:
-                plot_throughput_increase_by_scheme(df, query, file_type, file_size)
-    
-    plot_memory_usage_by_scheme(df, file_type, file_size)            
-    # Multithreading
-    # df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreading_1.json")
-    # df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreading_2.json")
-    # df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreading_4.json")
-    # df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreading_8.json")
-    # df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreading_16.json")
-    # df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreading_32.json")
+    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+
+    # Arithmetic mean across datasets, query types and schemes, bytes -> MiB
+    memory = (data.groupby("thread_count")["peak_delta"].mean() / (1024 ** 2)).to_frame("median")
+
+    save(out, memory, title, None, "Thread Count", "Peak Memory Increase (MiB)")
+
+if __name__ == "__main__":
+    # df = load_results(f"{RESULTS_DIR}/search/search_multithreaded_1.json")
     
     # os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
     
+    # file_sizes = df["file_size"].unique()
+    # file_types = df["file_type"].unique()
+    # datasets = df["dataset"].unique()
     # query_types = ["simple", "union", "intersection", "combination", "complex_combination"]
-    # df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
+
     # for query in query_types:
-    #     plot_throughput_by_scheme_threads(df, query, "csv", "large")
+    #     for file_type in file_types:
+    #         for file_size in file_sizes:
+    #             plot_latency_decrease_by_scheme(df, query, file_type, file_size)
+    #             plot_throughput_increase_by_scheme(df, query, file_type, file_size)
+    
+    # plot_memory_usage_by_scheme(df, file_type, file_size)  
+              
+    # Multithreading
+    df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_1.json")
+    df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_2.json")
+    df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_4.json")
+    df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_8.json")
+    df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_16.json")
+    
+    os.makedirs(f"{RESULTS_DIR}/figures/search", exist_ok=True)
+    
+    query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
+    df = pd.concat([df_1, df_2, df_3, df_4, df_5], ignore_index=True)
+    plot_throughput_by_threads_schemes(df, None, "csv", "large")
+    plot_memory_usage_by_threads(df, "csv", "large")
