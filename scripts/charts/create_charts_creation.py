@@ -59,7 +59,7 @@ def load_results(path):
     df["partition_size"] = parts.str[4].astype(int)
     df["thread_count"] = parts.str[5].astype(int)
 
-    all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size", "thread_count"]
+    all_cols = ["file_type", "file_size", "scheme", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size", "thread_count"]
     return df.reindex(columns=all_cols)
 
 def load_results_lz4_gz(path):
@@ -72,7 +72,7 @@ def load_results_lz4_gz(path):
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
 
-    all_cols = ["file_type", "file_size", "scheme", "dataset", "compression", "peak_delta"]
+    all_cols = ["file_type", "file_size", "scheme", "index_size", "data_size", "real_time", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
 
 def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=None):
@@ -85,6 +85,7 @@ def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=No
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_{file_type}_compression_by_scheme.png"
         title = f"Index Compression By Encoding Scheme ({file_size}, {file_type}, dataset_{dataset})"
 
+    data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = data.groupby("scheme")["compression"].mean() * 100
 
     order = [s for s in SCHEMES if s in compression.index]
@@ -103,6 +104,7 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_compression.png"
         title = f"Index Compression ({file_size}, dataset_{dataset})"
  
+    data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = (data.groupby(["file_type", "scheme"])["compression"].mean() * 100).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in compression.columns]
@@ -121,6 +123,7 @@ def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_compression.png"
         title = f"Index Compression ({file_type}, dataset_{dataset})"
  
+    data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = (data.groupby(["file_size", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in compression.columns]
@@ -135,6 +138,7 @@ def plot_compression_by_dataset(df, file_size, file_type, folder_name):
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
 
+    data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = data.pivot(index="dataset", columns="scheme", values="compression") * 100
 
     cols = [s for s in SCHEMES if s in compression.columns]
@@ -406,4 +410,5 @@ if __name__ == "__main__":
     df = pd.concat([df_0, df_1], ignore_index=True)
 
     plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
-    plot_memory_usage_by_scheme(df, "small", "creation_lz4_gz", None)
+    plot_throughput_by_file_type(df, "small", "creation_lz4_gz", None)
+    #plot_memory_usage_by_scheme(df, "small", "creation_lz4_gz", None)

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../misc/paths.sh"
-CREATION_OUT_DIR="$RESULTS_DIR/creation"
-SEARCH_OUT_DIR="$RESULTS_DIR/search"
+CREATION_OUT_DIR="$RESULTS_DIR/creation_lz4_gz"
+SEARCH_OUT_DIR="$RESULTS_DIR/creation_lz4_gz"
 
 mkdir -p "$CREATION_OUT_DIR"
 mkdir -p "$SEARCH_OUT_DIR"
@@ -19,12 +19,10 @@ trap 'rm -f "$TIMES" "$TIMES2"; rm -rf "$BASE_DIR"' EXIT
 SEARCH="$SEARCH_OUT_DIR/search_lz4_gz.json"
 sep=""
 
-######## Empty inputs for baseline runs ########
 : > "$BASE_DIR/empty"
 lz4 -q -f "$BASE_DIR/empty" "$BASE_DIR/empty.lz4"
 gzip -c "$BASE_DIR/empty" > "$BASE_DIR/empty.gzip"
 
-######## Compress Data ########
 setup_compress_data() {
   mkdir -p "$BENCH_DATA"/tmp_compressed/{csv,json,logfmt}/small_data/data_{1..4}
 
@@ -56,7 +54,7 @@ compress_loop() {
   local size="$1" file_type="$2" scheme="$3"
   local in="$BENCH_DATA/all_input_data/${file_type}/${size}_data"
   local out="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data"
-  local i label src dst elapsed compression max_rss base_rss
+  local i label src dst elapsed max_rss base_rss data_size index_size
 
   for i in {1..4}; do
     label="${scheme},${size},${file_type},$((i-1))"
@@ -81,10 +79,11 @@ compress_loop() {
 
     read -r elapsed max_rss < <(tail -n1 "$TIMES")
 
-    compression=$(awk -v o="$(stat -c%s "$src")" -v c="$(stat -c%s "$dst")" 'BEGIN { printf "%.2f", c / o}')
+    data_size=$(stat -c%s "$src")
+    index_size=$(stat -c%s "$dst")
 
-    printf '%s  {\n    "label": "%s",\n    "compression": %s,\n    "real_time": %s,\n    "peak_delta": %s\n  }' \
-      "$sep" "$label" "$compression" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$CREATION"
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION"
     sep=$',\n'
   done
 }
