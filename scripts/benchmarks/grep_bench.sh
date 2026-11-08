@@ -2,21 +2,21 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../misc/paths.sh"
-CREATION_OUT_DIR="$RESULTS_DIR/creation_lz4_gz"
-SEARCH_OUT_DIR="$RESULTS_DIR/creation_lz4_gz"
+CREATION_OUT_DIR="$RESULTS_DIR/creation_grep"
+SEARCH_OUT_DIR="$RESULTS_DIR/search_grep"
 
 mkdir -p "$CREATION_OUT_DIR"
 mkdir -p "$SEARCH_OUT_DIR"
 
 GTIME=/usr/bin/time
 
-CREATION="$CREATION_OUT_DIR/creation_lz4_gz.json"
+CREATION="$CREATION_OUT_DIR/creation_grep.json"
 TIMES=$(mktemp)
 TIMES2=$(mktemp)
 BASE_DIR=$(mktemp -d)
 trap 'rm -f "$TIMES" "$TIMES2"; rm -rf "$BASE_DIR"' EXIT
 
-SEARCH="$SEARCH_OUT_DIR/search_lz4_gz.json"
+SEARCH="$SEARCH_OUT_DIR/search_grep.json"
 sep=""
 
 : > "$BASE_DIR/empty"

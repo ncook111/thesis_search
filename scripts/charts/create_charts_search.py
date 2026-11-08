@@ -68,6 +68,37 @@ def load_results(path):
                 "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
     return df.reindex(columns=all_cols)
 
+def load_results_grep(path):
+    with open(path) as f:
+        df = pd.json_normalize(json.load(f)["benchmarks"])
+
+    if "aggregate_name" in df.columns:
+        df = df[df["aggregate_name"].isin(["median"])].copy()
+    else:
+        # no repetitions: one iteration row per benchmark
+        df = df.copy()
+        df["aggregate_name"] = "single"
+    
+    parts = df["label"].str.split(",")
+    df["scheme"] = pd.Categorical(parts.str[0], categories=["gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"], ordered=True)
+    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
+    df["file_type"] = parts.str[2]
+    df["dataset"] = parts.str[3].astype(int) + 1
+    df["partition_size"] = parts.str[4].astype(int)
+    df["thread_count"] = parts.str[5].astype(int)
+    df["query_type"] = df["name"].str.split("/").str[3]
+    
+    df = df[~df["scheme"].isin(EXCLUDED_SCHEMES)]
+
+    df = df.rename(columns={"aggregate_name": "stat"})
+
+    timed = df["stat"].isin(["mean", "median", "p95"])
+    df["throughput"] = df["items_per_second"].where(timed)
+
+    all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
+                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
+    return df.reindex(columns=all_cols)
+
 def plot_latency_by_dataset(df, query_type, file_type, file_size):
     stats = ["median", "p95"]
     for stat in stats:

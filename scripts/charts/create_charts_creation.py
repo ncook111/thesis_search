@@ -52,7 +52,7 @@ def load_results(path):
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
     parts = df["label"].str.split(",")
-    df["scheme"] = parts.str[0]
+    df["scheme"] = pd.Categorical(parts.str[0], categories=["gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"], ordered=True)
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
@@ -60,19 +60,6 @@ def load_results(path):
     df["thread_count"] = parts.str[5].astype(int)
 
     all_cols = ["file_type", "file_size", "scheme", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size", "thread_count"]
-    return df.reindex(columns=all_cols)
-
-def load_results_lz4_gz(path):
-    with open(path) as f:
-        df = pd.json_normalize(json.load(f)["benchmarks"])
-
-    parts = df["label"].str.split(",")
-    df["scheme"] = parts.str[0]
-    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
-    df["file_type"] = parts.str[2]
-    df["dataset"] = parts.str[3].astype(int) + 1
-
-    all_cols = ["file_type", "file_size", "scheme", "index_size", "data_size", "real_time", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
 
 def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=None):
@@ -403,12 +390,12 @@ if __name__ == "__main__":
     # plot_compression_by_scheme(df_0, "large", "csv", "creation_single_threaded", None)
     
     # LZ4 GZIP Comparison Chart Creation
-    os.makedirs(f"{RESULTS_DIR}/figures/creation_lz4_gz", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_grep", exist_ok=True)
 
-    df_0 = load_results_lz4_gz(f"{RESULTS_DIR}/creation_lz4_gz/creation_lz4_gz.json")
-    df_1 = load_results_lz4_gz(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
+    df_0 = load_results_grep(f"{RESULTS_DIR}/creation_grep/creation_grep.json")
+    df_1 = load_results_grep(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
     df = pd.concat([df_0, df_1], ignore_index=True)
 
-    plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
-    plot_throughput_by_file_type(df, "small", "creation_lz4_gz", None)
-    #plot_memory_usage_by_scheme(df, "small", "creation_lz4_gz", None)
+    plot_compression_by_file_type(df, "small", "creation_grep", None)
+    plot_throughput_by_file_type(df, "small", "creation_grep", None)
+    #plot_memory_usage_by_scheme(df, "small", "creation_grep", None)

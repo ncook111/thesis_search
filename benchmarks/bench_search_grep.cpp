@@ -55,7 +55,7 @@ template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benc
         })
         ->Iterations(1)
         ->UseRealTime()
-        ->Unit(benchmark::kMicrosecond)
+        ->Unit(benchmark::kMillisecond)
         ->ComputeStatistics("p95", [](const std::vector<double>& v) { return get_percentile(v, 0.95); })
         ->ComputeStatistics("max", [](const std::vector<double>& v) { return *std::max_element(v.begin(), v.end()); });
 }
