@@ -45,7 +45,7 @@ static double get_percentile(std::vector<double> timings, double percentile) {
 }
 
 template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
-    args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType))
+    args->Name(std::string("IndexSearchBaseline/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType))
         ->ArgNames({"size", "dataset", "type", "enc"})
         ->ArgsProduct({
             {FileSize},
@@ -67,7 +67,7 @@ static const std::vector<std::string> queries = {
     "2026"
 };
 
-class IndexSearch : public benchmark::Fixture {
+class IndexSearchBaseline : public benchmark::Fixture {
 public:
     int dataset_number;
     std::string bench_path;
@@ -114,9 +114,9 @@ private:
     static std::once_flag wipe_flag;
 };
 
-std::once_flag IndexSearch::wipe_flag;
+std::once_flag IndexSearchBaseline::wipe_flag;
 
-BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(IndexSearchBaseline, simple_search)(benchmark::State& state) {
     const std::string& query = queries[dataset_number];
     std::cout << query << "\n";
     #if defined(__linux__)
@@ -148,15 +148,15 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);
-BENCHMARK_REGISTER_F(IndexSearch, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::CSV>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::JSON>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::JSON>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::JSON>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::JSON>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::SMALL, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::MEDIUM, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::LARGE, FileType::LOGFMT>);
+BENCHMARK_REGISTER_F(IndexSearchBaseline, simple_search)->Apply(StandardBenchArgs<FileSize::XLARGE, FileType::LOGFMT>);

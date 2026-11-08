@@ -406,4 +406,4 @@ if __name__ == "__main__":
     df = pd.concat([df_0, df_1], ignore_index=True)
 
     plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
-    plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
+    plot_memory_usage_by_scheme(df, "small", "creation_lz4_gz", None)
