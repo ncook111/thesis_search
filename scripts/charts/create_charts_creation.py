@@ -12,6 +12,7 @@ SCHEMES = {
     "s4_bpd4": "S4-BP128-D4", "s4_bpdm": "S4-BP128-DM",
     "s8_bpd4": "S8-BP128-D4", "s8_bpdm": "S8-BP128-DM",
     "s16_bpd4": "S16-BP128-D4", "s16_bpdm": "S16-BP128-DM",
+    "gzip": "GZIP", "lz4": "LZ4"
 }
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,10 +58,21 @@ def load_results(path):
     df["dataset"] = parts.str[3].astype(int) + 1
     df["partition_size"] = parts.str[4].astype(int)
     df["thread_count"] = parts.str[5].astype(int)
-    
-    df = df[~df["scheme"].isin(EXCLUDED_SCHEMES)]
 
     all_cols = ["file_type", "file_size", "scheme", "compression", "real_time", "index_size", "data_size", "dataset", "peak_delta", "partition_size", "thread_count"]
+    return df.reindex(columns=all_cols)
+
+def load_results_lz4_gz(path):
+    with open(path) as f:
+        df = pd.json_normalize(json.load(f)["benchmarks"])
+
+    parts = df["label"].str.split(",")
+    df["scheme"] = parts.str[0]
+    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
+    df["file_type"] = parts.str[2]
+    df["dataset"] = parts.str[3].astype(int) + 1
+
+    all_cols = ["file_type", "file_size", "scheme", "dataset", "compression"]
     return df.reindex(columns=all_cols)
 
 def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=None):
@@ -73,8 +85,7 @@ def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=No
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_{file_type}_compression_by_scheme.png"
         title = f"Index Compression By Encoding Scheme ({file_size}, {file_type}, dataset_{dataset})"
 
-    totals = data.groupby("scheme", observed=True)[["index_size", "data_size"]].sum()
-    compression = totals["index_size"] / totals["data_size"] * 100
+    compression = data.groupby("scheme")["compression"].mean() * 100
 
     order = [s for s in SCHEMES if s in compression.index]
     order += [s for s in compression.index if s not in order]
@@ -92,8 +103,7 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_compression.png"
         title = f"Index Compression ({file_size}, dataset_{dataset})"
  
-    totals = data.groupby(["file_type", "scheme"])[["index_size", "data_size"]].sum()
-    compression = (totals["index_size"] / totals["data_size"] * 100).unstack("scheme")
+    compression = (data.groupby(["file_type", "scheme"])["compression"].mean() * 100).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in compression.columns]
     cols += [c for c in compression.columns if c not in cols]
@@ -111,8 +121,7 @@ def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_compression.png"
         title = f"Index Compression ({file_type}, dataset_{dataset})"
  
-    totals = data.groupby(["file_size", "scheme"], observed=True)[["index_size", "data_size"]].sum()
-    compression = (totals["index_size"] / totals["data_size"] * 100).unstack("scheme")
+    compression = (data.groupby(["file_size", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in compression.columns]
     cols += [c for c in compression.columns if c not in cols]
@@ -349,51 +358,60 @@ def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, sch
     
 if __name__ == "__main__":
     
-    # Single Threaded Chart Creation
-    df = load_results(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
+    # # Single Threaded Chart Creation
+    # df = load_results(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
     
-    os.makedirs(f"{RESULTS_DIR}/figures/creation_single_threaded", exist_ok=True)
+    # os.makedirs(f"{RESULTS_DIR}/figures/creation_single_threaded", exist_ok=True)
     
-    file_sizes = df["file_size"].unique()
-    file_types = df["file_type"].unique()
-    datasets = [None, 1, 2, 3, 4]
+    # file_sizes = df["file_size"].unique()
+    # file_types = df["file_type"].unique()
+    # datasets = [None, 1, 2, 3, 4]
     
-    for dataset in datasets:
-        plot_compression_by_file_type(df, "small", "creation_single_threaded", dataset)
-        plot_throughput_by_file_type(df, "small", "creation_single_threaded", dataset)
-        plot_index_size_by_file_type(df, "small", "creation_single_threaded", dataset)
+    # for dataset in datasets:
+    #     plot_compression_by_file_type(df, "small", "creation_single_threaded", dataset)
+    #     plot_throughput_by_file_type(df, "small", "creation_single_threaded", dataset)
+    #     plot_index_size_by_file_type(df, "small", "creation_single_threaded", dataset)
 
-    for file_type in file_types:
-        plot_compression_by_dataset(df, "small", file_type, "creation_single_threaded")
-        plot_throughput_by_dataset(df, "small", file_type, "creation_single_threaded")
+    # for file_type in file_types:
+    #     plot_compression_by_dataset(df, "small", file_type, "creation_single_threaded")
+    #     plot_throughput_by_dataset(df, "small", file_type, "creation_single_threaded")
 
-    # Partition Size Chart Creation
-    df = load_results(f"{RESULTS_DIR}/creation/creation_partitioned.json")
+    # # Partition Size Chart Creation
+    # df = load_results(f"{RESULTS_DIR}/creation/creation_partitioned.json")
     
-    os.makedirs(f"{RESULTS_DIR}/figures/creation_partitioned", exist_ok=True)
+    # os.makedirs(f"{RESULTS_DIR}/figures/creation_partitioned", exist_ok=True)
     
-    partition_sizes = sorted(df["partition_size"].dropna().unique())
-    schemes = df["scheme"].unique()
+    # partition_sizes = sorted(df["partition_size"].dropna().unique())
+    # schemes = df["scheme"].unique()
 
-    plot_throughput_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    plot_compression_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    plot_memory_usage_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    plot_memory_usage_by_scheme(df, "medium", "csv", "creation_partitioned")
+    # plot_throughput_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    # plot_compression_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    # plot_memory_usage_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    # plot_memory_usage_by_scheme(df, "medium", "csv", "creation_partitioned")
     
-    # Multi-threaded Chart Creation
+    # # Multi-threaded Chart Creation
     
-    os.makedirs(f"{RESULTS_DIR}/figures/creation_multi_threaded", exist_ok=True)
+    # os.makedirs(f"{RESULTS_DIR}/figures/creation_multi_threaded", exist_ok=True)
 
-    df_0 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_1.json")
-    df_1 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_2.json")
-    df_2 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_4.json")
-    df_3 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_8.json")
-    df_4 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_16.json")
-    df_5 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_32.json")
+    # df_0 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_1.json")
+    # df_1 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_2.json")
+    # df_2 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_4.json")
+    # df_3 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_8.json")
+    # df_4 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_16.json")
+    # df_5 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_32.json")
 
-    df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
+    # df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
     
-    plot_throughput_by_thread_count(df, "large", "csv", "creation_multi_threaded")
-    plot_memory_usage_by_thread_count(df, "large", "csv", "creation_multi_threaded")
+    # plot_throughput_by_thread_count(df, "large", "csv", "creation_multi_threaded")
+    # plot_memory_usage_by_thread_count(df, "large", "csv", "creation_multi_threaded")
     
-    plot_compression_by_scheme(df_0, "large", "csv", "creation_single_threaded", None)
+    # plot_compression_by_scheme(df_0, "large", "csv", "creation_single_threaded", None)
+    
+    # LZ4 GZIP Comparison Chart Creation
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_lz4_gz", exist_ok=True)
+
+    df_0 = load_results_lz4_gz(f"{RESULTS_DIR}/creation_lz4_gz/creation_lz4_gz.json")
+    df_1 = load_results_lz4_gz(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
+    df = pd.concat([df_0, df_1], ignore_index=True)
+
+    plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
