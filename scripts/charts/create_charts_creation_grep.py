@@ -41,6 +41,12 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
     fig.tight_layout()
     fig.savefig(out, dpi=300)
     plt.close(fig)
+    
+    # Tabular output
+    base = os.path.splitext(out)[0]
+    table = data.round(3)
+    table.to_latex(f"{base}.tex", float_format="%.2f", escape=True)
+    
     print(f"wrote {out}")
 
 def load_results(path):
@@ -68,7 +74,7 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
         title = f"Index Compression ({file_size}, dataset_{dataset})"
  
     data = data.assign(compression=data["index_size"] / data["data_size"])
-    compression = (data.groupby(["file_type", "scheme"])["compression"].mean() * 100).unstack("scheme")
+    compression = (data.groupby(["file_type", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in compression.columns]
     cols += [c for c in compression.columns if c not in cols]
@@ -86,7 +92,7 @@ def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_throughput.png"
         title = f"Index Creation Throughput ({file_size}, dataset_{dataset})"
 
-    totals = data.groupby(["file_type", "scheme"])[["data_size", "real_time"]].sum()
+    totals = data.groupby(["file_type", "scheme"], observed=True)[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in throughput.columns]
@@ -106,7 +112,7 @@ def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
         title = f"Index Size ({file_size}, dataset_{dataset})"
 
     index_size = (
-        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1000000
+        data.groupby(["file_type", "scheme"], observed=True)["index_size"].sum() / 1000000
     ).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in index_size.columns]

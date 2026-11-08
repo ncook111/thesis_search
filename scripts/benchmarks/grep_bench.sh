@@ -109,7 +109,7 @@ run_bench() {
     read -r dec_elapsed dec_rss < <(tail -n1 "$TIMES")
     read -r grep_elapsed grep_rss < <(tail -n1 "$TIMES2")
     elapsed=$(awk -v a="$dec_elapsed" -v b="$grep_elapsed" 'BEGIN { print (a > b ? a : b) }')
-    max_rss=$(( dec_rss + grep_rss ))
+    max_rss=$(grep_rss)
 
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "peak_delta": %s\n  }' \
       "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH"

@@ -113,7 +113,7 @@ mkdir -p "$OUT_DIR"
 ### Search File Type Comparisons ###
 OUT_DIR="$RESULTS_DIR/search_grep"
 mkdir -p "$OUT_DIR"
-FILTER="IndexSearch/small/(csv|json|logfmt)/.*/partition_size:256/num_threads:1/"
+FILTER="IndexSearchBaseline/small/(csv|json|logfmt)/"
 
 "$BENCH_BIN" \
 --benchmark_filter="$FILTER" \

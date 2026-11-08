@@ -61,10 +61,10 @@ template <uint8_t FileSize, uint8_t FileType> static void StandardBenchArgs(benc
 }
 
 static const std::vector<std::string> queries = {
-    "book",
-    "IssueCommentEvent",
-    "germany",
-    "2026"
+    "[*] = \"book\"",
+    "[*] = \"IssueCommentEvent\"",
+    "[*] = \"germany\"",
+    "[*] = \"2026\""
 };
 
 class IndexSearchBaseline : public benchmark::Fixture {
