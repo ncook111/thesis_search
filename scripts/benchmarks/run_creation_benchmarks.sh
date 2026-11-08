@@ -2,10 +2,11 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../misc/paths.sh"
+
+### Creation benchmarking comparing file types ###
 OUT_DIR="$RESULTS_DIR/creation"
 mkdir -p "$OUT_DIR"
 
-# ### Creation benchmarking comparing file types ###
 "$BENCH_BIN" \
 --benchmark_filter='IndexCreate/small/[^/]+/.*/partition_size:256/num_threads:1/' \
 --benchmark_out="$OUT_DIR/creation_file_types.json" \

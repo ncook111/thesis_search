@@ -12,6 +12,7 @@ SCHEMES = {
     "s4_bpd4": "S4-BP128-D4", "s4_bpdm": "S4-BP128-DM",
     "s8_bpd4": "S8-BP128-D4", "s8_bpdm": "S8-BP128-DM",
     "s16_bpd4": "S16-BP128-D4", "s16_bpdm": "S16-BP128-DM",
+    "gzip": "GZIP", "lz4": "LZ4",
 }
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,7 +38,7 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
     plt.close(fig)
     print(f"wrote {out}")
 
-def load_results_grep(path):
+def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
@@ -62,71 +63,67 @@ def load_results_grep(path):
                 "index_size", "data_size", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
 
-def plot_latency_by_file_type(df, file_size folder_name):
-    if dataset is None:
-        ds_title, ds_file = "all datasets (mean)", "all_datasets"
-    else:
-        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
+STATS = ["mean", "median"]
 
-    title = f"Query Latency ({query_type}, {ds_title}, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_single_threaded/{query_type}_{ds_file}_{file_size}_{file_type}_latency_by_scheme.png"
+def plot_latency_by_file_type(df, file_size, folder_name):
+    for stat in STATS:
+        title = f"Query Latency ({stat}, all datasets, {file_size})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_latency_by_file_type.png"
 
-    data = df[(df["query_type"] == query_type)
-              & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
-    if dataset is not None:
-        data = data[data["dataset"] == dataset]
+        data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
 
-    latency = data.pivot_table(index="scheme", columns="stat", values="real_time",
-                               aggfunc="mean", observed=True)
-    latency = latency.reindex(columns=["median", "p95"]).dropna(axis=1, how="all")
+        latency = data.pivot_table(index="file_type", columns="scheme", values="real_time",
+                                 aggfunc="mean", observed=True)
+        latency.columns = latency.columns.astype(str)
 
-    order = [s for s in SCHEMES if s in latency.index]
-    order += [s for s in latency.index if s not in order]
-    latency = latency.loc[order].rename(index=SCHEMES)
+        cols = [s for s in SCHEMES if s in latency.columns]
+        cols += [c for c in latency.columns if c not in cols]
+        latency = latency[cols].rename(columns=SCHEMES)
 
-    save(out, latency, title, "Statistics", "Encoding Scheme", "Microseconds")
-    
+        save(out, latency, title, "Encoding Schemes", "File Type", "Seconds")
+
 def plot_throughput_by_file_type(df, file_size, folder_name):
-    stats = ["median"]
-    for stat in stats:
-        title = f"Query Throughput ({stat}, {query_type}, {file_size}, {file_type})"
-        out = f"{RESULTS_DIR}/figures/search_single_threaded/{query_type}_{stat}_{file_size}_{file_type}_throughput_by_dataset.png"
-        data = df[df["stat"] == stat].copy()
-        data = data[data["query_type"] == query_type]
-        data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
+    for stat in STATS:
+        title = f"Query Throughput ({stat}, all datasets, {file_size})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_throughput_by_file_type.png"
 
-        throughput = data.pivot(index="dataset", columns="scheme", values="throughput")
+        data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
+
+        throughput = data.pivot_table(index="file_type", columns="scheme", values="throughput",
+                                 aggfunc="mean", observed=True)
+        throughput.columns = throughput.columns.astype(str)
 
         cols = [s for s in SCHEMES if s in throughput.columns]
         cols += [c for c in throughput.columns if c not in cols]
         throughput = throughput[cols].rename(columns=SCHEMES)
 
-        save(out, throughput, title, "Encoding Schemes", "Datasets", "Queries/s")
-    
+        save(out, throughput, title, "Encoding Schemes", "File Type", "Queries/s")
 
 def plot_memory_usage_by_file_type(df, file_size, folder_name):
-    title = f"Median Peak Memory Usage During Search (all datasets, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_single_threaded/all_datasets_{file_size}_{file_type}_memory_by_query.png"
+    for stat in STATS:
+        title = f"{stat.capitalize()} Peak Memory Usage During Search (all datasets, {file_size})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_memory_by_file_type.png"
 
-    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
+        data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
 
-    memory = data.pivot_table(index="query_type", columns="scheme", values="peak_delta",
-                              aggfunc="mean", observed=True) / (1024 ** 2)
-    order = ["simple", "union", "intersection", "combination", "complex_combination"]
-    memory = memory.reindex(index=[q for q in order if q in memory.index])
+        memory = data.pivot_table(index="file_type", columns="scheme", values="peak_delta",
+                                 aggfunc="mean", observed=True) / 1000000
+        memory.columns = memory.columns.astype(str)
 
-    cols = [s for s in SCHEMES if s in memory.columns]
-    cols += [c for c in memory.columns if c not in cols]
-    memory = memory[cols].rename(columns=SCHEMES)
+        cols = [s for s in SCHEMES if s in memory.columns]
+        cols += [c for c in memory.columns if c not in cols]
+        memory = memory[cols].rename(columns=SCHEMES)
 
-    save(out, memory, title, "Encoding Scheme", "Query Type", "Peak Memory Increase (MB)")
-    
+        save(out, memory, title, "Encoding Schemes", "File Type", "Peak Memory Increase (MB)")
+
 if __name__ == "__main__":
-    df = load_results_grep(f"{RESULTS_DIR}/search_grep/search_grep.json")
+    df_0 = load_results(f"{RESULTS_DIR}/search_grep/search_grep.json")
+    df_1 = load_results(f"{RESULTS_DIR}/search_grep/search_file_type_comparisons.json")
+    df = pd.concat([df_0, df_1], ignore_index=True)
     
-    os.makedirs(f"{RESULTS_DIR}/figures/search_single_threaded", exist_ok=True)
-    
+    os.makedirs(f"{RESULTS_DIR}/figures/search_grep", exist_ok=True)
+
 
     plot_latency_by_file_type(df, "small", "search_grep")
     plot_throughput_by_file_type(df, "small", "search_grep")          
-    plot_memory_usage_by_file_type(df, "small", "search_grep") 
+    plot_memory_usage_by_file_type(df, "small", "search_grep")

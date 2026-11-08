@@ -110,8 +110,9 @@ mkdir -p "$OUT_DIR"
 # --benchmark_enable_random_interleaving=true \
 # --benchmark_repetitions="$reps" </dev/null
 
-### Search Latency File Type Comparisons ###
-
+### Search File Type Comparisons ###
+OUT_DIR="$RESULTS_DIR/search_grep"
+mkdir -p "$OUT_DIR"
 FILTER="IndexSearch/small/(csv|json|logfmt)/.*/partition_size:256/num_threads:1/"
 
 "$BENCH_BIN" \
@@ -120,14 +121,4 @@ FILTER="IndexSearch/small/(csv|json|logfmt)/.*/partition_size:256/num_threads:1/
 --benchmark_out_format=json \
 --benchmark_report_aggregates_only=true \
 --benchmark_enable_random_interleaving=true \
---benchmark_repetitions="$reps" </dev/null
-
-### Search Comparisons With Grep Benchmarks###
-FILTER="IndexSearch/small/(csv|json|logfmt)/.*/partition_size:256/num_threads:1/"
-
-"$BENCH_BIN" \
---benchmark_filter="$FILTER" \
---benchmark_out="$OUT_DIR/search_file_type_comparisons.json" \
---benchmark_out_format=json \
---benchmark_enable_random_interleaving=true \
---benchmark_repetitions="$reps" </dev/null
+--benchmark_repetitions=20 </dev/null

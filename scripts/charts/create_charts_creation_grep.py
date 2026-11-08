@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import ScalarFormatter
 
 EXCLUDED_SCHEMES = ["pef", "fls"]
 
@@ -18,29 +19,24 @@ SCHEMES = {
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
-def save(out, data, chart_title, legend_title, xlabel, ylabel):
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
+
+def save(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
     if data.empty:
         print(f"{out}: no data")
         return
     
     fig, ax = plt.subplots(figsize=(8, 5))
-    data.plot.bar(ax=ax, rot=0, title=chart_title,
-                         xlabel=xlabel, ylabel=ylabel)
+    
+    if logy:  
+        data.plot.bar(ax=ax, rot=0, title=chart_title,
+                         xlabel=xlabel, ylabel=ylabel, logy=True)
+        ax.yaxis.set_major_formatter(ScalarFormatter())
+    else:
+        data.plot.bar(ax=ax, rot=0, title=chart_title,
+                                 xlabel=xlabel, ylabel=ylabel)
+        
     ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote {out}")
-    
-def save_no_legend(out, data, chart_title, xlabel, ylabel):
-    if data.empty:
-        print(f"{out}: no data")
-        return
-    
-    fig, ax = plt.subplots(figsize=(10, 5))
-    data.plot.bar(ax=ax, rot=0, title=chart_title,
-                         xlabel=xlabel, ylabel=ylabel, legend=False)
     ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out, dpi=300)
@@ -62,7 +58,7 @@ def load_results(path):
 
 
 def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
-    title = f"Index Compression By File Type ({file_size})"
+    title = f"Index Compression By File Type ({file_size}, all datasets)"
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_compression_by_file_type.png"
     
     data = df[df["file_size"] == file_size].copy()
@@ -110,7 +106,7 @@ def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
         title = f"Index Size ({file_size}, dataset_{dataset})"
 
     index_size = (
-        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1_000_000
+        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1000000
     ).unstack("scheme")
 
     cols = [s for s in SCHEMES if s in index_size.columns]
@@ -130,7 +126,7 @@ def plot_memory_usage_by_file_type(df, file_size, folder_name, dataset=None):
         out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_size}_memory.png"
         title = f"Peak Memory ({file_size}, dataset_{dataset})"
 
-    data["peak_mb"] = data["peak_delta"] / 1_000_000
+    data["peak_mb"] = data["peak_delta"] / 1000000
 
     memory = data.groupby(["file_type", "scheme"], observed=True)["peak_mb"].mean().unstack("scheme")
 
@@ -138,16 +134,17 @@ def plot_memory_usage_by_file_type(df, file_size, folder_name, dataset=None):
     cols += [c for c in memory.columns if c not in cols]
     memory = memory[cols].rename(columns=SCHEMES)
 
-    save(out, memory, title, "Encoding Schemes", "File Type", "Peak memory (MB)")
+    save(out, memory, title, "Encoding Schemes", "File Type", "Peak memory (MB)", True)
     
 if __name__ == "__main__":
     # Grep Comparison Chart Creation
     os.makedirs(f"{RESULTS_DIR}/figures/creation_grep", exist_ok=True)
 
     df_0 = load_results(f"{RESULTS_DIR}/creation_grep/creation_grep.json")
-    df_1 = load_results(f"{RESULTS_DIR}/creation_grep/creation_simdindex.json")
+    df_1 = load_results(f"{RESULTS_DIR}/creation_grep/creation_file_types.json")
     df = pd.concat([df_0, df_1], ignore_index=True)
 
+    plot_index_size_by_file_type(df, "small", "creation_grep", None)
     plot_compression_by_file_type(df, "small", "creation_grep", None)
     plot_throughput_by_file_type(df, "small", "creation_grep", None)
     plot_memory_usage_by_file_type(df, "small", "creation_grep", None)
