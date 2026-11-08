@@ -131,7 +131,7 @@ BENCHMARK_DEFINE_F(IndexSearchBaseline, simple_search)(benchmark::State& state) 
         #endif
         flush_cache(cache_size);
         state.ResumeTiming();
-        search_mode(index_path + bench_path, "", {}, query);
+        search_mode(index_path + bench_path, "", {}, query, 1);
         benchmark::ClobberMemory();
     }
 
