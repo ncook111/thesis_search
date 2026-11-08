@@ -25,7 +25,7 @@ struct CoarseDelta4AVX512 {
   }
 };
 
-// Modification of Max4Delta to run on 256-bit simd
+// Modification of Max4Delta to run on 512-bit simd
 // Compares deltas with a maximum gap of 16
 // https://github.com/fast-pack/SIMDCompressionAndIntersection/blob/master/include/deltatemplates.h
 struct Max4DeltaAVX512 {

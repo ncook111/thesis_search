@@ -8,6 +8,17 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
+EXCLUDED_SCHEMES = ["pef", "fls"]
+
+SCHEMES = {
+    "gvb": "GVB", "gvb_delta": "GVB + Delta", "pef": "PEF", "fls": "FLS",
+    "s4_bpd4": "S4-BP128-D4", "s4_bpdm": "S4-BP128-DM",
+    "s8_bpd4": "S8-BP128-D4", "s8_bpdm": "S8-BP128-DM",
+    "s16_bpd4": "S16-BP128-D4", "s16_bpdm": "S16-BP128-DM",
+    "delta": "Delta", "s4d4": "S4-D4", "s4dm": "S4-DM",
+    "s8d4": "S8-D4", "s8dm": "S8-DM", "s16d4": "S16-D4", "s16dm": "S16-DM",
+}
+
 def load_results_encoding_decoding(path):
 
     with open(path) as f:
@@ -18,6 +29,8 @@ def load_results_encoding_decoding(path):
     parts = df["run_name"].str.split("/")
     df["scheme"] = parts.str[1].str.split("_", n=1).str[1]
     df["size"] = parts.str[2].astype(int)
+    
+    df = df[~df["scheme"].isin(EXCLUDED_SCHEMES)]
 
     df = df.rename(columns={"aggregate_name": "stat"})
     
@@ -32,22 +45,28 @@ def load_results_memory_usage(path):
     df["run_type"] = parts.str[1].str.split("_", n=1).str[0]
     df["scheme"] = parts.str[1].str.split("_", n=1).str[1]
     df["size"] = parts.str[2].astype(int)
+    
+    df = df[~df["scheme"].isin(EXCLUDED_SCHEMES)]
 
     all_cols = ["run_type", "scheme", "size", "peak_delta", "run_name"]
     return df.reindex(columns=all_cols)
 
 def plot_throughput(df, chart_type, key_title, title_type):
-    stats = ["median", "p10", "p1"]
+    stats = ["median"]
     for stat in stats:
         title = f"{title_type} Throughput ({stat})"
         out = f"{RESULTS_DIR}/figures/encodings_warm/{chart_type}_throughput_{stat}.png"
         data = df[df["stat"] == stat]
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second") / 1e9 # Convert into GB/s
+        
+        cols = [s for s in SCHEMES if s in throughput.columns]
+        cols += [c for c in throughput.columns if c not in cols]
+        throughput = throughput[cols].rename(columns=SCHEMES)
 
         fig, ax = plt.subplots(figsize=(8, 5))
         throughput.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="GB/s")
         
-        ax.legend(title=f"{key_title} Schemes")
+        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
         ax.minorticks_off()
         ax.grid(alpha=0.3)
         fig.tight_layout()
@@ -61,11 +80,15 @@ def plot_compression(df, type, key_title):
     
     data = df[df["stat"] == "median"]
     compression = data.pivot(index="size", columns="scheme", values="compression") * 100
+    
+    cols = [s for s in SCHEMES if s in compression.columns]
+    cols += [c for c in compression.columns if c not in cols]
+    compression = compression[cols].rename(columns=SCHEMES)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     compression.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="% of input")
     
-    ax.legend(title=f"{key_title} Schemes")
+    ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
     ax.minorticks_off()
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -79,11 +102,15 @@ def plot_bits_int(df, type, key_title):
     
     data = df[df["stat"] == "median"]
     bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int")
+    
+    cols = [s for s in SCHEMES if s in bits_int.columns]
+    cols += [c for c in bits_int.columns if c not in cols]
+    bits_int = bits_int[cols].rename(columns=SCHEMES)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     bits_int.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="bits/int")
     
-    ax.legend(title=f"{key_title} Schemes")
+    ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
     ax.minorticks_off()
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -96,7 +123,11 @@ def plot_memory_usage_by_scheme(df, type_filter, type_name, key_title, title_typ
     out = f"{RESULTS_DIR}/figures/encodings_memory_usage/{type_name}_memory_usage.png"
 
     data = df[df["run_type"] == type_filter]
-    memory = data.groupby("scheme")["peak_delta"].mean() / 1e6 # Convert into MB
+    memory = data.groupby("scheme")["peak_delta"].mean() / 1e6  # Convert into MB
+
+    order = [s for s in SCHEMES if s in memory.index]
+    order += [s for s in memory.index if s not in order]
+    memory = memory.loc[order].rename(index=SCHEMES)
 
     fig, ax = plt.subplots(figsize=(10, 5))
     memory.plot.bar(ax=ax, rot=0, title=title, xlabel=f"{key_title} Scheme", ylabel="Peak memory (MB)")

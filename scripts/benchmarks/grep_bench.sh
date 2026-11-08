@@ -2,113 +2,122 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../misc/paths.sh"
-OUT_DIR="$RESULTS_DIR/grep_baseline"
-mkdir -p "$OUT_DIR"
+CREATION_OUT_DIR="$RESULTS_DIR/creation"
+SEARCH_OUT_DIR="$RESULTS_DIR/creation"
 
-RATIOS="$OUT_DIR/ratios.txt"
-MATCHES="$OUT_DIR/matches.txt"
-TIMES="$OUT_DIR/times.txt"
-BENCH_OUT="$OUT_DIR/bench_output.txt"
+mkdir -p "$CREATION_OUT_DIR"
+mkdir -p "$SEARCH_OUT_DIR"
+
+GTIME=/usr/bin/time
+
+CREATION="$CREATION_OUT_DIR/creation_gz_lz4.json"
+TIMES=$(mktemp)
+trap 'rm -f "$TIMES"' EXIT
+SEARCH="$SEARCH_OUT_DIR/search_gz_lz4.json"
+sep=""
 
 ######## Compress Data ########
 setup_compress_data() {
-  mkdir -p "$BENCH_DATA"/tmp_compressed/{csv,json,logfmt}/{large,medium,small}_data/data_{1..5}
+  mkdir -p "$BENCH_DATA"/tmp_compressed/{csv,json,logfmt}/small_data/data_{1..4}
+
+  printf '{\n"benchmarks": [\n' >> "$CREATION"
+  sep=""
 
   # csv
-  compress_loop "large" "csv"
-  compress_loop "medium" "csv"
-  compress_loop "small" "csv"
+  compress_loop "small" "csv" "lz4"
+  compress_loop "small" "csv" "gzip"
+
+  echo "Compressed CSV"
 
   # json
-  compress_loop "large" "json"
-  compress_loop "medium" "json"
-  compress_loop "small" "json"
+  compress_loop "small" "json" "lz4"
+  compress_loop "small" "json" "gzip"
+
+  echo "Compressed JSON"
 
   # # logfmt
-  compress_loop "large" "logfmt"
-  compress_loop "medium" "logfmt"
-  compress_loop "small" "logfmt"
+  compress_loop "small" "logfmt" "lz4"
+  compress_loop "small" "logfmt" "gzip"
+
+  echo "Compressed LOGFMT"
+
+  printf '\n]\n}\n' >> "$CREATION"
 }
 
 compress_loop() {
-  local size="$1"
-  local file_type="$2"
+  local size="$1" file_type="$2" scheme="$3"
   local in="$BENCH_DATA/all_input_data/${file_type}/${size}_data"
   local out="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data"
-  
-  for i in {1..3}; do
-    ratio=$(lz4 -f "${in}/data_${i}/${i}_${size}.${file_type}" \
-                   "${out}/data_${i}/${i}_${size}.lz4" 2>&1 | grep -o '[0-9.]*%' | tail -1)
-    echo "${file_type} ${size} data_${i}: ${ratio}" >> "$RATIOS"
-  done
+  local i label src dst output elapsed compression
 
-  local ratios=()
   for i in {1..4}; do
-    ratio=$(lz4 -f "${in}/data_4/4_${size}_${i}.${file_type}" \
-                  "${out}/data_4/4_${size}_${i}.lz4" 2>&1 | grep -o '[0-9.]*%' | tail -1 | tr -d '%')
-    ratios+=("$ratio")
+    label="${scheme},${size},${file_type},$((i-1))"
+
+    echo "Running ${label}"
+
+    src="${in}/data_${i}/${i}_${size}.${file_type}"
+    dst="${out}/data_${i}/${i}_${size}.${scheme}"
+
+    if [[ "$scheme" == lz4 ]]; then
+      output=$("$GTIME" -f 'ELAPSED %e' lz4 -q -f "$src" "$dst" 2>&1)
+    elif [[ "$scheme" == gzip ]]; then
+      output=$("$GTIME" -f 'ELAPSED %e' gzip -c "$src" 2>&1 >"$dst")
+    else
+      echo "unknown scheme: $scheme" >&2
+      return 1
+    fi
+
+    elapsed=$(grep -o 'ELAPSED [0-9.]*' <<<"$output" | awk '{print $2}')
+    compression=$(awk -v o="$(stat -c%s "$src")" -v c="$(stat -c%s "$dst")" \
+                      'BEGIN { printf "%.2f", c / o * 100 }')
+
+    printf '%s  {\n    "label": "%s",\n    "compression": %s,\n    "real_time": %s\n  }' \
+      "$sep" "$label" "${compression}" "${elapsed}" >> "$CREATION"
+    sep=$',\n'
   done
-
-  avg=$(printf '%s\n' "${ratios[@]}" | awk '{s+=$1} END {printf "%.2f", s/NR}')
-  echo "${file_type} ${size} data_4 average: ${avg}%" >> "$RATIOS"
-
-  local ratios=()
-  for i in {1..3}; do
-    ratio=$(lz4 -f "${in}/data_5/5_${size}_${i}.${file_type}" \
-                  "${out}/data_5/5_${size}_${i}.lz4" 2>&1 | grep -o '[0-9.]*%' | tail -1 | tr -d '%')
-    ratios+=("$ratio")
-  done
-
-  avg=$(printf '%s\n' "${ratios[@]}" | awk '{s+=$1} END {printf "%.2f", s/NR}')
-  echo "${file_type} ${size} data_5 average: ${avg}%" >> "$RATIOS"
-
-
 }
 
 run_bench() {
-  local size="$1"
-  local file_type="$2"
-  local data_set="$3"
-  local query="$4"
+  local size="$1" file_type="$2" data_set="$3" query="$4" scheme="$5"
+  local file_path="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data/data_${data_set}/${data_set}_${size}.${scheme}"
+  local label="${scheme},${size},${file_type},$((data_set-1))"
+  local i elapsed
+  for i in $(seq 1 20); do
+    if [[ "$scheme" == lz4 ]]; then
+      "$GTIME" -o "$TIMES" -f "%e" bash -c "lz4 -dc '${file_path}' | grep -c '${query}' &>/dev/null || true"
+    elif [[ "$scheme" == gzip ]]; then
+      "$GTIME" -o "$TIMES" -f "%e" bash -c "gzip -dc '${file_path}' | grep -c '${query}' &>/dev/null || true"
+    else
+      echo "unknown scheme: $scheme" >&2
+      return 1
+    fi
+    elapsed=$(<"$TIMES")
 
-  if [[ $data_set -lt 4 ]]; then
-    local file_path="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data/data_${data_set}/${data_set}_${size}.lz4"
-    echo "Data_${data_set} ${size} ${file_type}" >> "$MATCHES"
-    for i in $(seq 1 20); do
-      gtime -a -o "$TIMES" -f "%e" bash -c "lz4 -dc '${file_path}' | grep -c '${query}' >> '$MATCHES' || true"
-    done
-  elif [[ $data_set -eq 4 ]]; then
-    local file_path="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data/data_4"
-    echo "Data_${data_set} ${size} ${file_type}" >> "$MATCHES"
-    echo ${file_path} >> "$MATCHES"
-    for i in $(seq 1 20); do
-      gtime -a -o "$TIMES" -f "%e" bash -c "for f in '${file_path}'/4_${size}_{1..4}.lz4; do lz4 -dc \"\$f\"; done | grep -c '${query}' >> '$MATCHES' || true"
-    done
-  elif [[ $data_set -eq 5 ]]; then
-    local file_path="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data/data_5"
-    echo "Data_${data_set} ${size} ${file_type}" >> "$MATCHES"
-
-    # Count occurances for this dataset as a csv document can be multiline in this instance, makes for a more fair comparison between csv/json/logfmt
-    for i in $(seq 1 20); do
-      gtime -a -o "$TIMES" -f "%e" bash -c "for f in '${file_path}'/5_${size}_{1..3}.lz4; do lz4 -dc \"\$f\"; done | grep -o '${query}' | wc -l >> '$MATCHES' || true"
-    done
-  fi
-
-  echo "Data_${data_set} ${size} ${file_type} Average Time: $(awk '{s+=$1} END {print s/NR}' "$TIMES") seconds" >> "$BENCH_OUT"
-  rm "$TIMES"
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s\n  }' \
+      "$sep" "$label" "${elapsed}" >> "$SEARCH"
+    sep=$',\n'
+  done
 }
 
-rm -f "$RATIOS" "$TIMES" "$MATCHES" "$BENCH_OUT"
+rm -f "$CREATION" "$SEARCH"
+rm -rf "$BENCH_DATA/tmp_compressed"
 
 setup_compress_data
 
 queries=("book" "IssueCommentEvent" "germany" "2026")
-for data_set in {1..4}; do 
-  for size in large; do
+printf '{\n"benchmarks": [\n' >> "$SEARCH"
+sep=""
+for data_set in {1..4}; do
+  for size in small; do
     for file_type in csv; do
-      run_bench "${size}" "${file_type}" "${data_set}" "${queries[data_set-1]}"
+      for scheme in lz4 gzip; do
+        run_bench "${size}" "${file_type}" "${data_set}" "${queries[data_set-1]}" "${scheme}"
+      done
     done
   done
 done
+printf '\n]\n}\n' >> "$SEARCH"
 
 rm -rf "$BENCH_DATA/tmp_compressed"
+
+echo "done: $CREATION $SEARCH"
