@@ -32,7 +32,7 @@ void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str,
                   const uint8_t enc_type,
-                  const uint32_t partition_size = 128 << 20,
+                  const uint32_t partition_size = 256 << 20,
                   const uint8_t num_threads = std::max(1u, std::thread::hardware_concurrency()),
                   const bool run_checks = false);
 void update_index(const std::vector<std::string> &fields,

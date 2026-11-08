@@ -50,7 +50,7 @@ int main(int argc, const char *argv[]) {
   if (vm.count("partition")) {
     partition_size = vm["partition"].as<uint32_t>() << 20; // Convert into MB
   } else {
-    partition_size = 128 << 20; // Default
+    partition_size = 256 << 20; // Default
   }
 
   uint32_t num_threads;

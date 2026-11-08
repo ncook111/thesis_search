@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 
-constexpr size_t PARTITION_SIZE = 128 << 20;
+constexpr size_t PARTITION_SIZE = 256 << 20;
 
 void create_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
