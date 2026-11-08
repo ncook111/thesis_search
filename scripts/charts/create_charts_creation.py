@@ -72,7 +72,7 @@ def load_results_lz4_gz(path):
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
 
-    all_cols = ["file_type", "file_size", "scheme", "dataset", "compression"]
+    all_cols = ["file_type", "file_size", "scheme", "dataset", "compression", "peak_delta"]
     return df.reindex(columns=all_cols)
 
 def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=None):
@@ -283,18 +283,12 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
         save(out, memory.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
 
 
-def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name, partition_size=None):
-    # Average of all datasets, average of all partition_sizes unless partition_sizes set
-    if partition_size is None:
-        tag = "all_partitions"
-    else:
-        tag, label = f"partition_{partition_size:g}", f"{partition_size:g}"
+def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
+    # Average of all datasets
     title = f"Peak Memory By Scheme ({file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_memory_by_scheme.png"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_memory_by_scheme.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
-    if partition_size is not None:
-        data = data[data["partition_size"] == partition_size]
     data["peak_mb"] = data["peak_delta"] / 1_000_000
 
     memory = data.groupby("scheme")["peak_mb"].mean()
@@ -303,10 +297,7 @@ def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name, partition
     order += [s for s in memory.index if s not in order]
     memory = memory.loc[order].rename(index=SCHEMES)
 
-    if partition_size is None:
-        save_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
-    else:
-        save(out, memory.to_frame(label), title, "Partition Size", "Encoding Scheme", "Peak memory (MB)")
+    save_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
         
 def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -414,4 +405,5 @@ if __name__ == "__main__":
     df_1 = load_results_lz4_gz(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
     df = pd.concat([df_0, df_1], ignore_index=True)
 
+    plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
     plot_compression_by_file_type(df, "small", "creation_lz4_gz", None)
