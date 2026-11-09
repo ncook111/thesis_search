@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 
-EXCLUDED_SCHEMES = ["pef", "fls"]
-
 SCHEMES = {
     "gvb": "GVB + Delta", "pef": "PEF", "fls": "FLS",
     "s4_bpd4": "S4-BP128-D4", "s4_bpdm": "S4-BP128-DM",
@@ -16,12 +14,14 @@ SCHEMES = {
     "gzip": "GZIP", "lz4": "LZ4"
 }
 
+FILE_TYPES = { "csv" : "CSV", "json" : "JSON", "logfmt" : "LOGFMT" }
+
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
 plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
 
-def save(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
+def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
     if data.empty:
         print(f"{out}: no data")
         return
@@ -41,27 +41,40 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
     fig.tight_layout()
     fig.savefig(out, dpi=300)
     plt.close(fig)
-    
+    print(f"wrote chart {out}")
+
+def save_table(out, data):
     # Tabular output
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    table.to_latex(f"{base}.tex", float_format="%.2f", escape=True)
+    latex_table = table.T.rename_axis("Scheme").reset_index()
+    latex_table.columns.name = None
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
+    print(f"wrote table {out}")
     
-    print(f"wrote {out}")
-
 def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
     parts = df["label"].str.split(",")
-    df["scheme"] = pd.Categorical(parts.str[0], categories=["lz4", "gzip", "gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"], ordered=True)
+    
+    scheme_order = list(SCHEMES)
+    df["scheme"] = (
+        pd.Categorical(parts.str[0], categories=scheme_order, ordered=True)
+          .rename_categories(SCHEMES) 
+    )
+          
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
-    df["file_type"] = parts.str[2]
+    
+    df["file_type"] = pd.Categorical(
+        parts.str[2].map(FILE_TYPES),
+        categories=list(FILE_TYPES.values()),
+    )
+        
     df["dataset"] = parts.str[3].astype(int) + 1
 
     all_cols = ["file_type", "file_size", "scheme", "index_size", "data_size", "real_time", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
-
 
 def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Compression By File Type ({file_size}, all datasets)"
@@ -75,15 +88,12 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
  
     data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = (data.groupby(["file_type", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
-
-    cols = [s for s in SCHEMES if s in compression.columns]
-    cols += [c for c in compression.columns if c not in cols]
-    compression = compression[cols].rename(columns=SCHEMES)
  
-    save(out, compression, title, "Encoding Schemes", "File Type", "% of input")
+    save_chart(out, compression, title, "Encoding Schemes", "File Type", "% of input")
+    save_table(out, compression)
 
 def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
-    title = f"Index Creation Throughput By File Type({file_size}, all datasets)"
+    title = f"Index Creation Throughput By File Type ({file_size}, all datasets)"
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_throughput_by_file_type.png"
     
     data = df[df["file_size"] == file_size].copy()
@@ -95,11 +105,8 @@ def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     totals = data.groupby(["file_type", "scheme"], observed=True)[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in throughput.columns]
-    cols += [c for c in throughput.columns if c not in cols]
-    throughput = throughput[cols].rename(columns=SCHEMES)
-
-    save(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
+    save_chart(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
+    save_table(out, throughput)
     
 def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Size By File Type ({file_size}, all datasets)"
@@ -115,11 +122,8 @@ def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
         data.groupby(["file_type", "scheme"], observed=True)["index_size"].sum() / 1000000
     ).unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in index_size.columns]
-    cols += [c for c in index_size.columns if c not in cols]
-    index_size = index_size[cols].rename(columns=SCHEMES)
-
-    save(out, index_size, title, "Encoding Schemes", "File Type", "Index size (MB)")
+    save_chart(out, index_size, title, "Encoding Schemes", "File Type", "Index size (MB)")
+    save_table(out, index_size)
 
 def plot_memory_usage_by_file_type(df, file_size, folder_name, dataset=None):
     # Average of all datasets unless dataset set
@@ -136,11 +140,8 @@ def plot_memory_usage_by_file_type(df, file_size, folder_name, dataset=None):
 
     memory = data.groupby(["file_type", "scheme"], observed=True)["peak_mb"].mean().unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in memory.columns]
-    cols += [c for c in memory.columns if c not in cols]
-    memory = memory[cols].rename(columns=SCHEMES)
-
-    save(out, memory, title, "Encoding Schemes", "File Type", "Peak memory (MB)", True)
+    save_chart(out, memory, title, "Encoding Schemes", "File Type", "Peak Memory (MB)", True)
+    save_table(out, memory)
     
 if __name__ == "__main__":
     # Grep Comparison Chart Creation

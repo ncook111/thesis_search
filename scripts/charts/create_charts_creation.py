@@ -18,7 +18,7 @@ SCHEMES = {
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
-def save(out, data, chart_title, legend_title, xlabel, ylabel):
+def save_chart(out, data, chart_title, legend_title, xlabel, ylabel):
     if data.empty:
         print(f"{out}: no data")
         return
@@ -31,9 +31,10 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel):
     fig.tight_layout()
     fig.savefig(out, dpi=300)
     plt.close(fig)
+    
     print(f"wrote {out}")
     
-def save_no_legend(out, data, chart_title, xlabel, ylabel):
+def save_chart_no_legend(out, data, chart_title, xlabel, ylabel):
     if data.empty:
         print(f"{out}: no data")
         return
@@ -45,7 +46,17 @@ def save_no_legend(out, data, chart_title, xlabel, ylabel):
     fig.tight_layout()
     fig.savefig(out, dpi=300)
     plt.close(fig)
+    
     print(f"wrote {out}")
+    
+def save_table(out, data):
+    # Tabular output
+    base = os.path.splitext(out)[0]
+    table = data.round(3)
+    latex_table = table.T.rename_axis("Scheme").reset_index()
+    latex_table.columns.name = None
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
+    print(f"wrote table {out}")
 
 def load_results(path):
     with open(path) as f:
@@ -98,7 +109,7 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
     cols += [c for c in compression.columns if c not in cols]
     compression = compression[cols].rename(columns=SCHEMES)
  
-    save(out, compression, title, "Encoding Schemes", "File Type", "% of input")
+    save_chart(out, compression, title, "Encoding Schemes", "File Type", "% of input")
     
 def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index Compression By File Size ({file_type})"
@@ -117,7 +128,7 @@ def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
     cols += [c for c in compression.columns if c not in cols]
     compression = compression[cols].rename(columns=SCHEMES)
  
-    save(out, compression, title, "Encoding Schemes", "Dataset Size", "% of input")
+    save_chart(out, compression, title, "Encoding Schemes", "Dataset Size", "% of input")
 
 def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Compression By Dataset ({file_size}, {file_type})"
@@ -132,7 +143,7 @@ def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     cols += [c for c in compression.columns if c not in cols]
     compression = compression[cols].rename(columns=SCHEMES)
 
-    save(out, compression, title, "Encoding Schemes", "Dataset", "% of input")
+    save_chart(out, compression, title, "Encoding Schemes", "Dataset", "% of input")
     
 def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Creation Throughput By File Type({file_size})"
@@ -151,7 +162,7 @@ def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     cols += [c for c in throughput.columns if c not in cols]
     throughput = throughput[cols].rename(columns=SCHEMES)
 
-    save(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
+    save_chart(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
     
 def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index Creation Throughput By File Size({file_type})"
@@ -170,7 +181,7 @@ def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
     cols += [c for c in throughput.columns if c not in cols]
     throughput = throughput[cols].rename(columns=SCHEMES)
 
-    save(out, throughput, title, "Encoding Schemes", "Dataset Size", "MB/s")
+    save_chart(out, throughput, title, "Encoding Schemes", "Dataset Size", "MB/s")
     
 def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Creation Throughput By Dataset ({file_size}, {file_type})"
@@ -185,7 +196,7 @@ def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     cols += [c for c in throughput.columns if c not in cols]
     throughput = throughput[cols].rename(columns=SCHEMES)
 
-    save(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s")
+    save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s")
 
 def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Size By File Type ({file_size})"
@@ -205,7 +216,7 @@ def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
     cols += [c for c in index_size.columns if c not in cols]
     index_size = index_size[cols].rename(columns=SCHEMES)
 
-    save(out, index_size, title, "Encoding Schemes", "File Type", "Index size (MB)")
+    save_chart(out, index_size, title, "Encoding Schemes", "File Type", "Index size (MB)")
 
 def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -224,9 +235,9 @@ def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, sch
     throughput = data.groupby("partition_size")["throughput"].mean()
 
     if scheme is None:
-        save_no_legend(out, throughput, title, "Partition Size (MB)", "MB/s")
+        save_chart_no_legend(out, throughput, title, "Partition Size (MB)", "MB/s")
     else:
-        save(out, throughput.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "MB/s")
+        save_chart(out, throughput.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "MB/s")
 
 
 def plot_compression_by_partition_size(df, file_size, file_type, folder_name, scheme=None):
@@ -246,9 +257,9 @@ def plot_compression_by_partition_size(df, file_size, file_type, folder_name, sc
     compression = data.groupby("partition_size")["compression_pct"].mean()
 
     if scheme is None:
-        save_no_legend(out, compression, title, "Partition Size (MB)", "% of input")
+        save_chart_no_legend(out, compression, title, "Partition Size (MB)", "% of input")
     else:
-        save(out, compression.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "% of input")
+        save_chart(out, compression.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "% of input")
 
         
 
@@ -269,9 +280,9 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
     memory = data.groupby("partition_size")["peak_mb"].mean()
 
     if scheme is None:
-        save_no_legend(out, memory, title, "Partition Size (MB)", "Peak memory (MB)")
+        save_chart_no_legend(out, memory, title, "Partition Size (MB)", "Peak memory (MB)")
     else:
-        save(out, memory.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
+        save_chart(out, memory.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
 
 
 def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
@@ -288,7 +299,7 @@ def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
     order += [s for s in memory.index if s not in order]
     memory = memory.loc[order].rename(index=SCHEMES)
 
-    save_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
+    save_chart_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
         
 def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -304,7 +315,7 @@ def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, schem
         cols = [s for s in SCHEMES if s in throughput.columns]
         cols += [c for c in throughput.columns if c not in cols]
         throughput = throughput[cols].rename(columns=SCHEMES)
-        save(out, throughput, title, "Encoding Schemes", "Thread Count", "MB/s")
+        save_chart(out, throughput, title, "Encoding Schemes", "Thread Count", "MB/s")
         return
 
     if scheme == "average":
@@ -314,7 +325,7 @@ def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, schem
         title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, {SCHEMES.get(scheme, scheme)})"
 
     throughput = data.groupby("thread_count")["throughput"].mean().sort_index()
-    save_no_legend(out, throughput, title, "Thread Count", "MB/s")
+    save_chart_no_legend(out, throughput, title, "Thread Count", "MB/s")
 
 
 def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
@@ -336,7 +347,7 @@ def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, sch
 
     memory = data.groupby("thread_count")["peak_mb"].mean().sort_index()
 
-    save_no_legend(out, memory, title, "Thread Count", "Peak memory (MB)")
+    save_chart_no_legend(out, memory, title, "Thread Count", "Peak memory (MB)")
     
 if __name__ == "__main__":
     

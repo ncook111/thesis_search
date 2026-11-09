@@ -37,6 +37,15 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
     plt.close(fig)
     print(f"wrote {out}")
 
+def save_table(out, data):
+    # Tabular output
+    base = os.path.splitext(out)[0]
+    table = data.round(3)
+    latex_table = table.T.rename_axis("Scheme").reset_index()
+    latex_table.columns.name = None
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
+    print(f"wrote table {out}")
+    
 def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
