@@ -5,6 +5,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from matplotlib.ticker import FuncFormatter, NullFormatter
+
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
@@ -130,22 +132,31 @@ def plot_bits_int(df, type, key_title):
     
     save_table(out, bits_int)
     
-def plot_memory_usage_by_scheme(df, type_filter, type_name, key_title, title_type):
-    title = f"{title_type} Memory Usage By Scheme"
+def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type):
+    title = f"{title_type} Memory Usage By Scheme and Size"
     out = f"{RESULTS_DIR}/figures/encodings_memory_usage/{type_name}_memory_usage.png"
 
     data = df[df["run_type"] == type_filter]
-    memory = data.groupby("scheme", observed=True)["peak_delta"].mean() / 1e6  # Convert into MB
+    memory = (
+        data.groupby(["size", "scheme"], observed=True)["peak_delta"].mean()
+            .unstack("scheme") / 1e6          # rows = size, columns = scheme, in MB
+    )
+    memory.columns = memory.columns.astype(str)
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    memory.plot.bar(ax=ax, rot=0, title=title, xlabel=f"{key_title} Scheme", ylabel="Peak memory (MB)")
+    memory.plot.bar(ax=ax, rot=0, title=title, xlabel="Input Size", ylabel="Peak memory (MB)", logy=True)
+    ax.legend(title=f"{key_title} Scheme", loc="upper left",
+              bbox_to_anchor=(1.01, 1), borderaxespad=0)
+    
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
+    ax.yaxis.set_minor_formatter(NullFormatter())
 
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {out}")
-    
+
     save_table(out, memory)
     
 
@@ -165,7 +176,7 @@ if __name__ == "__main__":
     plot_bits_int(df_comp_dec, "compression_decoding", "Compression")
     plot_throughput(df_delta_enc, "delta_encoding", "Delta", "Encoding")
     plot_throughput(df_delta_dec, "delta_decoding", "Delta", "Decoding")
-    plot_memory_usage_by_scheme(df_memory_usage, "cenc", "compression_encoding", "Compression", "Compression Encoding")
-    plot_memory_usage_by_scheme(df_memory_usage, "cdec", "compression_decoding", "Compression", "Compression Decoding")
-    plot_memory_usage_by_scheme(df_memory_usage, "denc", "delta_encoding", "Delta", "Delta Encoding")
-    plot_memory_usage_by_scheme(df_memory_usage, "ddec", "delta_decoding", "Delta", "Delta Decoding")
+    plot_memory_usage_by_size(df_memory_usage, "cenc", "compression_encoding", "Compression", "Compression Encoding")
+    plot_memory_usage_by_size(df_memory_usage, "cdec", "compression_decoding", "Compression", "Compression Decoding")
+    plot_memory_usage_by_size(df_memory_usage, "denc", "delta_encoding", "Delta", "Delta Encoding")
+    plot_memory_usage_by_size(df_memory_usage, "ddec", "delta_decoding", "Delta", "Delta Decoding")

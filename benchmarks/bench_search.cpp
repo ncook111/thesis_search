@@ -16,7 +16,7 @@
 #include <malloc.h>
 #endif
 
-constexpr size_t cache_size = 2048 * 1024;
+constexpr size_t cache_size = 512000 * 1024;
 
 static std::string csv_data_path = BENCH_DATA_DIR "/all_input_data/csv/";
 static std::string json_data_path = BENCH_DATA_DIR "/all_input_data/json/";
