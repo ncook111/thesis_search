@@ -41,7 +41,7 @@ int main(int argc, const char *argv[]) {
       std::cout << "Encoding argument invalid. Usage: ./ingest --help\n";
       return 1;
     }
-  } else if (act_mode != "v" && act_mode !=  "verify" && act_mode != "u" && act_mode !=  "update"){
+  } else if (act_mode != "v" && act_mode !=  "verify" && act_mode != "u" && act_mode !=  "update" && act_mode != "s" && act_mode !=  "search"){
     std::cout << "Encoding argument missing. Usage: ./ingest --help\n";
     return 1;
   }
