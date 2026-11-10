@@ -88,6 +88,10 @@ def load_results(path):
 
     timed = df["stat"].isin(["mean", "median"])
     df["throughput"] = df["items_per_second"].where(timed)
+    
+    to_seconds = {"s": 1, "ms": 1e3, "us": 1e6, "ns": 1e9}
+    unit = df["time_unit"] if "time_unit" in df else pd.Series("s", index=df.index)
+    df["real_time"] = df["real_time"] / unit.fillna("s").map(to_seconds)
 
     all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
                 "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]

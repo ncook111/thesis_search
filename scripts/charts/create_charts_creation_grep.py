@@ -72,6 +72,10 @@ def load_results(path):
     )
         
     df["dataset"] = parts.str[3].astype(int) + 1
+    
+    to_seconds = {"s": 1, "ms": 1e3, "us": 1e6, "ns": 1e9}
+    unit = df["time_unit"] if "time_unit" in df else pd.Series("s", index=df.index)
+    df["real_time"] = df["real_time"] / unit.fillna("s").map(to_seconds)
 
     all_cols = ["file_type", "file_size", "scheme", "index_size", "data_size", "real_time", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
