@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#set -euo pipefail
+set -euo pipefail
 
 source "$(dirname "$0")/../misc/paths.sh"
 source ~/elastic-start-local/.env
@@ -20,14 +20,24 @@ fi
 CREATION_ELASTIC="$CREATION_OUT_DIR/creation_elastic.json"
 CREATION_SIMDINDEX="$CREATION_OUT_DIR/creation_simdindex.json"
 TIMES=$(mktemp)
-TIMES2=$(mktemp)
-BASE_DIR=$(mktemp -d)
-trap 'rm -f "$TIMES" "$TIMES2"; rm -rf "$BASE_DIR"' EXIT
+trap 'rm -f "$TIMES"' EXIT
 
-SEARCH_ELASTIC="$SEARCH_OUT_DIR/search_elastic.json"
-SEARCH_SIMDINDEX="$SEARCH_OUT_DIR/search_simdindex.json"
+SEARCH_ELASTIC_WARM="$SEARCH_OUT_DIR/search_elastic_warm.json"
+SEARCH_ELASTIC_COLD="$SEARCH_OUT_DIR/search_elastic_cold.json"
+SEARCH_SIMDINDEX_WARM="$SEARCH_OUT_DIR/search_simdindex_warm.json"
+SEARCH_SIMDINDEX_COLD="$SEARCH_OUT_DIR/search_simdindex_cold.json"
 
 rss_kb() { awk -v k="$2:" '$1==k {print $2}' "/proc/$1/status"; }
+
+# Flush the Linux page cache so the next read comes from disk. Needs root.
+drop_caches() {
+  sync
+  if [[ $EUID -eq 0 ]]; then
+    echo 3 > /proc/sys/vm/drop_caches
+  else
+    echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+  fi
+}
 
 # find "$tmp" -name 'chunk_*' -print0 |
 #     xargs -0 -n 1 -P 10 bash -c 'bulk_one "$1"' _
@@ -107,7 +117,7 @@ elastic_create_loop() {
 
     curl -sS -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" -X DELETE "http://localhost:9200/$idx_name"
 
-    es_pid="$(pgrep -f org.elasticsearch.bootstrap.Elasticsearch | head -n1)"
+    es_pid="$(pgrep -f org.elasticsearch.bootstrap.Elasticsearch | head -n1 || true)"
     if [[ -z "$es_pid" ]]; then
       echo "Elasticsearch process not found" >&2
       rm -rf "$tmp"
@@ -169,52 +179,112 @@ elastic_create_loop() {
 }
 
 simdindex_search_loop() {
-  local size="$1" scheme="$2" querys=("${@:3}")
-  local path="$BENCH_DATA/tmp_indexed/${file_type}/${scheme}/${size}_data"
-  local i label src dst start end elapsed_ms max_rss base_rss data_size index_size
+  # Called as: simdindex_search_loop <size> <scheme> <query type> <cold: true|false> <query for data set 1> ... <query for data set 4>
+  local size="$1" scheme="$2" query_type="$3" cold="$4" querys=("${@:5}")
+  local path="$BENCH_DATA/tmp_indexed/json/${scheme}/${size}_data"
+  local i rep start end elapsed_ms max_rss base_rss
 
   for i in {1..4}; do
     local query="${querys[i-1]}"
-    local label="${scheme},${size},$((i-1))"
-    
+    local label="${scheme},${size},${query_type},$((i-1))"
     local idx="${path}/data_${i}"
-
 
     echo "Running ${label}"
 
-    src="${in}/data_${i}"
-    dst="${out}/data_${i}"
+    # Warm mode: one untimed run so every timed repetition reads from the page cache.
+    if [[ "$cold" != true ]]; then
+      "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+    fi
 
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
-    base_rss=$(tail -n1 "$TIMES")
-    start=$("$DATE" +%s%N)
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 
-    end=$("$DATE" +%s%N)
+    for rep in $(seq 1 20); do
+      # Cold mode: flush before every repetition. The baseline run that follows
+      # reloads the indexer binary, so only the index itself is read cold.
+      if [[ "$cold" == true ]]; then
+        drop_caches
+      fi
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
-    max_rss=$(tail -n1 "$TIMES")
+      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
+      base_rss=$(tail -n1 "$TIMES")
+      start=$("$DATE" +%s%N)
+      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+      end=$("$DATE" +%s%N)
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
-    sep=$',\n'
+      elapsed_ms=$(( (end - start) / 1000000 ))
+      max_rss=$(tail -n1 "$TIMES")
+
+      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
+        "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
+      sep=$',\n'
+    done
   done
 }
 
 elastic_search_loop() {
-  local size="$1" scheme="$2" querys=("${@:3}")
-  local path="$BENCH_DATA/tmp_indexed/${file_type}/${size}_data"
-  local i src dst start end elapsed_ms max_rss base_rss data_size index_size
+  # Called as: elastic_search_loop <size> <query type> <cold: true|false> <query for data set 1> ... <query for data set 4>
+  local size="$1" query_type="$2" cold="$3" querys=("${@:4}")
+  local i rep start end elapsed_ms max_rss base_rss es_pid resp rc
+
+  es_pid="$(pgrep -f org.elasticsearch.bootstrap.Elasticsearch | head -n1 || true)"
+  if [[ -z "$es_pid" ]]; then
+    echo "Elasticsearch process not found" >&2
+    return 1
+  fi
 
   for i in {1..4}; do
     local query="${querys[i-1]}"
-    local label="elastic,${size},$((i-1))"
+    local label="elastic,${size},${query_type},$((i-1))"
     local idx_name="${size}_$((i-1))_idx"
 
-    curl -sS -u "elastic:$ES_LOCAL_PASSWORD" \
-    -H 'Content-Type: application/json' \
-    -X GET "http://127.0.0.1:9200/$idx_name/_count" \
-    -d "$query" \
-    -w '\ndns %{time_namelookup}\nconnect %{time_connect}\nttfb %{time_starttransfer}\ntotal %{time_total}\n'
+    echo "Running ${label}"
+
+    # Warm mode: one untimed run so every timed repetition reads from the page cache.
+    # A failing query is reported by the first timed repetition below.
+    if [[ "$cold" != true ]]; then
+      curl -sS -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" \
+        -H 'Content-Type: application/json' \
+        -X GET "http://127.0.0.1:9200/$idx_name/_count" \
+        -d "$query" || true
+    fi
+
+    for rep in $(seq 1 20); do
+      # Cold mode: flush the OS page cache before every repetition.
+      if [[ "$cold" == true ]]; then
+        drop_caches
+      fi
+
+      # Elasticsearch keeps its own query and request caches, which can answer a
+      # repeated identical query without searching. Clear them (untimed) so every
+      # repetition is a real search.
+      curl -sS -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" \
+        -X POST "http://127.0.0.1:9200/$idx_name/_cache/clear?query=true&request=true"
+
+      # Memory, same method as elastic_create_loop: note the server's current RSS,
+      # reset its peak-RSS counter, then read the peak after the query.
+      base_rss="$(rss_kb "$es_pid" VmRSS)"
+      echo 5 | sudo tee "/proc/$es_pid/clear_refs" >/dev/null
+
+      start=$("$DATE" +%s%N)
+      resp="$(curl -sS --fail-with-body -u "elastic:$ES_LOCAL_PASSWORD" \
+        -H 'Content-Type: application/json' \
+        -X GET "http://127.0.0.1:9200/$idx_name/_count" \
+        -d "$query")" && rc=0 || rc=$?
+      end=$("$DATE" +%s%N)
+
+      if [[ "$rc" -ne 0 ]]; then
+        echo "search failed for ${label} (curl exit $rc): $query" >&2
+        echo "$resp" | head -c 2000 >&2
+        echo >&2
+        return 1
+      fi
+
+      elapsed_ms=$(( (end - start) / 1000000 ))
+      max_rss="$(rss_kb "$es_pid" VmHWM)"
+
+      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
+        "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_ELASTIC"
+      sep=$',\n'
+    done
+  done
 }
 
 simdindex_fields=(
@@ -226,7 +296,7 @@ simdindex_fields=(
 
 simdindex_simple_queries=(
   '[reviewText] = "book"'
-  '[page_title] = "IssueCommentEvent"'
+  '[type] = "IssueCommentEvent"'
   '[page_title] = "germany"'
   '[publication_year] = "2026"'
 )
@@ -255,25 +325,25 @@ simdindex_combination_queries=(
 simdindex_complex_combination_queries=(
   '([overall] = "5.0" & [reviewText] = "paperback") | [overall] = {3.0,4.0}'
   '([type] = "IssueCommentEvent" | [type] = "PullRequestReviewCommentEvent") & [id] = {1162772598,5862772598}'
-  '([page_title] = "germany" | [page_title] = "england") & ([page_title] = "pdf" | [page_title] = ".html")'
+  '([page_title] = "germany" | [page_title] = "england") & ([page_title] = "pdf" | [page_title] = "html")'
   '([publication_year] = {2020,2025} & [language] = "en") | [publication_year] = "2019"'
 )
 
 elastic_fields=(
   '"properties": {
-    "reviewText": { "type": "text", "page_title": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
+    "reviewText": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
     "overall":   { "type": "float" }
   }'
   '"properties": {
-    "type": { "type": "text", "page_title": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
+    "type": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
     "id":   { "type": "long" }
   }'
   '"properties": {
-    "page_title": { "type": "text", "page_title": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
+    "page_title": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
     "timestamp":   { "type": "date", "format": "yyyy-MM-dd HH:mm:ss" }
   }'
   '"properties": {
-    "language": { "type": "text", "page_title": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
+    "language": { "type": "text", "analyzer": "words", "index_options": "docs", "norms": false },
     "publication_year":   { "type": "integer" }
   }'
 )
@@ -286,16 +356,16 @@ elastic_simple_queries=(
 )
 
 elastic_union_queries=(
-  '{ "query": { "query_string": { "query": "reviewText:(book OR paperback)" } } }'
+  '{ "query": { "query_string": { "query": "reviewText:(book OR television)" } } }'
   '{ "query": { "query_string": { "query": "type:(IssueCommentEvent OR PullRequestReviewCommentEvent)" } } }'
   '{ "query": { "query_string": { "query": "page_title:(germany OR england)" } } }'
   '{ "query": { "query_string": { "query": "publication_year:(2026 OR 2025)" } } }'
 )
 
 elastic_intersection_queries=(
-  '{ "query": { "query_string": { "query": "reviewText:(book AND television)" } } }'
+  '{ "query": { "query_string": { "query": "reviewText:(book AND paperback)" } } }'
   '{ "query": { "query_string": { "query": "type:IssueCommentEvent AND id:5562772598" } } }'
-  '{ "query": { "query_string": { "query": "page_title:(germany AND england)" } } }'
+  '{ "query": { "query_string": { "query": "page_title:(pdf AND germany)" } } }'
   '{ "query": { "query_string": { "query": "publication_year:2026 AND language:en" } } }'
 )
 
@@ -309,17 +379,21 @@ elastic_combination_queries=(
 elastic_complex_combination_queries=(
   '{ "query": { "query_string": { "query": "(overall:5.0 AND reviewText:paperback) OR overall:[3.0 TO 4.0]" } } }'
   '{ "query": { "query_string": { "query": "type:(IssueCommentEvent OR PullRequestReviewCommentEvent) AND id:[1162772598 TO 5862772598]" } } }'
-  '{ "query": { "query_string": { "query": "page_title:(germany OR england) OR page_title:(pdf OR .html)" } } }'
+  '{ "query": { "query_string": { "query": "page_title:(germany OR england) AND page_title:(pdf OR html)" } } }'
   '{ "query": { "query_string": { "query": "(publication_year:[2020 TO 2025] AND language:en) OR publication_year:2019" } } }'
 )
 
 rm -f "$CREATION_SIMDINDEX" "$CREATION_ELASTIC"
-rm -f "SEARCH_SIMDINDEX" "SEARCH_ELASTIC"
+rm -f "$SEARCH_SIMDINDEX_WARM" "$SEARCH_SIMDINDEX_COLD" "$SEARCH_ELASTIC_WARM" "$SEARCH_ELASTIC_COLD"
+# Results from before the warm/cold split, so stale files are not mistaken for current ones.
+rm -f "$SEARCH_OUT_DIR/search_simdindex.json" "$SEARCH_OUT_DIR/search_elastic.json"
 rm -rf "$BENCH_DATA"/tmp_indexed
 
-mkdir -p "$BENCH_DATA"/tmp_indexed/{csv,json,logfmt}/small_data/data_{1..4}
+schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
 
-schemes="gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm"
+for scheme in "${schemes[@]}"; do
+  mkdir -p "$BENCH_DATA"/tmp_indexed/json/"$scheme"/small_data/data_{1..4}
+done
 
 printf '{\n"benchmarks": [\n' > "$CREATION_SIMDINDEX"
 sep=""
@@ -333,16 +407,38 @@ sep=""
 elastic_create_loop "small" "${elastic_fields[@]}"
 printf '\n]\n}\n' >> "$CREATION_ELASTIC"
 
-sep=""
-for scheme in "${schemes[@]}"; do
-  for query_type in simdindex_{simple,union,intersection,combination,complex_combination}_queries; do
-    ref="${query_type}[@]"
-    simdindex_search_loop "small" "$scheme" "${!ref}"
+query_types=(simple union intersection combination complex_combination)
+
+for cold in false true; do
+  if [[ "$cold" == true ]]; then
+    SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_COLD"
+  else
+    SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_WARM"
+  fi
+
+  printf '{\n"benchmarks": [\n' > "$SEARCH_SIMDINDEX"
+  sep=""
+  for scheme in "${schemes[@]}"; do
+    for query_type in "${query_types[@]}"; do
+      ref="simdindex_${query_type}_queries[@]"
+      simdindex_search_loop "small" "$scheme" "$query_type" "$cold" "${!ref}"
+    done
   done
+  printf '\n]\n}\n' >> "$SEARCH_SIMDINDEX"
 done
 
-sep=""
-for query_type in elastic_{simple,union,intersection,combination,complex_combination}_queries; do
-  ref="${query_type}[@]"
-  elastic_search_loop "small" "${!ref}"
+for cold in false true; do
+  if [[ "$cold" == true ]]; then
+    SEARCH_ELASTIC="$SEARCH_ELASTIC_COLD"
+  else
+    SEARCH_ELASTIC="$SEARCH_ELASTIC_WARM"
+  fi
+
+  printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
+  sep=""
+  for query_type in "${query_types[@]}"; do
+    ref="elastic_${query_type}_queries[@]"
+    elastic_search_loop "small" "$query_type" "$cold" "${!ref}"
+  done
+  printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
 done

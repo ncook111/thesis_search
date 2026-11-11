@@ -108,7 +108,7 @@ static const std::vector<std::vector<std::string>> queries = {
         {
             "([overall] = \"5.0\" & [reviewText] = \"paperback\") | [overall] = {3.0,4.0}",
             "([type] = \"IssueCommentEvent\" | [type] = \"PullRequestReviewCommentEvent\") & [id] = {1162772598,5862772598}",
-            "([page_title] = \"germany\" | [page_title] = \"england\") & ([page_title] = \"pdf\" | [page_title] = \".html\")",
+            "([page_title] = \"germany\" | [page_title] = \"england\") & ([page_title] = \"pdf\" | [page_title] = \"html\")",
             "([publication_year] = {2020,2025} & [language] = \"en\") | [publication_year] = \"2019\""
         }
 };
