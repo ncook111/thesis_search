@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+# Strict mode exits on the first failing command; say which one instead of exiting silently.
+trap 'rc=$?; echo "error: line $LINENO exited with status $rc: $BASH_COMMAND" >&2' ERR
 
 source "$(dirname "$0")/../misc/paths.sh"
 CREATION_OUT_DIR="$RESULTS_DIR/creation_grep"
@@ -121,7 +123,8 @@ simdindex_create_loop() {
     src="${in}/data_${i}"
     dst="${out}/data_${i}"
 
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
+    # Baseline only needs the memory figure; the exit status of --help does not matter.
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --threads 1
@@ -161,7 +164,8 @@ simdindex_search_loop() {
       drop_caches
     fi
 
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
+    # Baseline only needs the memory figure; the exit status of --help does not matter.
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+# Strict mode exits on the first failing command; say which one instead of exiting silently.
+trap 'rc=$?; echo "error: line $LINENO exited with status $rc: $BASH_COMMAND" >&2' ERR
 
 source "$(dirname "$0")/../misc/paths.sh"
 source ~/elastic-start-local/.env
@@ -75,7 +77,8 @@ simdindex_create_loop() {
 
     read -ra field_list <<< "$fields"
 
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
+    # Baseline only needs the memory figure; the exit status of --help does not matter.
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --fields "${field_list[@]}" --threads 1
@@ -203,7 +206,8 @@ simdindex_search_loop() {
         drop_caches
       fi
 
-      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null
+      # Baseline only needs the memory figure; the exit status of --help does not matter.
+      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
       base_rss=$(tail -n1 "$TIMES")
       start=$("$DATE" +%s%N)
       "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
@@ -247,9 +251,18 @@ elastic_search_loop() {
     fi
 
     for rep in $(seq 1 20); do
-      # Cold mode: flush the OS page cache before every repetition.
+      # Cold mode, before every repetition (all untimed): close the index so
+      # Elasticsearch releases its mappings of the index files (drop_caches cannot
+      # evict pages a process still has mapped), flush the OS page cache, reopen
+      # the index, and wait for its shard to be ready.
       if [[ "$cold" == true ]]; then
+        curl -sS --fail -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" \
+          -X POST "http://127.0.0.1:9200/$idx_name/_close"
         drop_caches
+        curl -sS --fail -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" \
+          -X POST "http://127.0.0.1:9200/$idx_name/_open"
+        curl -sS --fail -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" \
+          "http://127.0.0.1:9200/_cluster/health/$idx_name?wait_for_status=green&timeout=60s"
       fi
 
       # Elasticsearch keeps its own query and request caches, which can answer a
