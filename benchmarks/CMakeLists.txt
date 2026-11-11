@@ -1,7 +1,6 @@
 add_executable(indexer_benchmarks
     bench_creation.cpp
     bench_search.cpp
-    bench_search_grep.cpp
     bench_encoding.cpp
     cache_flush.cpp
 )
