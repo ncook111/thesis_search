@@ -77,7 +77,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
         title = f"{title_type} Throughput ({stat})"
         out = f"{RESULTS_DIR}/figures/encodings_warm/{chart_type}_throughput_{stat}.png"
         data = df[df["stat"] == stat]
-        throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second") / 1e9 # Convert into GB/s
+        throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second").sort_index(axis=1) / 1e9 # Convert into GB/s
 
         fig, ax = plt.subplots(figsize=(8, 5))
         throughput.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="GB/s")
@@ -97,7 +97,7 @@ def plot_compression(df, type, key_title):
     out = f"{RESULTS_DIR}/figures/encodings_warm/{type}_compression.png"
     
     data = df[df["stat"] == "median"]
-    compression = data.pivot(index="size", columns="scheme", values="compression") * 100
+    compression = data.pivot(index="size", columns="scheme", values="compression").sort_index(axis=1) * 100
 
     fig, ax = plt.subplots(figsize=(8, 5))
     compression.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="% of input")
@@ -117,7 +117,7 @@ def plot_bits_int(df, type, key_title):
     out = f"{RESULTS_DIR}/figures/encodings_warm/{type}_bits_int.png"
     
     data = df[df["stat"] == "median"]
-    bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int")
+    bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int").sort_index(axis=1)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     bits_int.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="bits/int")
@@ -134,7 +134,7 @@ def plot_bits_int(df, type, key_title):
     
 def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type):
     title = f"{title_type} Memory Usage By Scheme and Size"
-    out = f"{RESULTS_DIR}/figures/encodings_memory_usage/{type_name}_memory_usage.png"
+    out = f"{RESULTS_DIR}/figures/encodings_warm/{type_name}_memory_usage.png"
 
     data = df[df["run_type"] == type_filter]
     memory = (

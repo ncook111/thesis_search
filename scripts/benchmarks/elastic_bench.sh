@@ -63,7 +63,7 @@ simdindex_create_loop() {
   local size="$1" scheme="$2" all_fields=("${@:3}")
   local in="$BENCH_DATA/all_input_data/json/${size}_data"
   local out="$BENCH_DATA/tmp_indexed/json/${scheme}/${size}_data"
-  local i label src dst start end elapsed_ms max_rss base_rss data_size index_size
+  local i label src dst start end elapsed max_rss base_rss data_size index_size
 
   for i in {1..4}; do
     local label="${scheme},${size},$((i-1))"
@@ -84,14 +84,14 @@ simdindex_create_loop() {
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --fields "${field_list[@]}" --threads 1
     end=$("$DATE" +%s%N)
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
     max_rss=$(tail -n1 "$TIMES")
 
     data_size=$("$DU" -sb "$src" | cut -f1)
     index_size=$("$DU" -sb "$dst" | cut -f1)
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_SIMDINDEX"
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_SIMDINDEX"
     sep=$',\n'
   done
 }
@@ -99,7 +99,7 @@ simdindex_create_loop() {
 elastic_create_loop() {
   local size="$1" all_fields=("${@:2}")
   local in="$BENCH_DATA/all_input_data/json/${size}_data"
-  local i label src dst start end elapsed_ms max_rss base_rss data_size index_size es_pid resp
+  local i label src dst start end elapsed max_rss base_rss data_size index_size es_pid resp
 
   for i in {1..4}; do
     label="elastic,${size},$((i-1))"
@@ -109,7 +109,7 @@ elastic_create_loop() {
 
     echo "Running ${label}"
 
-    src="${in}/data_${i}/${i}_small.json"
+    src="${in}/data_${i}/${i}_${size}.json"
 
     split -a 4 -C 20M "$src" "$tmp/chunk_"
 
@@ -168,15 +168,15 @@ elastic_create_loop() {
     curl -sS -o /dev/null -u "elastic:$ES_LOCAL_PASSWORD" -X POST "http://localhost:9200/$idx_name/_refresh"
 
     max_rss="$(rss_kb "$es_pid" VmHWM)"
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
 
     rm -rf "$tmp"
 
     data_size=$("$STAT" -c%s "$src")
     index_size=$(curl -sS -u "elastic:$ES_LOCAL_PASSWORD" "http://localhost:9200/_cat/indices/$idx_name?h=store.size&bytes=b" | tr -d '[:space:]')
  
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_ELASTIC"
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_ELASTIC"
     sep=$',\n'
   done
 }
@@ -185,7 +185,7 @@ simdindex_search_loop() {
   # Called as: simdindex_search_loop <size> <scheme> <query type> <cold: true|false> <query for data set 1> ... <query for data set 4>
   local size="$1" scheme="$2" query_type="$3" cold="$4" querys=("${@:5}")
   local path="$BENCH_DATA/tmp_indexed/json/${scheme}/${size}_data"
-  local i rep start end elapsed_ms max_rss base_rss
+  local i rep start end elapsed max_rss base_rss
 
   for i in {1..4}; do
     local query="${querys[i-1]}"
@@ -213,11 +213,11 @@ simdindex_search_loop() {
       "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
       end=$("$DATE" +%s%N)
 
-      elapsed_ms=$(( (end - start) / 1000000 ))
+      elapsed=$(( (end - start) ))
       max_rss=$(tail -n1 "$TIMES")
 
-      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
-        "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
+      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s\n  }' \
+        "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
       sep=$',\n'
     done
   done
@@ -226,7 +226,7 @@ simdindex_search_loop() {
 elastic_search_loop() {
   # Called as: elastic_search_loop <size> <query type> <cold: true|false> <query for data set 1> ... <query for data set 4>
   local size="$1" query_type="$2" cold="$3" querys=("${@:4}")
-  local i rep start end elapsed_ms max_rss base_rss es_pid resp rc
+  local i rep start end elapsed max_rss base_rss es_pid resp rc
 
   es_pid="$(pgrep -f org.elasticsearch.bootstrap.Elasticsearch | head -n1 || true)"
   if [[ -z "$es_pid" ]]; then
@@ -290,11 +290,11 @@ elastic_search_loop() {
         return 1
       fi
 
-      elapsed_ms=$(( (end - start) / 1000000 ))
+      elapsed=$(( (end - start) ))
       max_rss="$(rss_kb "$es_pid" VmHWM)"
 
-      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
-        "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_ELASTIC"
+      printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s\n  }' \
+        "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_ELASTIC"
       sep=$',\n'
     done
   done
@@ -404,21 +404,22 @@ rm -rf "$BENCH_DATA"/tmp_indexed
 
 schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
 
-for scheme in "${schemes[@]}"; do
-  mkdir -p "$BENCH_DATA"/tmp_indexed/json/"$scheme"/small_data/data_{1..4}
+sizes=(small medium)
+
+for size in "${sizes[@]}"; do
+  for scheme in "${schemes[@]}"; do
+    mkdir -p "$BENCH_DATA"/tmp_indexed/json/"$scheme"/"${size}_data"/data_{1..4}
+  done
 done
 
 printf '{\n"benchmarks": [\n' > "$CREATION_SIMDINDEX"
 sep=""
-for scheme in "${schemes[@]}"; do
-  simdindex_create_loop "small" "$scheme" "${simdindex_fields[@]}"
+for size in "${sizes[@]}"; do
+  for scheme in "${schemes[@]}"; do
+    simdindex_create_loop "$size" "$scheme" "${simdindex_fields[@]}"
+  done
 done
 printf '\n]\n}\n' >> "$CREATION_SIMDINDEX"
-
-printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
-sep=""
-elastic_create_loop "small" "${elastic_fields[@]}"
-printf '\n]\n}\n' >> "$CREATION_ELASTIC"
 
 query_types=(simple union intersection combination complex_combination)
 
@@ -431,14 +432,25 @@ for cold in false true; do
 
   printf '{\n"benchmarks": [\n' > "$SEARCH_SIMDINDEX"
   sep=""
-  for scheme in "${schemes[@]}"; do
-    for query_type in "${query_types[@]}"; do
-      ref="simdindex_${query_type}_queries[@]"
-      simdindex_search_loop "small" "$scheme" "$query_type" "$cold" "${!ref}"
+  for size in "${sizes[@]}"; do
+    for scheme in "${schemes[@]}"; do
+      for query_type in "${query_types[@]}"; do
+        ref="simdindex_${query_type}_queries[@]"
+        simdindex_search_loop "$size" "$scheme" "$query_type" "$cold" "${!ref}"
+      done
     done
   done
   printf '\n]\n}\n' >> "$SEARCH_SIMDINDEX"
 done
+
+rm -rf "$BENCH_DATA"/tmp_indexed
+
+printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
+sep=""
+for size in "${sizes[@]}"; do
+  elastic_create_loop "$size" "${elastic_fields[@]}"
+done
+printf '\n]\n}\n' >> "$CREATION_ELASTIC"
 
 for cold in false true; do
   if [[ "$cold" == true ]]; then
@@ -449,9 +461,11 @@ for cold in false true; do
 
   printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
   sep=""
-  for query_type in "${query_types[@]}"; do
-    ref="elastic_${query_type}_queries[@]"
-    elastic_search_loop "small" "$query_type" "$cold" "${!ref}"
+  for size in "${sizes[@]}"; do
+    for query_type in "${query_types[@]}"; do
+      ref="elastic_${query_type}_queries[@]"
+      elastic_search_loop "$size" "$query_type" "$cold" "${!ref}"
+    done
   done
   printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
 done

@@ -67,6 +67,10 @@ def load_results(path):
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
         
     df["dataset"] = parts.str[2].astype(int) + 1
+    
+    to_seconds = {"s": 1, "ms": 1e3, "us": 1e6, "ns": 1e9}
+    unit = df["time_unit"] if "time_unit" in df else pd.Series("s", index=df.index)
+    df["real_time"] = df["real_time"] / unit.fillna("s").map(to_seconds)
 
     all_cols = ["file_type", "file_size", "scheme", "index_size", "data_size", "real_time", "dataset", "peak_delta"]
     return df.reindex(columns=all_cols)
@@ -88,8 +92,7 @@ def plot_throughput_by_dataset(df, file_size, folder_name):
 
     data = df[df["file_size"] == file_size]
     totals = data.groupby(["dataset", "scheme"], observed=True)[["data_size", "real_time"]].sum()
-    # real_time is in ms, so convert to seconds for MB/s
-    throughput = (totals["data_size"] / 1000000 / (totals["real_time"] / 1000)).unstack("scheme")
+    throughput = (totals["data_size"] / 1000000 / (totals["real_time"])).unstack("scheme")
 
     save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s", True)
     save_table(out, throughput)
@@ -115,6 +118,7 @@ def plot_memory_usage_by_dataset(df, file_size, folder_name):
     memory = data.groupby(["dataset", "scheme"], observed=True)["peak_mb"].mean().unstack("scheme")
 
     save_chart(out, memory, title, "Encoding Schemes", "Dataset", "Peak Memory (MB)", True)
+    save_table(out, memory)
     
 if __name__ == "__main__":
     # Elastic Search Comparison Chart Creation

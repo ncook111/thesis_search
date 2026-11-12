@@ -21,6 +21,8 @@ RESULTS_DIR = ROOT / "results"
 
 STATS = ["median"]
 
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
+
 def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False, logy=False):
     if data.empty:
         print(f"{out}: no data")
@@ -53,84 +55,56 @@ def save_table(out, data):
     latex_table = table.T.rename_axis("Scheme").reset_index()
     latex_table.columns.name = None
     latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
-    print(f"wrote table {out}")
+    print(f"wrote table {base}.tex")
  
 def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
-    if "aggregate_name" in df.columns:
-        df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p95"])].copy()
+    parts = df["label"].str.split(",")
+
+    scheme_order = list(SCHEMES)
+
+    df["scheme"] = (
+        pd.Categorical(parts.str[0], categories=scheme_order, ordered=True)
+            .rename_categories(SCHEMES)
+    )
+
+    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
+
+    df["file_type"] = pd.Categorical(
+        parts.str[2].map(FILE_TYPES),
+        categories=list(FILE_TYPES.values()),
+    )
+
+    df["dataset"] = parts.str[3].astype(int) + 1
+
+    # real_time in milliseconds, whatever unit the file recorded it in
+    to_ms = {"s": 1e3, "ms": 1, "us": 1e-3, "ns": 1e-6}
+    unit = df["time_unit"] if "time_unit" in df else pd.Series("ms", index=df.index)
+    df["real_time"] = df["real_time"] * unit.fillna("ms").map(to_ms)
+
+    # throughput in queries per second
+    if "items_per_second" in df.columns:
+        df["throughput"] = df["items_per_second"]
     else:
-        # no repetitions: one iteration row per benchmark
-        df = df.copy()
-        df["aggregate_name"] = "single"
-    
-    parts = df["label"].str.split(",")
-    
-    scheme_order = list(SCHEMES)
-    
-    df["scheme"] = (
-        pd.Categorical(parts.str[0], categories=scheme_order, ordered=True)
-            .rename_categories(SCHEMES) 
-    )
-            
-    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
-    
-    df["file_type"] = pd.Categorical(
-        parts.str[2].map(FILE_TYPES),
-        categories=list(FILE_TYPES.values()),
-    )
-            
-    df["dataset"] = parts.str[3].astype(int) + 1
-    
-    df = df.rename(columns={"aggregate_name": "stat"})
+        df["throughput"] = 1000 / df["real_time"]
 
-    timed = df["stat"].isin(["mean", "median"])
-    df["throughput"] = df["items_per_second"].where(timed)
-    
-    to_seconds = {"s": 1, "ms": 1e3, "us": 1e6, "ns": 1e9}
-    unit = df["time_unit"] if "time_unit" in df else pd.Series("s", index=df.index)
-    df["real_time"] = df["real_time"] / unit.fillna("s").map(to_seconds)
-
-    all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
-                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
-    return df.reindex(columns=all_cols)
-
-   
-def load_results_grep(path):
-    with open(path) as f:
-        df = pd.json_normalize(json.load(f)["benchmarks"])
-
-    parts = df["label"].str.split(",")
-        
-    scheme_order = list(SCHEMES)
-    
-    df["scheme"] = (
-        pd.Categorical(parts.str[0], categories=scheme_order, ordered=True)
-            .rename_categories(SCHEMES) 
-    )
-            
-    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
-    
-    df["file_type"] = pd.Categorical(
-        parts.str[2].map(FILE_TYPES),
-        categories=list(FILE_TYPES.values()),
-    )
-            
-    df["dataset"] = parts.str[3].astype(int) + 1
-    
-    df["throughput"] = 1 / (df["real_time"] / 1000)
-    
-    keys = ["scheme", "file_size", "file_type", "dataset"]
-    g = df.groupby(keys, observed=True)[["real_time", "throughput", "peak_delta"]]
-    df = pd.concat([g.mean().assign(stat="mean"),
-                    g.median().assign(stat="median")]).reset_index()
+    if "aggregate_name" in df.columns:
+        # already aggregated: keep the aggregate rows as they are
+        df = df[df["aggregate_name"].isin(["mean", "median", "stddev", "cv", "p95"])].copy()
+        df = df.rename(columns={"aggregate_name": "stat"})
+    else:
+        # raw repetitions: one row per run, so aggregate per benchmark here
+        keys = ["scheme", "file_size", "file_type", "dataset"]
+        g = df.groupby(keys, observed=True)[["real_time", "throughput", "peak_delta"]]
+        df = pd.concat([g.mean().assign(stat="mean"),
+                        g.median().assign(stat="median")]).reset_index()
 
     df["file_size"] = pd.Categorical(df["file_size"], categories=["small", "medium", "large"], ordered=True)
 
     all_cols = ["file_type", "file_size", "scheme", "stat", "real_time", "throughput",
-                "dataset", "peak_delta"]
+                "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
     return df.reindex(columns=all_cols)
 
 def plot_latency_by_file_type(df, file_size, folder_name):
@@ -176,13 +150,14 @@ def plot_memory_usage_by_file_type(df, file_size, folder_name):
         save_table(out, memory)
 
 if __name__ == "__main__":
-    df_0 = load_results_grep(f"{RESULTS_DIR}/search_grep/search_grep.json")
-    df_1 = load_results(f"{RESULTS_DIR}/search_grep/search_file_type_comparisons.json")
-    df = pd.concat([df_0, df_1], ignore_index=True)
-    
-    os.makedirs(f"{RESULTS_DIR}/figures/search_grep", exist_ok=True)
+    for mode in ["warm", "cold"]:
+        df_0 = load_results(f"{RESULTS_DIR}/search_grep/search_grep_{mode}.json")
+        df_1 = load_results(f"{RESULTS_DIR}/search_grep/search_simdindex_{mode}.json")
+        df = pd.concat([df_0, df_1], ignore_index=True)
 
+        folder_name = f"search_grep_{mode}"
+        os.makedirs(f"{RESULTS_DIR}/figures/{folder_name}", exist_ok=True)
 
-    plot_latency_by_file_type(df, "small", "search_grep")
-    plot_throughput_by_file_type(df, "small", "search_grep")          
-    plot_memory_usage_by_file_type(df, "small", "search_grep")
+        plot_latency_by_file_type(df, "small", folder_name)
+        plot_throughput_by_file_type(df, "small", folder_name)
+        plot_memory_usage_by_file_type(df, "small", folder_name)

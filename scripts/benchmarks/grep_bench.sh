@@ -70,7 +70,7 @@ compress_loop() {
   local size="$1" file_type="$2" scheme="$3"
   local in="$BENCH_DATA/all_input_data/${file_type}/${size}_data"
   local out="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data"
-  local i label src dst start end elapsed_ms max_rss base_rss data_size index_size
+  local i label src dst start end elapsed max_rss base_rss data_size index_size
 
   for i in {1..4}; do
     label="${scheme},${size},${file_type},$((i-1))"
@@ -97,14 +97,14 @@ compress_loop() {
       return 1
     fi
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
     max_rss=$(tail -n1 "$TIMES")
 
     data_size=$("$STAT" -c%s "$src")
     index_size=$("$STAT" -c%s "$dst")
 
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_GREP"
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_GREP"
     sep=$',\n'
   done
 }
@@ -113,7 +113,7 @@ simdindex_create_loop() {
   local size="$1" scheme="$2" file_type="$3"
   local in="$BENCH_DATA/all_input_data/${file_type}/${size}_data"
   local out="$BENCH_DATA/tmp_indexed/${file_type}/${scheme}/${size}_data"
-  local i label src dst start end elapsed_ms max_rss base_rss data_size index_size
+  local i label src dst start end elapsed max_rss base_rss data_size index_size
 
   for i in {1..4}; do
     local label="${scheme},${size},${file_type},$((i-1))"
@@ -130,14 +130,14 @@ simdindex_create_loop() {
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --threads 1
     end=$("$DATE" +%s%N)
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
     max_rss=$(tail -n1 "$TIMES")
 
     data_size=$("$DU" -sb "$src" | cut -f1)
     index_size=$("$DU" -sb "$dst" | cut -f1)
 
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_SIMDINDEX"
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_SIMDINDEX"
     sep=$',\n'
   done
 }
@@ -147,7 +147,7 @@ simdindex_search_loop() {
   # Same location simdindex_create_loop writes to.
   local idx="$BENCH_DATA/tmp_indexed/${file_type}/${scheme}/${size}_data/data_${data_set}"
   local label="${scheme},${size},${file_type},$((data_set-1))"
-  local i start end elapsed_ms max_rss base_rss
+  local i start end elapsed max_rss base_rss
 
   echo "Running ${label}"
 
@@ -171,11 +171,11 @@ simdindex_search_loop() {
     "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
     end=$("$DATE" +%s%N)
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
     max_rss=$(tail -n1 "$TIMES")
 
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
     sep=$',\n'
   done
 }
@@ -184,7 +184,7 @@ grep_search_loop() {
   local size="$1" file_type="$2" data_set="$3" query="$4" scheme="$5" cold="${6:-false}"
   local file_path="$BENCH_DATA/tmp_compressed/${file_type}/${size}_data/data_${data_set}/${data_set}_${size}.${scheme}"
   local label="${scheme},${size},${file_type},$((data_set-1))"
-  local i start end elapsed_ms max_rss base_rss dec_rss grep_rss
+  local i start end elapsed max_rss base_rss dec_rss grep_rss
 
   if [[ "$scheme" != lz4 && "$scheme" != gzip ]]; then
     echo "unknown scheme: $scheme" >&2
@@ -212,13 +212,13 @@ grep_search_loop() {
       | "$GTIME" -o "$TIMES2" -f '%M' grep -c "$query" >/dev/null || true
     end=$("$DATE" +%s%N)
 
-    elapsed_ms=$(( (end - start) / 1000000 ))
+    elapsed=$(( (end - start) ))
     dec_rss=$(tail -n1 "$TIMES")
     grep_rss=$(tail -n1 "$TIMES2")
     max_rss=$(( dec_rss + grep_rss ))
 
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
-      "$sep" "$label" "$elapsed_ms" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_GREP"
+      "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_GREP"
     sep=$',\n'
   done
 }

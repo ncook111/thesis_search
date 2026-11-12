@@ -152,7 +152,7 @@ if __name__ == "__main__":
     os.makedirs(f"{RESULTS_DIR}/figures/creation_grep", exist_ok=True)
 
     df_0 = load_results(f"{RESULTS_DIR}/creation_grep/creation_grep.json")
-    df_1 = load_results(f"{RESULTS_DIR}/creation_grep/creation_file_types.json")
+    df_1 = load_results(f"{RESULTS_DIR}/creation_grep/creation_simdindex.json")
     df = pd.concat([df_0, df_1], ignore_index=True)
 
     plot_index_size_by_file_type(df, "small", "creation_grep", None)
