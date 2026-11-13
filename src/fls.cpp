@@ -189,3 +189,67 @@ std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_
 
   return fls_decode_uint32_t(encoded_fls, num_blocks);
 }
+
+#if defined(SIMD_TARGET_AVX512BW)
+void fls_delta_decode_avx512(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
+    size_t num_blocks = input.size() / N;
+    uint32_t buf[N];
+    for (size_t b = 0; b < num_blocks; ++b) {
+        const size_t off = b * N;
+        generated::rsum::x86_64::avx512bw::rsum(input.data() + off, decoded.data() + off, base.data() + b * N_LANES);
+        generated::untranspose::fallback::scalar::untranspose_i(buf, decoded.data() + off);
+    }
+}
+#endif
+
+#if defined(SIMD_TARGET_AVX2)
+void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
+    size_t num_blocks = input.size() / N;
+    uint32_t buf[N];
+    for (size_t b = 0; b < num_blocks; ++b) {
+        const size_t off = b * N;
+        generated::rsum::x86_64::avx2::rsum(input.data() + off, decoded.data() + off, base.data() + b * N_LANES);
+        generated::untranspose::fallback::scalar::untranspose_i(buf, decoded.data() + off);
+    }
+}
+#endif
+
+#if defined(SIMD_TARGET_SSE)
+void fls_delta_decode_sse(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input,  std::vector<uint32_t> &decoded) {
+    size_t num_blocks = input.size() / N;
+    uint32_t buf[N];
+    for (size_t b = 0; b < num_blocks; ++b) {
+        const size_t off = b * N;
+        generated::rsum::x86_64::sse::rsum(input.data() + off, decoded.data() + off, base.data() + b * N_LANES);
+        generated::untranspose::fallback::scalar::untranspose_i(buf, decoded.data() + off);
+    }
+}
+#endif
+
+void fls_delta_decode_scalar(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
+    const size_t num_blocks = input.size() / N;
+    decoded.resize(input.size());
+    uint32_t buf[N];
+    for (size_t b = 0; b < num_blocks; ++b) {
+        const size_t off = b * N;
+        generated::rsum::fallback::scalar::rsum(input.data() + off, buf, base.data() + b * N_LANES);
+        generated::untranspose::fallback::scalar::untranspose_i(buf, decoded.data() + off);
+    }
+}
+
+void fls_delta_encode_scalar(std::vector<uint32_t> &input, std::vector<uint32_t> &encoded, std::vector<uint32_t> &base) {
+    size_t num_blocks;
+
+    // pad tail up to a whole block by repeating last value.
+    num_blocks = (input.size() + N-1) / N;
+    input.resize(num_blocks * N, input.back());
+
+    encoded.resize(input.size());
+    base.resize(num_blocks * N_LANES);
+    for (size_t b = 0; b < num_blocks; ++b) {
+        uint32_t* block = encoded.data() + b * N;
+        generated::transpose::fallback::scalar::transpose_i(input.data() + b * N, block);
+        std::copy(block, block + N_LANES, base.begin() + b * N_LANES);
+        generated::unrsum::fallback::scalar::unrsum_inplace(block);
+    }
+}

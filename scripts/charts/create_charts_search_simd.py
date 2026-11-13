@@ -37,14 +37,26 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
     plt.close(fig)
     print(f"wrote {out}")
 
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
+    if data.empty:
+        print(f"{out}: no data")
+        return
+
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
-    print(f"wrote table {out}")
+    if isinstance(table, pd.Series):
+        # If table contains two columns
+        latex_table = table.rename(col_name).rename_axis(row_name).reset_index()
+    else:
+        # If table contains more than two columns
+        latex_table = table.T.rename_axis(row_name).reset_index()
+        latex_table.columns = pd.MultiIndex.from_tuples(
+            [("", row_name)] + [(col_name, label) for label in table.index]
+        )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
+    print(f"wrote table {base}.tex")
     
 def load_results(path):
     with open(path) as f:
@@ -124,6 +136,7 @@ def plot_latency_by_dataset(df, query_type, file_type, file_size):
         latency = latency[cols].rename(columns=SCHEMES)
 
         save(out, latency, title, "Encoding Schemes", "Datasets", "Microseconds")
+        save_table(out, latency, "Scheme", "Dataset")
 
 def plot_latency_by_query_type(df, dataset, file_type, file_size):
     stats = ["median", "p95"]
@@ -141,6 +154,7 @@ def plot_latency_by_query_type(df, dataset, file_type, file_size):
         latency = latency[cols].rename(columns=SCHEMES)
 
         save(out, latency, title, "Encoding Schemes", "Query Type", "Microseconds")
+        save_table(out, latency, "Scheme", "Query Type")
 
 def plot_latency_by_scheme(df, query_type, dataset, file_type, file_size):
     if dataset is None:
@@ -165,6 +179,7 @@ def plot_latency_by_scheme(df, query_type, dataset, file_type, file_size):
     latency = latency.loc[order].rename(index=SCHEMES)
 
     save(out, latency, title, "Statistics", "Encoding Scheme", "Microseconds")
+    save_table(out, latency.T, "Scheme", "Latency (microseconds)")
     
 def plot_throughput_by_dataset(df, query_type, file_type, file_size):
     stats = ["median"]
@@ -182,6 +197,7 @@ def plot_throughput_by_dataset(df, query_type, file_type, file_size):
         throughput = throughput[cols].rename(columns=SCHEMES)
 
         save(out, throughput, title, "Encoding Schemes", "Datasets", "Queries/s")
+        save_table(out, throughput, "Scheme", "Dataset")
     
 def plot_throughput_by_query_type(df, dataset, file_type, file_size):
     stats = ["median"]
@@ -198,7 +214,8 @@ def plot_throughput_by_query_type(df, dataset, file_type, file_size):
         cols += [c for c in throughput.columns if c not in cols]
         throughput = throughput[cols].rename(columns=SCHEMES)
 
-        save(out, throughput, title, "Encoding Schemes", "Queries/s")
+        save(out, throughput, title, "Encoding Schemes", "Query Type", "Queries/s")
+        save_table(out, throughput, "Scheme", "Query Type")
 
 def plot_throughput_by_scheme_threads(df, query_type, file_type, file_size):
     qt_title = query_type if query_type is not None else "all queries"
@@ -227,13 +244,14 @@ def plot_throughput_by_scheme_threads(df, query_type, file_type, file_size):
     combined = combined.loc[order].rename(index=SCHEMES)
 
     save(out, combined, title, "Threads", "Encoding Scheme", "Queries/s")
+    save_table(out, combined.T, "Scheme", "Thread Count")
 
 def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
     qt_title = query_type if query_type is not None else "all queries"
     qt_file = query_type if query_type is not None else "all_queries"
 
     title = f"Median Query Throughput by Thread Count ({qt_title}, all datasets, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_multithreaded/{qt_file}_all_datasets_{file_size}_{file_type}_throughput_by_threads_schemes.png"
+    out = f"{RESULTS_DIR}/figures/search_multi_threaded/{qt_file}_all_datasets_{file_size}_{file_type}_throughput_by_threads_schemes.png"
 
     data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
     if query_type is not None:
@@ -256,6 +274,7 @@ def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
     combined = combined[cols].rename(columns=SCHEMES)
 
     save(out, combined, title, "Encoding Schemes", "Thread Count", "Queries/s")
+    save_table(out, combined, "Scheme", "Thread Count")
     
 def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     baseline_name = SCHEMES.get(baseline, baseline)
@@ -287,6 +306,7 @@ def plot_throughput_increase_by_scheme(df, query_type, file_type, file_size, bas
     extra = extra.loc[order].rename(index=SCHEMES)
 
     save(out, extra, title, None, "Encoding Schemes", f"Extra Queries/s vs {baseline_name}", True)
+    save_table(out, extra["median"], "Scheme", f"Extra Queries/s vs {baseline_name}")
 
 def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseline="gvb"):
     baseline_name = SCHEMES.get(baseline, baseline)
@@ -310,7 +330,7 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
 
     base = latency[baseline]
     decrease = latency.rsub(base, axis=0).div(base, axis=0) * 100
-    results["mediuan"] = decrease.mean().drop(baseline)
+    results["median"] = decrease.mean().drop(baseline)
 
     avg = pd.DataFrame(results)   # rows = schemes, columns = statistics
 
@@ -319,6 +339,7 @@ def plot_latency_decrease_by_scheme(df, query_type, file_type, file_size, baseli
     avg = avg.loc[order].rename(index=SCHEMES)
     
     save(out, avg, title, None, "Encoding Scheme", f"% Lower Latency than {baseline_name}", True)
+    save_table(out, avg["median"], "Scheme", f"% Lower Latency than {baseline_name}")
 
 def plot_memory_usage_by_query(df, file_type, file_size):
     title = f"Median Peak Memory Usage During Search (all datasets, {file_size}, {file_type})"
@@ -336,10 +357,11 @@ def plot_memory_usage_by_query(df, file_type, file_size):
     memory = memory[cols].rename(columns=SCHEMES)
 
     save(out, memory, title, "Encoding Scheme", "Query Type", "Peak Memory Increase (MB)")
+    save_table(out, memory, "Scheme", "Query Type")
     
 def plot_memory_usage_by_threads(df, file_type, file_size):
     title = f"Peak Memory Usage During Search (all datasets/queries/schemes, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_multithreaded/all_{file_size}_{file_type}_memory_by_threads.png"
+    out = f"{RESULTS_DIR}/figures/search_multi_threaded/all_{file_size}_{file_type}_memory_by_threads.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
 
@@ -347,6 +369,7 @@ def plot_memory_usage_by_threads(df, file_type, file_size):
     memory = (data.groupby("thread_count")["peak_delta"].mean() / (1024 ** 2)).to_frame("peak")
 
     save(out, memory, title, None, "Thread Count", "Peak Memory Increase (MiB)")
+    save_table(out, memory["peak"], "Thread Count", "Peak Memory Increase (MiB)")
 
 if __name__ == "__main__":
     df = load_results(f"{RESULTS_DIR}/search/search_multithreaded_1.json")
@@ -375,7 +398,7 @@ if __name__ == "__main__":
     df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_32.json")
     df_mem = load_results(f"{RESULTS_DIR}/search/search_large_memory_usage_threads.json")
     
-    os.makedirs(f"{RESULTS_DIR}/figures/search_multithreaded", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/search_multi_threaded", exist_ok=True)
     
     query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
     df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)

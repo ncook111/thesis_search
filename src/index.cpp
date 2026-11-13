@@ -266,8 +266,7 @@ void merge_index(const std::vector<std::string> &fields,
   Metadata metadata = Metadata::read(index_dir);
 
   uint64_t num_files = metadata.get_num_files();
-
-  using Merge = std::tuple<uint64_t, uint64_t, uint64_t>;
+  
   std::vector<std::vector<Merge>> merges(num_files);
   for (uint64_t file_id = 0; file_id < num_files; ++file_id) {
     uint64_t num_segments = metadata.get_num_segments(file_id);
@@ -316,17 +315,13 @@ void merge_index(const std::vector<std::string> &fields,
 
   for (auto &per_file_merges : merges) {
     for (auto &merge : per_file_merges) {
-        merge_segments(fields, index_dir_str, data_dir_str, metadata.get_enc_type());
+        merge_segments(merge, metadata);
     }
   }
 }
 
-void merge_segments(const std::vector<std::string> &fields,
-                  const std::string &index_dir_str,
-                  const std::string &data_dir_str, 
-                  const bool run_checks) {
-  const std::filesystem::path index_dir = index_dir_str;
-  const std::filesystem::path data_dir = data_dir_str;
+void merge_segments(const Merge &merge,
+                  Metadata &metadata) {
 }
 
 void create_segment(const std::string &data_path,

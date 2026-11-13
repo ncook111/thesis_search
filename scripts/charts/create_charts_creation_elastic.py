@@ -43,14 +43,17 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, logy=False)
     plt.close(fig)
     print(f"wrote chart {out}")
 
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
-    print(f"wrote table {out}")
+    latex_table = table.T.rename_axis(row_name).reset_index()
+    latex_table.columns = pd.MultiIndex.from_tuples(
+        [("", row_name)] + [(col_name, label) for label in table.index]
+    )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
+    print(f"wrote table {base}.tex")
     
 def load_results(path):
     with open(path) as f:
@@ -84,7 +87,7 @@ def plot_compression_by_dataset(df, file_size, folder_name):
     compression = (data.groupby(["dataset", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
 
     save_chart(out, compression, title, "Encoding Schemes", "Dataset", "% of input", True)
-    save_table(out, compression)
+    save_table(out, compression, "Scheme", "Dataset Number")
 
 def plot_throughput_by_dataset(df, file_size, folder_name):
     title = f"Index Creation Throughput By Dataset ({file_size})"
@@ -95,7 +98,7 @@ def plot_throughput_by_dataset(df, file_size, folder_name):
     throughput = (totals["data_size"] / 1000000 / (totals["real_time"])).unstack("scheme")
 
     save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s", True)
-    save_table(out, throughput)
+    save_table(out, throughput, "Scheme", "Dataset Number")
 
 def plot_index_size_by_dataset(df, file_size, folder_name):
     title = f"Index Size By Dataset ({file_size})"
@@ -107,7 +110,7 @@ def plot_index_size_by_dataset(df, file_size, folder_name):
     ).unstack("scheme")
 
     save_chart(out, index_size, title, "Encoding Schemes", "Dataset", "Index size (MB)", True)
-    save_table(out, index_size)
+    save_table(out, index_size, "Scheme", "Dataset Number")
 
 def plot_memory_usage_by_dataset(df, file_size, folder_name):
     title = f"Peak Memory Usage By Dataset ({file_size})"
@@ -118,7 +121,7 @@ def plot_memory_usage_by_dataset(df, file_size, folder_name):
     memory = data.groupby(["dataset", "scheme"], observed=True)["peak_mb"].mean().unstack("scheme")
 
     save_chart(out, memory, title, "Encoding Schemes", "Dataset", "Peak Memory (MB)", True)
-    save_table(out, memory)
+    save_table(out, memory, "Scheme", "Dataset Number")
     
 if __name__ == "__main__":
     # Elastic Search Comparison Chart Creation
@@ -132,3 +135,7 @@ if __name__ == "__main__":
     plot_compression_by_dataset(df, "small", "creation_elastic")
     plot_throughput_by_dataset(df, "small", "creation_elastic")
     plot_memory_usage_by_dataset(df, "small", "creation_elastic")
+    plot_index_size_by_dataset(df, "medium", "creation_elastic")
+    plot_compression_by_dataset(df, "medium", "creation_elastic")
+    plot_throughput_by_dataset(df, "medium", "creation_elastic")
+    plot_memory_usage_by_dataset(df, "medium", "creation_elastic")

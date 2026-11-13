@@ -103,7 +103,7 @@ compress_loop() {
     data_size=$("$STAT" -c%s "$src")
     index_size=$("$STAT" -c%s "$dst")
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
       "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_GREP"
     sep=$',\n'
   done
@@ -136,7 +136,7 @@ simdindex_create_loop() {
     data_size=$("$DU" -sb "$src" | cut -f1)
     index_size=$("$DU" -sb "$dst" | cut -f1)
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
       "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" "$index_size" "$data_size" >> "$CREATION_SIMDINDEX"
     sep=$',\n'
   done
@@ -174,7 +174,7 @@ simdindex_search_loop() {
     elapsed=$(( (end - start) ))
     max_rss=$(tail -n1 "$TIMES")
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s\n  }' \
       "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_SIMDINDEX"
     sep=$',\n'
   done
@@ -193,7 +193,7 @@ grep_search_loop() {
 
   # Warm mode: one untimed run so every timed repetition reads from the page cache.
   if [[ "$cold" != true ]]; then
-    "$scheme" -dc "$file_path" | grep -c "$query" >/dev/null || true
+    "$scheme" -dc "$file_path" | grep -wci "$query" >/dev/null || true
   fi
 
   for i in $(seq 1 20); do
@@ -204,12 +204,12 @@ grep_search_loop() {
     fi
 
     "$GTIME" -o "$TIMES"  -f '%M' "$scheme" -dc "$BASE_DIR/empty.$scheme" \
-      | "$GTIME" -o "$TIMES2" -f '%M' grep -c "$query" >/dev/null || true
+      | "$GTIME" -o "$TIMES2" -f '%M' grep -wci "$query" >/dev/null || true
     base_rss=$(( $(tail -n1 "$TIMES") + $(tail -n1 "$TIMES2") ))
 
     start=$("$DATE" +%s%N)
     "$GTIME" -o "$TIMES"  -f '%M' "$scheme" -dc "$file_path" \
-      | "$GTIME" -o "$TIMES2" -f '%M' grep -c "$query" >/dev/null || true
+      | "$GTIME" -o "$TIMES2" -f '%M' grep -wci "$query" >/dev/null || true
     end=$("$DATE" +%s%N)
 
     elapsed=$(( (end - start) ))
@@ -217,7 +217,7 @@ grep_search_loop() {
     grep_rss=$(tail -n1 "$TIMES2")
     max_rss=$(( dec_rss + grep_rss ))
 
-    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ms",\n    "peak_delta": %s\n  }' \
+    printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s\n  }' \
       "$sep" "$label" "$elapsed" "$(( (max_rss - base_rss) * 1024 ))" >> "$SEARCH_GREP"
     sep=$',\n'
   done

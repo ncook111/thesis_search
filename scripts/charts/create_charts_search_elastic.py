@@ -46,13 +46,16 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
     plt.close(fig)
     print(f"wrote chart {out}")
 
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
+    latex_table = table.T.rename_axis(row_name).reset_index()
+    latex_table.columns = pd.MultiIndex.from_tuples(
+        [("", row_name)] + [(col_name, label) for label in table.index]
+    )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
     print(f"wrote table {base}.tex")
  
 def load_results(path):
@@ -77,9 +80,9 @@ def load_results(path):
 
     df["dataset"] = parts.str[3].astype(int) + 1
     
-    to_seconds = {"s": 1, "ms": 1e3, "us": 1e6, "ns": 1e9}
+    to_ms = {"s": 1e3, "ms": 1, "us": 1e-3, "ns": 1e-6}
     unit = df["time_unit"] if "time_unit" in df else pd.Series("ms", index=df.index)
-    df["real_time"] = df["real_time"] / unit.fillna("s").map(to_seconds)
+    df["real_time"] = df["real_time"] * unit.fillna("ms").map(to_ms)
 
     df["throughput"] = 1 / (df["real_time"] / 1000)
 
@@ -112,7 +115,7 @@ def plot_latency_by_query_type(df, file_size, folder_name):
         latency.columns = latency.columns.astype(str)
 
         save_chart(out, latency, title, "Encoding Schemes", "Query Type", "Milliseconds")
-        save_table(out, latency)
+        save_table(out, latency, "Scheme", "Query Type")
 
 def plot_throughput_by_query_type(df, file_size, folder_name):
     for stat in STATS:
@@ -126,7 +129,7 @@ def plot_throughput_by_query_type(df, file_size, folder_name):
         throughput.columns = throughput.columns.astype(str)
 
         save_chart(out, throughput, title, "Encoding Schemes", "Query Type", "Queries/s")
-        save_table(out, throughput)
+        save_table(out, throughput, "Scheme", "Query Type")
 
 def plot_memory_usage_by_query_type(df, file_size, folder_name):
     for stat in STATS:
@@ -140,7 +143,7 @@ def plot_memory_usage_by_query_type(df, file_size, folder_name):
         memory.columns = memory.columns.astype(str)
 
         save_chart(out, memory, title, "Encoding Schemes", "Query Type", "Peak Memory Increase (MB)")
-        save_table(out, memory)
+        save_table(out, memory, "Scheme", "Query Type")
 
 if __name__ == "__main__":
     for mode in ["warm", "cold"]:
@@ -154,3 +157,6 @@ if __name__ == "__main__":
         plot_latency_by_query_type(df, "small", folder_name)
         plot_throughput_by_query_type(df, "small", folder_name)
         plot_memory_usage_by_query_type(df, "small", folder_name)
+        plot_latency_by_query_type(df, "medium", folder_name)
+        plot_throughput_by_query_type(df, "medium", folder_name)
+        plot_memory_usage_by_query_type(df, "medium", folder_name)

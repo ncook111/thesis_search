@@ -49,21 +49,39 @@ def save_chart_no_legend(out, data, chart_title, xlabel, ylabel):
     
     print(f"wrote {out}")
     
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
+    if data.empty:
+        print(f"{out}: no data")
+        return
+
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
-    print(f"wrote table {out}")
+    if isinstance(table, pd.Series):
+        # If table contains two columns
+        latex_table = table.rename(col_name).rename_axis(row_name).reset_index()
+    else:
+        # If table contains more than two columns
+        latex_table = table.T.rename_axis(row_name).reset_index()
+        latex_table.columns = pd.MultiIndex.from_tuples(
+            [("", row_name)] + [(col_name, label) for label in table.index]
+        )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
+    print(f"wrote table {base}.tex")
 
 def load_results(path):
     with open(path) as f:
         df = pd.json_normalize(json.load(f)["benchmarks"])
 
     parts = df["label"].str.split(",")
-    df["scheme"] = pd.Categorical(parts.str[0], categories=["gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"], ordered=True)
+    
+    df["scheme"] = pd.Categorical(
+        parts.str[0],
+        categories=["gvb", "pef", "fls", "s4_bpd4", "s4_bpdm", "s8_bpd4", "s8_bpdm", "s16_bpd4", "s16_bpdm"],
+        ordered=True,
+    ).rename_categories(SCHEMES)
+    
     df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
     df["file_type"] = parts.str[2]
     df["dataset"] = parts.str[3].astype(int) + 1
@@ -86,11 +104,8 @@ def plot_compression_by_scheme(df, file_size, file_type, folder_name, dataset=No
     data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = data.groupby("scheme")["compression"].mean() * 100
 
-    order = [s for s in SCHEMES if s in compression.index]
-    order += [s for s in compression.index if s not in order]
-    compression = compression.loc[order].rename(index=SCHEMES)
-
-    save_no_legend(out, compression, title, "Encoding Scheme", "% of input")
+    save_chart_no_legend(out, compression, title, "Encoding Scheme", "% of input")
+    save_table(out, compression, "Scheme", "% of input")
          
 def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Compression By File Type ({file_size})"
@@ -104,12 +119,9 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
  
     data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = (data.groupby(["file_type", "scheme"])["compression"].mean() * 100).unstack("scheme")
-
-    cols = [s for s in SCHEMES if s in compression.columns]
-    cols += [c for c in compression.columns if c not in cols]
-    compression = compression[cols].rename(columns=SCHEMES)
  
     save_chart(out, compression, title, "Encoding Schemes", "File Type", "% of input")
+    save_table(out, compression, "Scheme", "File Type")
     
 def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index Compression By File Size ({file_type})"
@@ -123,12 +135,9 @@ def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
  
     data = data.assign(compression=data["index_size"] / data["data_size"])
     compression = (data.groupby(["file_size", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
-
-    cols = [s for s in SCHEMES if s in compression.columns]
-    cols += [c for c in compression.columns if c not in cols]
-    compression = compression[cols].rename(columns=SCHEMES)
  
     save_chart(out, compression, title, "Encoding Schemes", "Dataset Size", "% of input")
+    save_table(out, compression, "Scheme", "Dataset Size")
 
 def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Compression By Dataset ({file_size}, {file_type})"
@@ -137,13 +146,10 @@ def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
 
     data = data.assign(compression=data["index_size"] / data["data_size"])
-    compression = data.pivot(index="dataset", columns="scheme", values="compression") * 100
-
-    cols = [s for s in SCHEMES if s in compression.columns]
-    cols += [c for c in compression.columns if c not in cols]
-    compression = compression[cols].rename(columns=SCHEMES)
+    compression = data.pivot(index="dataset", columns="scheme", values="compression").sort_index(axis=1) * 100
 
     save_chart(out, compression, title, "Encoding Schemes", "Dataset", "% of input")
+    save_table(out, compression, "Scheme", "Dataset")
     
 def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Creation Throughput By File Type({file_size})"
@@ -158,11 +164,8 @@ def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
     totals = data.groupby(["file_type", "scheme"])[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in throughput.columns]
-    cols += [c for c in throughput.columns if c not in cols]
-    throughput = throughput[cols].rename(columns=SCHEMES)
-
     save_chart(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
+    save_table(out, throughput, "Scheme", "File Type")
     
 def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
     title = f"Index Creation Throughput By File Size({file_type})"
@@ -177,11 +180,8 @@ def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
     totals = data.groupby(["file_size", "scheme"], observed=True)[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in throughput.columns]
-    cols += [c for c in throughput.columns if c not in cols]
-    throughput = throughput[cols].rename(columns=SCHEMES)
-
     save_chart(out, throughput, title, "Encoding Schemes", "Dataset Size", "MB/s")
+    save_table(out, throughput, "Scheme", "Dataset Size")
     
 def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Creation Throughput By Dataset ({file_size}, {file_type})"
@@ -190,13 +190,10 @@ def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
 
     data["throughput"] = data["data_size"] / 1000000 / data["real_time"]
-    throughput = data.pivot(index="dataset", columns="scheme", values="throughput")
-
-    cols = [s for s in SCHEMES if s in throughput.columns]
-    cols += [c for c in throughput.columns if c not in cols]
-    throughput = throughput[cols].rename(columns=SCHEMES)
+    throughput = data.pivot(index="dataset", columns="scheme", values="throughput").sort_index(axis=1)
 
     save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s")
+    save_table(out, throughput, "Scheme", "Dataset")
 
 def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
     title = f"Index Size By File Type ({file_size})"
@@ -209,14 +206,11 @@ def plot_index_size_by_file_type(df, file_size, folder_name, dataset=None):
         title = f"Index Size ({file_size}, dataset_{dataset})"
 
     index_size = (
-        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1_000_000
+        data.groupby(["file_type", "scheme"])["index_size"].sum() / 1e6
     ).unstack("scheme")
 
-    cols = [s for s in SCHEMES if s in index_size.columns]
-    cols += [c for c in index_size.columns if c not in cols]
-    index_size = index_size[cols].rename(columns=SCHEMES)
-
     save_chart(out, index_size, title, "Encoding Schemes", "File Type", "Index size (MB)")
+    save_table(out, index_size, "Scheme", "File Type")
 
 def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -229,8 +223,8 @@ def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, sch
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
     if scheme is not None:
-        data = data[data["scheme"] == scheme]
-    data["throughput"] = data["data_size"] / 1_000_000 / data["real_time"]
+        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
+    data["throughput"] = data["data_size"] / 1e6 / data["real_time"]
 
     throughput = data.groupby("partition_size")["throughput"].mean()
 
@@ -238,6 +232,7 @@ def plot_throughput_by_partition_size(df, file_size, file_type, folder_name, sch
         save_chart_no_legend(out, throughput, title, "Partition Size (MB)", "MB/s")
     else:
         save_chart(out, throughput.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "MB/s")
+    save_table(out, throughput, "Partition Size (MB)", "MB/s")
 
 
 def plot_compression_by_partition_size(df, file_size, file_type, folder_name, scheme=None):
@@ -251,7 +246,7 @@ def plot_compression_by_partition_size(df, file_size, file_type, folder_name, sc
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
     if scheme is not None:
-        data = data[data["scheme"] == scheme]
+        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
     data["compression_pct"] = data["index_size"] / data["data_size"] * 100
 
     compression = data.groupby("partition_size")["compression_pct"].mean()
@@ -260,6 +255,7 @@ def plot_compression_by_partition_size(df, file_size, file_type, folder_name, sc
         save_chart_no_legend(out, compression, title, "Partition Size (MB)", "% of input")
     else:
         save_chart(out, compression.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "% of input")
+    save_table(out, compression, "Partition Size (MB)", "% of input")
 
         
 
@@ -274,8 +270,8 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
     if scheme is not None:
-        data = data[data["scheme"] == scheme]
-    data["peak_mb"] = data["peak_delta"] / 1_000_000
+        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
+    data["peak_mb"] = data["peak_delta"] / 1e6
 
     memory = data.groupby("partition_size")["peak_mb"].mean()
 
@@ -283,6 +279,7 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name, s
         save_chart_no_legend(out, memory, title, "Partition Size (MB)", "Peak memory (MB)")
     else:
         save_chart(out, memory.to_frame(SCHEMES.get(scheme, scheme)), title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
+    save_table(out, memory, "Partition Size (MB)", "Peak memory (MB)")
 
 
 def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
@@ -291,15 +288,13 @@ def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_memory_by_scheme.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
-    data["peak_mb"] = data["peak_delta"] / 1_000_000
+    data["peak_mb"] = data["peak_delta"] / 1e6
 
     memory = data.groupby("scheme")["peak_mb"].mean()
 
-    order = [s for s in SCHEMES if s in memory.index]
-    order += [s for s in memory.index if s not in order]
-    memory = memory.loc[order].rename(index=SCHEMES)
 
     save_chart_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
+    save_table(out, memory, "Scheme", "Peak memory (MB)")
         
 def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -308,24 +303,23 @@ def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, schem
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_throughput_by_thread_count.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
-    data["throughput"] = data["data_size"] / 1_000_000 / data["real_time"]
+    data["throughput"] = data["data_size"] / 1e6 / data["real_time"]
 
     if scheme is None:
         throughput = data.groupby(["thread_count", "scheme"])["throughput"].mean().unstack("scheme").sort_index()
-        cols = [s for s in SCHEMES if s in throughput.columns]
-        cols += [c for c in throughput.columns if c not in cols]
-        throughput = throughput[cols].rename(columns=SCHEMES)
         save_chart(out, throughput, title, "Encoding Schemes", "Thread Count", "MB/s")
+        save_table(out, throughput, "Scheme", "Thread Count")
         return
 
     if scheme == "average":
         title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, average of schemes)"
     else:
-        data = data[data["scheme"] == scheme]
+        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
         title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, {SCHEMES.get(scheme, scheme)})"
 
     throughput = data.groupby("thread_count")["throughput"].mean().sort_index()
     save_chart_no_legend(out, throughput, title, "Thread Count", "MB/s")
+    save_table(out, throughput, "Thread Count", "MB/s")
 
 
 def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
@@ -341,72 +335,62 @@ def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, sch
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
     if scheme is not None:
-        data = data[data["scheme"] == scheme]
+        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
     data = data.dropna(subset=["thread_count"])
-    data["peak_mb"] = data["peak_delta"] / 1_000_000
+    data["peak_mb"] = data["peak_delta"] / 1e6
 
     memory = data.groupby("thread_count")["peak_mb"].mean().sort_index()
 
     save_chart_no_legend(out, memory, title, "Thread Count", "Peak memory (MB)")
+    save_table(out, memory, "Thread Count", "Peak memory (MB)")
     
 if __name__ == "__main__":
     
-    # # Single Threaded Chart Creation
-    # df = load_results(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
+    # Single Threaded Chart Creation
+    df = load_results(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
     
-    # os.makedirs(f"{RESULTS_DIR}/figures/creation_single_threaded", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_single_threaded", exist_ok=True)
     
-    # file_sizes = df["file_size"].unique()
-    # file_types = df["file_type"].unique()
-    # datasets = [None, 1, 2, 3, 4]
+    file_sizes = df["file_size"].unique()
+    file_types = df["file_type"].unique()
+    datasets = [None, 1, 2, 3, 4]
     
-    # for dataset in datasets:
-    #     plot_compression_by_file_type(df, "small", "creation_single_threaded", dataset)
-    #     plot_throughput_by_file_type(df, "small", "creation_single_threaded", dataset)
-    #     plot_index_size_by_file_type(df, "small", "creation_single_threaded", dataset)
+    for dataset in datasets:
+        plot_compression_by_file_type(df, "small", "creation_single_threaded", dataset)
+        plot_throughput_by_file_type(df, "small", "creation_single_threaded", dataset)
+        plot_index_size_by_file_type(df, "small", "creation_single_threaded", dataset)
 
-    # for file_type in file_types:
-    #     plot_compression_by_dataset(df, "small", file_type, "creation_single_threaded")
-    #     plot_throughput_by_dataset(df, "small", file_type, "creation_single_threaded")
+    for file_type in file_types:
+        plot_compression_by_dataset(df, "small", file_type, "creation_single_threaded")
+        plot_throughput_by_dataset(df, "small", file_type, "creation_single_threaded")
 
-    # # Partition Size Chart Creation
-    # df = load_results(f"{RESULTS_DIR}/creation/creation_partitioned.json")
+    # Partition Size Chart Creation
+    df = load_results(f"{RESULTS_DIR}/creation/creation_partitioned.json")
     
-    # os.makedirs(f"{RESULTS_DIR}/figures/creation_partitioned", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_partitioned", exist_ok=True)
     
-    # partition_sizes = sorted(df["partition_size"].dropna().unique())
-    # schemes = df["scheme"].unique()
+    partition_sizes = sorted(df["partition_size"].dropna().unique())
+    schemes = df["scheme"].unique()
 
-    # plot_throughput_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    # plot_compression_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    # plot_memory_usage_by_partition_size(df, "medium", "csv", "creation_partitioned")
-    # plot_memory_usage_by_scheme(df, "medium", "csv", "creation_partitioned")
+    plot_throughput_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    plot_compression_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    plot_memory_usage_by_partition_size(df, "medium", "csv", "creation_partitioned")
+    plot_memory_usage_by_scheme(df, "medium", "csv", "creation_partitioned")
     
-    # # Multi-threaded Chart Creation
+    # Multi-threaded Chart Creation
     
-    # os.makedirs(f"{RESULTS_DIR}/figures/creation_multi_threaded", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/creation_multi_threaded", exist_ok=True)
 
-    # df_0 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_1.json")
-    # df_1 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_2.json")
-    # df_2 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_4.json")
-    # df_3 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_8.json")
-    # df_4 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_16.json")
-    # df_5 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_32.json")
+    df_0 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_1.json")
+    df_1 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_2.json")
+    df_2 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_4.json")
+    df_3 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_8.json")
+    df_4 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_16.json")
+    df_5 = load_results(f"{RESULTS_DIR}/creation/creation_multithreaded_32.json")
 
-    # df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
+    df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
     
-    # plot_throughput_by_thread_count(df, "large", "csv", "creation_multi_threaded")
-    # plot_memory_usage_by_thread_count(df, "large", "csv", "creation_multi_threaded")
+    plot_throughput_by_thread_count(df, "large", "csv", "creation_multi_threaded")
+    plot_memory_usage_by_thread_count(df, "large", "csv", "creation_multi_threaded")
     
-    # plot_compression_by_scheme(df_0, "large", "csv", "creation_single_threaded", None)
-    
-    # LZ4 GZIP Comparison Chart Creation
-    os.makedirs(f"{RESULTS_DIR}/figures/creation_grep", exist_ok=True)
-
-    df_0 = load_results_grep(f"{RESULTS_DIR}/creation_grep/creation_grep.json")
-    df_1 = load_results_grep(f"{RESULTS_DIR}/creation/creation_single_threaded.json")
-    df = pd.concat([df_0, df_1], ignore_index=True)
-
-    plot_compression_by_file_type(df, "small", "creation_grep", None)
-    plot_throughput_by_file_type(df, "small", "creation_grep", None)
-    #plot_memory_usage_by_scheme(df, "small", "creation_grep", None)
+    plot_compression_by_scheme(df_0, "large", "csv", "creation_single_threaded", None)

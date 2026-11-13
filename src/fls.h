@@ -22,5 +22,9 @@ const std::vector<uint32_t> select_unffor_decoder(const std::vector<uint32_t> &e
 const std::vector<uint32_t> select_delta_decoder(const std::vector<uint32_t> &encoded, const std::vector<uint32_t> &base);
 uint64_t write_fls_to_file(const std::vector<uint32_t> &vec, std::ostream &file);
 std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_to_read);
-
+void fls_delta_decode_avx512(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded);
+void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded);
+void fls_delta_decode_sse(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded);
+void fls_delta_decode_scalar(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded);
+void fls_delta_encode_scalar(std::vector<uint32_t> &input, std::vector<uint32_t> &encoded, std::vector<uint32_t> &base);
 #endif

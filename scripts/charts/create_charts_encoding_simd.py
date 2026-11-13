@@ -19,14 +19,17 @@ SCHEMES = {
     "s8d4": "S8-D4", "s8dm": "S8-DM", "s16d4": "S16-D4", "s16dm": "S16-DM",
 }
 
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
-    print(f"wrote table {out}")
+    latex_table = table.T.rename_axis(row_name).reset_index()
+    latex_table.columns = pd.MultiIndex.from_tuples(
+        [("", row_name)] + [(col_name, label) for label in table.index]
+    )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
+    print(f"wrote table {base}.tex")
 
 def load_results_encoding_decoding(path):
 
@@ -90,7 +93,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
         plt.close(fig)
         print(f"wrote {out}")
         
-        save_table(out, throughput)
+        save_table(out, throughput, "Scheme", "Vector length (integers)")
 
 def plot_compression(df, type, key_title):
     title = "Compressed Size"
@@ -110,7 +113,8 @@ def plot_compression(df, type, key_title):
     plt.close(fig)
     print(f"wrote {out}")
     
-    save_table(out, compression)
+    save_table(out, compression, "Scheme", "Vector length (integers)")
+
     
 def plot_bits_int(df, type, key_title):
     title = "Bits Per Int"
@@ -130,7 +134,8 @@ def plot_bits_int(df, type, key_title):
     plt.close(fig)
     print(f"wrote {out}")
     
-    save_table(out, bits_int)
+    save_table(out, bits_int, "Scheme", "Vector length (integers)")
+
     
 def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type):
     title = f"{title_type} Memory Usage By Scheme and Size"
@@ -157,8 +162,7 @@ def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type)
     plt.close(fig)
     print(f"wrote {out}")
 
-    save_table(out, memory)
-    
+    save_table(out, memory, "Scheme", "Vector length (integers)")
 
 if __name__ == "__main__":
     df_comp_enc = load_results_encoding_decoding(f"{RESULTS_DIR}/encodings_warm/compression_encoding.json")

@@ -9,6 +9,7 @@
 #include "fls.h"
 #include "helper.h"
 #include "segment.h"
+#include "metadata.h"
 #include "pef.h"
 #include <fstream>
 #include <map>
@@ -16,6 +17,7 @@
 #include <filesystem>
 
 typedef std::map<uint32_t, std::vector<uint32_t>> FieldDocs;
+typedef std::tuple<uint64_t, uint64_t, uint64_t> Merge;
 
 struct Fields_header {
   uint16_t num_fields; // Number of fields that will contain docids
@@ -60,10 +62,8 @@ void merge_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str, 
                   const bool run_checks);
-void merge_segments(const std::vector<std::string> &fields,
-  const std::string &index_dir_str,
-  const std::string &data_dir_str, 
-  const bool run_checks);
+void merge_segments(const Merge &merge,
+                  Metadata &metadata);
 const std::vector<uint32_t> get_id_offsets_from_file(const std::string &file_name, const uint8_t type, const uint8_t enc_type);
 const std::pair<uint64_t, uint64_t> get_id_offsets_setup(const Offsets_header &header, const uint8_t type);
 const FieldDocs get_tok_offsets_from_file(

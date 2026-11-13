@@ -48,13 +48,16 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
     plt.close(fig)
     print(f"wrote chart {out}")
 
-def save_table(out, data):
+def save_table(out, data, row_name, col_name):
     # Tabular output
     base = os.path.splitext(out)[0]
     table = data.round(3)
-    latex_table = table.T.rename_axis("Scheme").reset_index()
-    latex_table.columns.name = None
-    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f", escape=True)
+    latex_table = table.T.rename_axis(row_name).reset_index()
+    latex_table.columns = pd.MultiIndex.from_tuples(
+        [("", row_name)] + [(col_name, label) for label in table.index]
+    )
+    latex_table.to_latex(f"{base}.tex", index=False, float_format="%.2f",
+                         escape=True, multicolumn_format="c")
     print(f"wrote table {base}.tex")
  
 def load_results(path):
@@ -119,7 +122,7 @@ def plot_latency_by_file_type(df, file_size, folder_name):
         latency.columns = latency.columns.astype(str)
 
         save_chart(out, latency, title, "Encoding Schemes", "File Type", "Milliseconds", False, True)
-        save_table(out, latency)
+        save_table(out, latency, "Scheme", "File Type")
 
 def plot_throughput_by_file_type(df, file_size, folder_name):
     for stat in STATS:
@@ -133,7 +136,7 @@ def plot_throughput_by_file_type(df, file_size, folder_name):
         throughput.columns = throughput.columns.astype(str)
 
         save_chart(out, throughput, title, "Encoding Schemes", "File Type", "Queries/s", False, True)
-        save_table(out, throughput)
+        save_table(out, throughput, "Scheme", "File Type")
 
 def plot_memory_usage_by_file_type(df, file_size, folder_name):
     for stat in STATS:
@@ -147,7 +150,7 @@ def plot_memory_usage_by_file_type(df, file_size, folder_name):
         memory.columns = memory.columns.astype(str)
 
         save_chart(out, memory, title, "Encoding Schemes", "File Type", "Peak Memory Increase (MB)")
-        save_table(out, memory)
+        save_table(out, memory, "Scheme", "File Type")
 
 if __name__ == "__main__":
     for mode in ["warm", "cold"]:

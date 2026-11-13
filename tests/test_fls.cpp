@@ -46,3 +46,42 @@ TEST(fls_u32_t_encode_decode_test_fuzzed, test1) {
 
     ASSERT_TRUE(input == decoded);
 }
+
+TEST(fls_u32_t__deltaencode_decode_test_fuzzed, test1) {
+    std::vector<uint32_t> input = generate_rand_uint32_t_vec_dist(100);
+
+    std::vector<uint32_t> encoded;
+    std::vector<uint32_t> base;
+    fls_delta_encode_scalar(input, encoded, base);
+
+    std::vector<uint32_t> decoded;
+    fls_delta_decode_scalar(base, encoded, decoded);
+
+    ASSERT_TRUE(input == decoded);
+}
+
+TEST(fls_u32_t__deltaencode_decode_test_fuzzed, test2) {
+    std::vector<uint32_t> input = generate_rand_uint32_t_vec_dist(1000);
+
+    std::vector<uint32_t> encoded;
+    std::vector<uint32_t> base;
+    fls_delta_encode_scalar(input, encoded, base);
+
+    std::vector<uint32_t> decoded;
+    fls_delta_decode_scalar(base, encoded, decoded);
+
+    ASSERT_TRUE(input == decoded);
+}
+
+TEST(fls_u32_t__deltaencode_decode_test_fuzzed, test3) {
+    std::vector<uint32_t> input = generate_rand_uint32_t_vec_dist(1000000);
+
+    std::vector<uint32_t> encoded;
+    std::vector<uint32_t> base;
+    fls_delta_encode_scalar(input, encoded, base);
+
+    std::vector<uint32_t> decoded;
+    fls_delta_decode_scalar(base, encoded, decoded);
+
+    ASSERT_TRUE(input == decoded);
+}

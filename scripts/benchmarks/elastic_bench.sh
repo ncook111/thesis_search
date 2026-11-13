@@ -41,24 +41,6 @@ drop_caches() {
   fi
 }
 
-# find "$tmp" -name 'chunk_*' -print0 |
-#     xargs -0 -n 1 -P 10 bash -c 'bulk_one "$1"' _
-
-# curl -sS -u "elastic:$ES_LOCAL_PASSWORD" \
-#   -H 'Content-Type: application/json' \
-#   -X GET "http://127.0.0.1:9200/my_index/_count" \
-#   -d '{ "query": { "match": { "count_views": "1" } } }' \
-#   -w '\ndns %{time_namelookup}\nconnect %{time_connect}\nttfb %{time_starttransfer}\ntotal %{time_total}\n'
-
-# curl -sS -u "elastic:$ES_LOCAL_PASSWORD" \
-#   -H 'Content-Type: application/json' \
-#   -X GET "http://localhost:9200/my_index/_count" \
-#   -d '{ "query": { "match": { "type": "IssueCommentEvent" } } }'
-
-# curl -sS -u "elastic:$ES_LOCAL_PASSWORD" \
-#   "http://localhost:9200/_cat/indices/$INDEX?v&h=index,docs.count,store.size,pri.store.size"
-
-
 simdindex_create_loop() {
   local size="$1" scheme="$2" all_fields=("${@:3}")
   local in="$BENCH_DATA/all_input_data/json/${size}_data"
@@ -109,9 +91,9 @@ elastic_create_loop() {
 
     echo "Running ${label}"
 
-    src="${in}/data_${i}/${i}_${size}.json"
+    src="${in}/data_${i}"
 
-    split -a 4 -C 20M "$src" "$tmp/chunk_"
+    cat "$src"/* | split -a 4 -C 20M - "$tmp/chunk_"
 
     for chunk in "$tmp"/chunk_*; do
             jq -c '{"index":{}}, .' "$chunk" > "$chunk.json" || { rm -rf "$tmp"; return 1; }
@@ -172,7 +154,7 @@ elastic_create_loop() {
 
     rm -rf "$tmp"
 
-    data_size=$("$STAT" -c%s "$src")
+    data_size=$("$DU" -sb "$src" | cut -f1)
     index_size=$(curl -sS -u "elastic:$ES_LOCAL_PASSWORD" "http://localhost:9200/_cat/indices/$idx_name?h=store.size&bytes=b" | tr -d '[:space:]')
  
     printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s,\n    "index_size": %s,\n    "data_size": %s\n  }' \
@@ -404,7 +386,7 @@ rm -rf "$BENCH_DATA"/tmp_indexed
 
 schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
 
-sizes=(small medium)
+sizes=(large)
 
 for size in "${sizes[@]}"; do
   for scheme in "${schemes[@]}"; do
@@ -445,27 +427,27 @@ done
 
 rm -rf "$BENCH_DATA"/tmp_indexed
 
-printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
-sep=""
-for size in "${sizes[@]}"; do
-  elastic_create_loop "$size" "${elastic_fields[@]}"
-done
-printf '\n]\n}\n' >> "$CREATION_ELASTIC"
+# printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
+# sep=""
+# for size in "${sizes[@]}"; do
+#   elastic_create_loop "$size" "${elastic_fields[@]}"
+# done
+# printf '\n]\n}\n' >> "$CREATION_ELASTIC"
 
-for cold in false true; do
-  if [[ "$cold" == true ]]; then
-    SEARCH_ELASTIC="$SEARCH_ELASTIC_COLD"
-  else
-    SEARCH_ELASTIC="$SEARCH_ELASTIC_WARM"
-  fi
+# for cold in false true; do
+#   if [[ "$cold" == true ]]; then
+#     SEARCH_ELASTIC="$SEARCH_ELASTIC_COLD"
+#   else
+#     SEARCH_ELASTIC="$SEARCH_ELASTIC_WARM"
+#   fi
 
-  printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
-  sep=""
-  for size in "${sizes[@]}"; do
-    for query_type in "${query_types[@]}"; do
-      ref="elastic_${query_type}_queries[@]"
-      elastic_search_loop "$size" "$query_type" "$cold" "${!ref}"
-    done
-  done
-  printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
-done
+#   printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
+#   sep=""
+#   for size in "${sizes[@]}"; do
+#     for query_type in "${query_types[@]}"; do
+#       ref="elastic_${query_type}_queries[@]"
+#       elastic_search_loop "$size" "$query_type" "$cold" "${!ref}"
+#     done
+#   done
+#   printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
+# done
