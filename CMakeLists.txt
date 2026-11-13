@@ -104,30 +104,33 @@ set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 set(_simd ${SIMD_TARGET})
 
 # check combination possible
-set(FLS_X86 ${FASTLANES_PUB}/fls_generated/x86_64)
-
-if (_simd STREQUAL "neon")
-    target_sources(fastlanes_bp PRIVATE
-        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unffor_src.cpp
-        ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp)
+if (_simd STREQUAL "neon" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    message(FATAL_ERROR "SIMD_TARGET=neon requested but target is not arm64/aarch64")
+endif()
+if (_simd MATCHES "^(sse|avx2|avx512bw)$" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    message(FATAL_ERROR "SIMD_TARGET=${_simd} requested but target is not x86_64")
 endif()
 
-# Kernel sources are cumulative, matching the SIMD_TARGET_* definitions above:
-# avx512bw also builds avx2 and sse, and avx2 also builds sse.
-if (_simd MATCHES "^(sse|avx2|avx512bw)$")
-    target_sources(fastlanes_bp PRIVATE
-        ${FLS_X86}/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_unffor_src.cpp
-        ${FLS_X86}/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_rsum_src.cpp)
-endif()
-if (_simd MATCHES "^(avx2|avx512bw)$")
-    target_sources(fastlanes_bp PRIVATE
-        ${FLS_X86}/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_unffor_src.cpp
-        ${FLS_X86}/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_rsum_src.cpp)
-endif()
-if (_simd STREQUAL "avx512bw")
-    target_sources(fastlanes_bp PRIVATE
-        ${FLS_X86}/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unffor_src.cpp
-        ${FLS_X86}/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp)
+add_library(simd_target INTERFACE)
+
+if (_simd STREQUAL "scalar")
+    target_compile_options(simd_target INTERFACE -fno-tree-vectorize -fno-tree-slp-vectorize)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SCALAR=1)
+elseif (_simd STREQUAL "neon")
+    target_compile_options(simd_target INTERFACE -march=armv8-a+simd)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(simd_target INTERFACE -flax-vector-conversions)
+    endif()
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_NEON=1)
+elseif (_simd STREQUAL "sse")
+    target_compile_options(simd_target INTERFACE -msse4.2)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_SSE=1)
+elseif (_simd STREQUAL "avx2")
+    target_compile_options(simd_target INTERFACE -mavx2)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX2=1 SIMD_TARGET_SSE=1)
+elseif (_simd STREQUAL "avx512bw")
+    target_compile_options(simd_target INTERFACE -mavx512bw -mavx512f)
+    target_compile_definitions(simd_target INTERFACE SIMD_TARGET_AVX512BW=1 SIMD_TARGET_AVX2=1 SIMD_TARGET_SSE=1)
 endif()
 
 ###### FASTLANES ######
@@ -154,21 +157,30 @@ add_library(fastlanes_bp STATIC
 target_include_directories(fastlanes_bp PUBLIC ${FASTLANES_PUB}/fls_generated/include)
 target_link_libraries(fastlanes_bp PUBLIC simd_target)
 
+set(FLS_X86 ${FASTLANES_PUB}/fls_generated/x86_64)
+
 if (_simd STREQUAL "neon")
     target_sources(fastlanes_bp PRIVATE
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unffor_src.cpp
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp)
-elseif (_simd STREQUAL "sse")
+endif()
+
+# Kernel sources are cumulative, matching the SIMD_TARGET_* definitions above:
+# avx512bw also builds avx2 and sse, and avx2 also builds sse.
+if (_simd MATCHES "^(sse|avx2|avx512bw)$")
     target_sources(fastlanes_bp PRIVATE
-        ${FASTLANES_PUB}/fls_generated/x86_64/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_unffor_src.cpp)
-elseif (_simd STREQUAL "avx2")
+        ${FLS_X86}/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_unffor_src.cpp
+        ${FLS_X86}/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_rsum_src.cpp)
+endif()
+if (_simd MATCHES "^(avx2|avx512bw)$")
     target_sources(fastlanes_bp PRIVATE
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_unffor_src.cpp
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_rsum_src.cpp)
-elseif (_simd STREQUAL "avx512bw")
+        ${FLS_X86}/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_unffor_src.cpp
+        ${FLS_X86}/avx2_intrinsic_uf1/x86_64_avx2_intrinsic_1024_uf1_rsum_src.cpp)
+endif()
+if (_simd STREQUAL "avx512bw")
     target_sources(fastlanes_bp PRIVATE
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unffor_src.cpp
-        ${FASTLANES_PUB}/fls_generated/x86_64/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp)
+        ${FLS_X86}/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_unffor_src.cpp
+        ${FLS_X86}/avx512bw_intrinsic_uf1/x86_64_avx512bw_intrinsic_1024_uf1_rsum_src.cpp)
 endif()
 
 ###### SIMDBP128 ######
