@@ -194,7 +194,6 @@ std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_
 void fls_delta_decode_avx512(std::span<const uint32_t> base, std::span<const uint32_t> input, std::span<uint32_t> decoded) {
     const size_t num_blocks = input.size() / N;
     alignas(64) uint32_t buf[N];
-    uint32_t buf[N];
     for (size_t b = 0; b < num_blocks; ++b) {
         const size_t off = b * N;
         generated::rsum::x86_64::avx512bw::rsum(input.data() + off, buf, base.data() + b * N_LANES);
@@ -219,7 +218,6 @@ void fls_delta_decode_avx2(std::span<const uint32_t> base, std::span<const uint3
 void fls_delta_decode_sse(std::span<const uint32_t> base, std::span<const uint32_t> input, std::span<uint32_t> decoded) {
     const size_t num_blocks = input.size() / N;
     alignas(64) uint32_t buf[N];
-    uint32_t buf[N];
     for (size_t b = 0; b < num_blocks; ++b) {
         const size_t off = b * N;
         generated::rsum::x86_64::sse::rsum(input.data() + off, buf, base.data() + b * N_LANES);
