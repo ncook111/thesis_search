@@ -98,7 +98,7 @@ FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "avx512bw" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
@@ -106,7 +106,7 @@ set(_simd ${SIMD_TARGET})
 # check combination possible
 set(FLS_X86 ${FASTLANES_PUB}/fls_generated/x86_64)
 
-if (_simd STREQUAL "avx512bw")
+if (_simd STREQUAL "neon")
     target_sources(fastlanes_bp PRIVATE
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_unffor_src.cpp
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp)
