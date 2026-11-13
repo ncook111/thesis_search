@@ -225,11 +225,14 @@ public:
 
 class U32S1DTDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
-    std::vector<uint32_t> base;
+    aligned_vec input;
+    aligned_vec base;
     void SetUp(::benchmark::State& state) {
         std::vector<uint32_t> src = dataset(state.range(0));
-        fls_delta_encode_scalar(src, input, base);
+        std::vector<uint32_t> enc, enc_base;
+        fls_delta_encode_scalar(src, enc, enc_base);
+        input.assign(enc.begin(), enc.end());
+        base.assign(enc_base.begin(), enc_base.end());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -345,11 +348,14 @@ public:
 #if defined(SIMD_TARGET_SSE)
 class U32S4DTDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
-    std::vector<uint32_t> base;
+    aligned_vec input;
+    aligned_vec base;
     void SetUp(::benchmark::State& state) {
         std::vector<uint32_t> src = dataset(state.range(0));
-        fls_delta_encode_scalar(src, input, base);
+        std::vector<uint32_t> enc, enc_base;
+        fls_delta_encode_scalar(src, enc, enc_base);
+        input.assign(enc.begin(), enc.end());
+        base.assign(enc_base.begin(), enc_base.end());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -419,11 +425,14 @@ public:
 
 class U32S8DTDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
-    std::vector<uint32_t> base;
+    aligned_vec input;
+    aligned_vec base;
     void SetUp(::benchmark::State& state) {
         std::vector<uint32_t> src = dataset(state.range(0));
-        fls_delta_encode_scalar(src, input, base);
+        std::vector<uint32_t> enc, enc_base;
+        fls_delta_encode_scalar(src, enc, enc_base);
+        input.assign(enc.begin(), enc.end());
+        base.assign(enc_base.begin(), enc_base.end());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -492,11 +501,14 @@ public:
 
 class U32S16DTDecode : public benchmark::Fixture {
 public:
-    std::vector<uint32_t> input;
-    std::vector<uint32_t> base;
+    aligned_vec input;
+    aligned_vec base;
     void SetUp(::benchmark::State& state) {
         std::vector<uint32_t> src = dataset(state.range(0));
-        fls_delta_encode_scalar(src, input, base);
+        std::vector<uint32_t> enc, enc_base;
+        fls_delta_encode_scalar(src, enc, enc_base);
+        input.assign(enc.begin(), enc.end());
+        base.assign(enc_base.begin(), enc_base.end());
     }
 
     void TearDown(::benchmark::State& state) {
@@ -1367,7 +1379,7 @@ BENCHMARK_DEFINE_F(U32FLSDecode, cdec_fls)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(U32S1DTDecode, ddec_s1dt)(benchmark::State& state) {
     const double rss_before = read_mem_begin();
-    std::vector<uint32_t> decoded(input.size());
+    aligned_vec decoded(input.size());
     fls_delta_decode_scalar(base, input, decoded);
     benchmark::DoNotOptimize(decoded);
     benchmark::ClobberMemory();
@@ -1628,7 +1640,7 @@ BENCHMARK_DEFINE_F(U32S4DMDecode, ddec_s4dm)(benchmark::State& state) {
 #if defined(SIMD_TARGET_SSE)
 BENCHMARK_DEFINE_F(U32S4DTDecode, ddec_s4dt)(benchmark::State& state) {
     const double rss_before = read_mem_begin();
-    std::vector<uint32_t> decoded(input.size());
+    aligned_vec decoded(input.size());
     fls_delta_decode_sse(base, input, decoded);
     benchmark::DoNotOptimize(decoded);
     benchmark::ClobberMemory();
@@ -1774,7 +1786,7 @@ BENCHMARK_DEFINE_F(U32S8DMDecode, ddec_s8dm)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(U32S8DTDecode, ddec_s8dt)(benchmark::State& state) {
     const double rss_before = read_mem_begin();
-    std::vector<uint32_t> decoded(input.size());
+    aligned_vec decoded(input.size());
     fls_delta_decode_avx2(base, input, decoded);
     benchmark::DoNotOptimize(decoded);
     benchmark::ClobberMemory();
@@ -1919,7 +1931,7 @@ BENCHMARK_DEFINE_F(U32S16DMDecode, ddec_s16dm)(benchmark::State& state) {
 
 BENCHMARK_DEFINE_F(U32S16DTDecode, ddec_s16dt)(benchmark::State& state) {
     const double rss_before = read_mem_begin();
-    std::vector<uint32_t> decoded(input.size());
+    aligned_vec decoded(input.size());
     fls_delta_decode_avx512(base, input, decoded);
     benchmark::DoNotOptimize(decoded);
     benchmark::ClobberMemory();
