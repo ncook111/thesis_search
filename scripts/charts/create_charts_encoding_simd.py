@@ -15,7 +15,7 @@ SCHEMES = {
     "s4_bpd4": "S4-BP128-D4", "s4_bpdm": "S4-BP128-DM",
     "s8_bpd4": "S8-BP128-D4", "s8_bpdm": "S8-BP128-DM",
     "s16_bpd4": "S16-BP128-D4", "s16_bpdm": "S16-BP128-DM",
-    "delta": "Delta", "s4d4": "S4-D4", "s4dm": "S4-DM",
+    "delta": "Delta", "s1dt": "S1-DT", "s4dt": "S4-DT", "s8dt": "S8-DT", "s16dt": "S16-DT", "s4d4": "S4-D4", "s4dm": "S4-DM",
     "s8d4": "S8-D4", "s8dm": "S8-DM", "s16d4": "S16-D4", "s16dm": "S16-DM",
 }
 
