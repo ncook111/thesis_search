@@ -228,7 +228,6 @@ void fls_delta_decode_sse(const std::vector<uint32_t> &base, const std::vector<u
     }
 }
 #endif
-#endif
 
 void fls_delta_decode_scalar(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
     const size_t num_blocks = input.size() / N;
