@@ -690,8 +690,6 @@ BENCHMARK_DEFINE_F(U32Vec, denc_s1dt)(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        encoded.clear();
-        base.clear();
         flush_cache(cache_size);
         #if defined(__linux__)
         malloc_trim(0);

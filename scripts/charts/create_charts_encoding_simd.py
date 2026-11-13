@@ -19,6 +19,8 @@ SCHEMES = {
     "s8d4": "S8-D4", "s8dm": "S8-DM", "s16d4": "S16-D4", "s16dm": "S16-DM",
 }
 
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
+
 def save_table(out, data, row_name, col_name):
     # Tabular output
     base = os.path.splitext(out)[0]
