@@ -191,7 +191,7 @@ std::vector<uint32_t> read_fls_from_file(const uint8_t *file, const size_t size_
 }
 
 #if defined(SIMD_TARGET_AVX512BW)
-void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
+void fls_delta_decode_avx512(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
     const size_t num_blocks = input.size() / N;
     decoded.resize(input.size());
     uint32_t buf[N];
@@ -217,7 +217,7 @@ void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<
 #endif
 
 #if defined(SIMD_TARGET_SSE)
-void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
+void fls_delta_decode_sse(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
     const size_t num_blocks = input.size() / N;
     decoded.resize(input.size());
     uint32_t buf[N];
@@ -227,6 +227,7 @@ void fls_delta_decode_avx2(const std::vector<uint32_t> &base, const std::vector<
         generated::untranspose::fallback::scalar::untranspose_i(buf, decoded.data() + off);
     }
 }
+#endif
 #endif
 
 void fls_delta_decode_scalar(const std::vector<uint32_t> &base, const std::vector<uint32_t> &input, std::vector<uint32_t> &decoded) {
