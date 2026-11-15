@@ -160,3 +160,6 @@ if __name__ == "__main__":
         plot_latency_by_query_type(df, "medium", folder_name)
         plot_throughput_by_query_type(df, "medium", folder_name)
         plot_memory_usage_by_query_type(df, "medium", folder_name)
+        plot_latency_by_query_type(df, "large", folder_name)
+        plot_throughput_by_query_type(df, "large", folder_name)
+        plot_memory_usage_by_query_type(df, "large", folder_name)

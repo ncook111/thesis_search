@@ -388,51 +388,51 @@ schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
 
 sizes=(large)
 
-for size in "${sizes[@]}"; do
-  for scheme in "${schemes[@]}"; do
-    mkdir -p "$BENCH_DATA"/tmp_indexed/json/"$scheme"/"${size}_data"/data_{1..4}
-  done
-done
+# for size in "${sizes[@]}"; do
+#   for scheme in "${schemes[@]}"; do
+#     mkdir -p "$BENCH_DATA"/tmp_indexed/json/"$scheme"/"${size}_data"/data_{1..4}
+#   done
+# done
 
-printf '{\n"benchmarks": [\n' > "$CREATION_SIMDINDEX"
-sep=""
-for size in "${sizes[@]}"; do
-  for scheme in "${schemes[@]}"; do
-    simdindex_create_loop "$size" "$scheme" "${simdindex_fields[@]}"
-  done
-done
-printf '\n]\n}\n' >> "$CREATION_SIMDINDEX"
-
-query_types=(simple union intersection combination complex_combination)
-
-for cold in false true; do
-  if [[ "$cold" == true ]]; then
-    SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_COLD"
-  else
-    SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_WARM"
-  fi
-
-  printf '{\n"benchmarks": [\n' > "$SEARCH_SIMDINDEX"
-  sep=""
-  for size in "${sizes[@]}"; do
-    for scheme in "${schemes[@]}"; do
-      for query_type in "${query_types[@]}"; do
-        ref="simdindex_${query_type}_queries[@]"
-        simdindex_search_loop "$size" "$scheme" "$query_type" "$cold" "${!ref}"
-      done
-    done
-  done
-  printf '\n]\n}\n' >> "$SEARCH_SIMDINDEX"
-done
-
-rm -rf "$BENCH_DATA"/tmp_indexed
-
-# printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
+# printf '{\n"benchmarks": [\n' > "$CREATION_SIMDINDEX"
 # sep=""
 # for size in "${sizes[@]}"; do
-#   elastic_create_loop "$size" "${elastic_fields[@]}"
+#   for scheme in "${schemes[@]}"; do
+#     simdindex_create_loop "$size" "$scheme" "${simdindex_fields[@]}"
+#   done
 # done
-# printf '\n]\n}\n' >> "$CREATION_ELASTIC"
+# printf '\n]\n}\n' >> "$CREATION_SIMDINDEX"
+
+# query_types=(simple union intersection combination complex_combination)
+
+# for cold in false true; do
+#   if [[ "$cold" == true ]]; then
+#     SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_COLD"
+#   else
+#     SEARCH_SIMDINDEX="$SEARCH_SIMDINDEX_WARM"
+#   fi
+
+#   printf '{\n"benchmarks": [\n' > "$SEARCH_SIMDINDEX"
+#   sep=""
+#   for size in "${sizes[@]}"; do
+#     for scheme in "${schemes[@]}"; do
+#       for query_type in "${query_types[@]}"; do
+#         ref="simdindex_${query_type}_queries[@]"
+#         simdindex_search_loop "$size" "$scheme" "$query_type" "$cold" "${!ref}"
+#       done
+#     done
+#   done
+#   printf '\n]\n}\n' >> "$SEARCH_SIMDINDEX"
+# done
+
+# rm -rf "$BENCH_DATA"/tmp_indexed
+
+printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
+sep=""
+for size in "${sizes[@]}"; do
+  elastic_create_loop "$size" "${elastic_fields[@]}"
+done
+printf '\n]\n}\n' >> "$CREATION_ELASTIC"
 
 # for cold in false true; do
 #   if [[ "$cold" == true ]]; then

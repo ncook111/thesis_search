@@ -32,6 +32,13 @@ static size_t read_rss_kb(const char* key) {
         if (line.rfind(key, 0) == 0) return std::stoul(line.substr(std::strlen(key)));
     return 0;
 }
+
+static void drop_page_cache() {
+    ::sync();
+    std::ofstream f("/proc/sys/vm/drop_caches");
+    f << "3" << std::flush;   // "3" to also drop dentries/inodes
+    if (!f) { std::cerr << "drop_caches failed (need root)\n"; std::abort(); }
+}
 #endif
 
 static benchmark::Counter kb_counter(double kb) {
@@ -55,14 +62,15 @@ std::vector<std::string> search_types =
 
 template <uint8_t FileSize, uint8_t FileType, uint8_t SearchType> static void StandardBenchArgs(benchmark::internal::Benchmark* args) {
     args->Name(std::string("IndexSearch/") + file_size_to_str(FileSize) + '/' + file_type_to_str(FileType) + '/' + search_types[SearchType])
-        ->ArgNames({"size", "dataset", "type", "enc", "partition_size", "num_threads", "query_type"})
+        ->ArgNames({"size", "dataset", "type", "enc", "partition_size", "num_threads", "cold"})
         ->ArgsProduct({
             {FileSize},
             {0, 1, 2, 3},
             {FileType},
             available_enc_types(),
             {8, 16, 32, 64, 128, 256, 512, 1024},
-            {1, 2, 4, 6, 8, 10, 12, 14, 16, 32}
+            {1, 2, 4, 6, 8, 10, 12, 14, 16, 32},
+            {true, false}
         })
         ->Iterations(1)
         ->UseRealTime()
@@ -134,6 +142,7 @@ public:
     uint8_t enc_type;
     size_t partition_size;
     size_t num_threads;
+    bool run_cold;
     void SetUp(::benchmark::State& state) {
         std::string dataset_size = file_size_to_str(state.range(0));
         dataset_number = state.range(1);
@@ -141,8 +150,9 @@ public:
         enc_type = state.range(3);
         partition_size = state.range(4);
         num_threads = state.range(5);
+        run_cold = state.range(6);
         state.SetLabel(enc_type_to_str(enc_type) + ',' + dataset_size + ',' + file_type_to_str(file_type) + ',' +
-                       std::to_string(dataset_number) + ',' + std::to_string(partition_size) + ',' + std::to_string(num_threads));
+                       std::to_string(dataset_number) + ',' + std::to_string(partition_size) + ',' + std::to_string(num_threads), std::to_string(run_cold)s);
 
         // partition_size part of the index location
         bench_path = file_type_to_str(file_type) + '/' + dataset_size + "_data/partition_" + std::to_string(partition_size) +
@@ -190,11 +200,14 @@ BENCHMARK_DEFINE_F(IndexSearch, simple_search)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
+        if (run_cold) {
+            drop_page_cache();
+            flush_cache(cache_size);
+        }
         malloc_trim(0);  
         reset_rss_hwm();
         rss_before = read_rss_kb("VmRSS:");
         #endif
-        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -222,11 +235,14 @@ BENCHMARK_DEFINE_F(IndexSearch, union_search)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
+        if (run_cold) {
+            drop_page_cache();
+            flush_cache(cache_size);
+        }
         malloc_trim(0);  
         reset_rss_hwm();
         rss_before = read_rss_kb("VmRSS:");
         #endif
-        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -254,11 +270,14 @@ BENCHMARK_DEFINE_F(IndexSearch, intersection_search)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
+        if (run_cold) {
+            drop_page_cache();
+            flush_cache(cache_size);
+        }
         malloc_trim(0);  
         reset_rss_hwm();
         rss_before = read_rss_kb("VmRSS:");
         #endif
-        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -286,11 +305,14 @@ BENCHMARK_DEFINE_F(IndexSearch, combination_search)(benchmark::State& state) {
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
+        if (run_cold) {
+            drop_page_cache();
+            flush_cache(cache_size);
+        }
         malloc_trim(0);  
         reset_rss_hwm();
         rss_before = read_rss_kb("VmRSS:");
         #endif
-        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
@@ -318,11 +340,14 @@ BENCHMARK_DEFINE_F(IndexSearch, complex_combination_search)(benchmark::State& st
     for (auto _ : state) {
         state.PauseTiming();
         #if defined(__linux__)
+        if (run_cold) {
+            drop_page_cache();
+            flush_cache(cache_size);
+        }
         malloc_trim(0);  
         reset_rss_hwm();
         rss_before = read_rss_kb("VmRSS:");
         #endif
-        flush_cache(cache_size);
         state.ResumeTiming();
         search_mode(index_path + bench_path, "", {}, query, num_threads);
         benchmark::ClobberMemory();
