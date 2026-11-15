@@ -152,7 +152,7 @@ public:
         num_threads = state.range(5);
         run_cold = state.range(6);
         state.SetLabel(enc_type_to_str(enc_type) + ',' + dataset_size + ',' + file_type_to_str(file_type) + ',' +
-                       std::to_string(dataset_number) + ',' + std::to_string(partition_size) + ',' + std::to_string(num_threads) + ',' + std::to_string(run_cold)s);
+                       std::to_string(dataset_number) + ',' + std::to_string(partition_size) + ',' + std::to_string(num_threads) + ',' + std::to_string(run_cold));
 
         // partition_size part of the index location
         bench_path = file_type_to_str(file_type) + '/' + dataset_size + "_data/partition_" + std::to_string(partition_size) +
