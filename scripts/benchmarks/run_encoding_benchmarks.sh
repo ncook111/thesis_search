@@ -14,6 +14,7 @@ mkdir -p "$OUT_DIR"
 --benchmark_out="a.json" \
 --benchmark_out_format=json \
 --benchmark_report_aggregates_only=true \
+--benchmark_enable_random_interleaving=true \
 --benchmark_repetitions="$reps"
 
 # Compression Decoding

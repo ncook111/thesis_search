@@ -18,7 +18,7 @@
 
 using aligned_vec = std::vector<uint32_t, boost::alignment::aligned_allocator<uint32_t, 64>>;
 
-constexpr size_t cache_size = 1 * 1024;
+constexpr size_t cache_size = 4096 * 1024;
 
 #if defined(__linux__)
 static void reset_rss_hwm() { std::ofstream("/proc/self/clear_refs") << "5"; }
