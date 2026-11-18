@@ -14,6 +14,8 @@ SCHEMES = {
 
 FILE_TYPES = { "csv" : "CSV", "json" : "JSON", "logfmt" : "LOGFMT" }
 
+FONT_SIZE = 14
+
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
@@ -21,31 +23,35 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel):
     if data.empty:
         print(f"{out}: no data")
         return
-    
-    fig, ax = plt.subplots(figsize=(8, 5))
-    data.plot.bar(ax=ax, rot=0, title=chart_title,
-                         xlabel=xlabel, ylabel=ylabel)
-    ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    
+
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(8, 5))
+        data.plot.bar(ax=ax, rot=0, xlabel=xlabel, ylabel=ylabel)
+        # ax.set_title(chart_title)
+        ax.legend(title=legend_title, loc="upper left",
+                  bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
+        plt.close(fig)
+
     print(f"wrote {out}")
-    
+
+
 def save_chart_no_legend(out, data, chart_title, xlabel, ylabel):
     if data.empty:
         print(f"{out}: no data")
         return
-    
-    fig, ax = plt.subplots(figsize=(10, 5))
-    data.plot.bar(ax=ax, rot=0, title=chart_title,
-                         xlabel=xlabel, ylabel=ylabel, legend=False)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    
+
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(10, 5))
+        data.plot.bar(ax=ax, rot=0, xlabel=xlabel, ylabel=ylabel, legend=False)
+        # ax.set_title(chart_title)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
+        plt.close(fig)
+
     print(f"wrote {out}")
     
 def save_table(out, data, row_name, col_name):
@@ -255,8 +261,8 @@ def plot_compression_by_partition_size(df, file_size, file_type, folder_name):
 
 
 def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name):
-    # Average of all datasets; one bar per scheme at each partition size
-    title = f"Peak Memory by Partition Size ({file_size}, {file_type})"
+    # Average of all datasets and all schemes; one bar per partition size
+    title = f"Average Peak Memory by Partition Size Across All Schemes ({file_size}, {file_type})"
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_all_schemes_memory_by_partition_size.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
@@ -264,14 +270,15 @@ def plot_memory_usage_by_partition_size(df, file_size, file_type, folder_name):
 
     memory = (
         data.groupby(["partition_size", "scheme"], observed=True)["peak_mb"]
-            .mean()
-            .unstack("scheme")
+            .mean()                                  # mean per scheme at each partition size
+            .groupby(level="partition_size", observed=True)
+            .mean()                                  # then average across schemes
             .sort_index()
+            .to_frame("All schemes (avg)")
     )
 
-    save_chart(out, memory, title, "Encoding Schemes", "Partition Size (MB)", "Peak memory (MB)")
+    save_chart_no_legend(out, memory, title, "Partition Size (MB)", "Peak memory (MB)")
     save_table(out, memory, "Scheme", "Partition Size (MB)")
-
 
 def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
     # Average of all datasets

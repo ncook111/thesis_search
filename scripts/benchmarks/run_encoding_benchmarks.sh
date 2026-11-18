@@ -11,7 +11,7 @@ mkdir -p "$OUT_DIR"
 # Compression Encoding
 "$BENCH_BIN" \
 --benchmark_filter=cenc \
---benchmark_out="a.json" \
+--benchmark_out="$OUT_DIR/compression_encoding.json" \
 --benchmark_out_format=json \
 --benchmark_report_aggregates_only=true \
 --benchmark_enable_random_interleaving=true \

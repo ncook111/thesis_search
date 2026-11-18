@@ -19,6 +19,8 @@ SCHEMES = {
     "s8d4": "S8-D4", "s8dm": "S8-DM", "s16d4": "S16-D4", "s16dm": "S16-DM",
 }
 
+FONT_SIZE = 14
+
 plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
 
 def save_table(out, data, row_name, col_name):
@@ -84,18 +86,20 @@ def plot_throughput(df, chart_type, key_title, title_type):
         data = df[df["stat"] == stat]
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second").sort_index(axis=1) / 1e9 # Convert into GB/s
 
-        fig, ax = plt.subplots(figsize=(8, 5))
-        throughput.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="GB/s")
-        
-        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-        ax.minorticks_off()
-        ax.grid(alpha=0.3)
-        fig.tight_layout()
-        fig.savefig(out, dpi=300)
-        plt.close(fig)
-        print(f"wrote {out}")
-        
-        save_table(out, throughput, "Scheme", "Vector length (integers)")
+        with plt.rc_context({"font.size": FONT_SIZE}):
+            fig, ax = plt.subplots(figsize=(8, 5))
+            throughput.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="GB/s")
+            
+            #ax.set_title(title)
+            ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+            ax.minorticks_off()
+            ax.grid(alpha=0.3)
+            fig.tight_layout()
+            fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
+            plt.close(fig)
+            print(f"wrote {out}")
+            
+            save_table(out, throughput, "Scheme", "Vector length (integers)")
 
 def plot_compression(df, type, key_title):
     title = "Compressed Size"
@@ -104,18 +108,20 @@ def plot_compression(df, type, key_title):
     data = df[df["stat"] == "median"]
     compression = data.pivot(index="size", columns="scheme", values="compression").sort_index(axis=1) * 100
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    compression.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="% of input")
-    
-    ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    ax.minorticks_off()
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote {out}")
-    
-    save_table(out, compression, "Scheme", "Vector length (integers)")
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(8, 5))
+        compression.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="% of input")
+        
+        #ax.set_title(title)
+        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.minorticks_off()
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
+        plt.close(fig)
+        print(f"wrote {out}")
+        
+        save_table(out, compression, "Scheme", "Vector length (integers)")
 
     
 def plot_bits_int(df, type, key_title):
@@ -125,18 +131,20 @@ def plot_bits_int(df, type, key_title):
     data = df[df["stat"] == "median"]
     bits_int = data.pivot(index="size", columns="scheme", values="bits_per_int").sort_index(axis=1)
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    bits_int.plot(ax=ax, marker="o", logx=True, title=title, xlabel="Number of Integers (uint32)", ylabel="bits/int")
-    
-    ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    ax.minorticks_off()
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote {out}")
-    
-    save_table(out, bits_int, "Scheme", "Vector length (integers)")
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(8, 5))
+        bits_int.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="bits/int")
+        
+        #ax.set_title(title)
+        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.minorticks_off()
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
+        plt.close(fig)
+        print(f"wrote {out}")
+        
+        save_table(out, bits_int, "Scheme", "Vector length (integers)")
 
     
 def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type):
@@ -150,19 +158,21 @@ def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type)
     )
     memory.columns = memory.columns.astype(str)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    memory.plot.bar(ax=ax, rot=0, title=title, xlabel="Input Size", ylabel="Peak memory (MB)", logy=True)
-    ax.legend(title=f"{key_title} Scheme", loc="upper left",
-              bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
-    ax.yaxis.set_minor_formatter(NullFormatter())
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(10, 5))
+        memory.plot.bar(ax=ax, rot=0, xlabel="Input Size", ylabel="Peak memory (MB)", logy=True)
+        ax.legend(title=f"{key_title} Scheme", loc="upper left",
+                bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
+        ax.yaxis.set_minor_formatter(NullFormatter())
 
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-    print(f"wrote {out}")
+        #ax.set_title(title)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        print(f"wrote {out}")
 
     save_table(out, memory, "Scheme", "Vector length (integers)")
 
