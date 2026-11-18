@@ -153,7 +153,7 @@ void index_files(const std::vector<std::string> &fields,
 void update_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str,
-                  const uint8_t num_threads = std::max(1u, std::thread::hardware_concurrency()),
+                  const uint8_t num_threads,
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path data_dir = data_dir_str;
