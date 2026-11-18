@@ -85,12 +85,16 @@ void index_files(const std::vector<std::string> &fields,
                 std::vector<std::vector<uint64_t>> &all_segment_offsets,
                 std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
                 const uint8_t num_threads,
-                const bool run_checks) {
-  
+                const bool run_checks,
+                const std::vector<uint64_t> &first_segment_ids) {
+
   // Build segment tasks
+  // first_segment_ids[i] is the first segment of file i that still needs building,
+  // segments before it already exist on disk. Defaults to 0 (build every segment)
   std::vector<std::pair<uint64_t, uint64_t>> segment_tasks;
   for (uint64_t i = 0; i < all_segment_offsets.size(); ++i) {
-    for (uint64_t j = 0; j + 1 < all_segment_offsets[i].size(); ++j) {
+    const uint64_t first_segment_id = i < first_segment_ids.size() ? first_segment_ids[i] : 0;
+    for (uint64_t j = first_segment_id; j + 1 < all_segment_offsets[i].size(); ++j) {
       segment_tasks.push_back({i, j});
     }
   }
@@ -149,6 +153,7 @@ void index_files(const std::vector<std::string> &fields,
 void update_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str,
+                  const uint8_t num_threads = std::max(1u, std::thread::hardware_concurrency()),
                   const bool run_checks) {
   const std::filesystem::path index_dir = index_dir_str;
   const std::filesystem::path data_dir = data_dir_str;
@@ -186,71 +191,84 @@ void update_index(const std::vector<std::string> &fields,
   for (auto &f : new_files) std::cout << "New file: " << f << '\n';
 
 
-  std::vector<std::string> files_to_update;
-  for (auto &f : files_indexed) {
-    uint64_t num_documents;
-    switch (str_to_file_type(f)) {
-      case FileType::CSV:
-        num_documents = count_documents_csv(data_dir.string() + '/' + f);
-        break;
-      case FileType::JSON:
-        num_documents = count_documents_json(data_dir.string() + '/' + f);
-        break;
-      case FileType::LOGFMT:
-        num_documents = count_documents_logfmt(data_dir.string() + '/' + f);
-        break;
-    }
-
-    uint64_t file_id = metadata.get_file_id(f);
-    uint64_t num_documents_prev = metadata.get_num_documents(file_id);
-
-    if (num_documents != num_documents_prev) {
-      files_to_update.push_back(f);
-    }
-  }
-
-  // Add in new files (appended, so existing file_ids are unchanged)
   std::vector<std::string> file_mappings_vec = metadata.get_file_mappings();
-  uint64_t file_id = file_mappings_vec.size();
   std::vector<std::vector<uint64_t>> all_segment_offsets = metadata.get_all_segment_offsets();
   std::vector<std::vector<uint64_t>> all_segment_docid_modifiers = metadata.get_all_segment_docid_modifiers();
 
-  // Make room for the new files so they can be written at vec[file_id]
-  const size_t total_files = file_mappings_vec.size() + new_files.size();
+  std::vector<std::string> files_to_update;
+  for (const auto &f : files_indexed) {
+    const auto path = data_dir / f;
+    if (!std::filesystem::exists(path)) continue; // deleted: leave as is (or decide a policy)
+
+    const uint64_t id = metadata.get_file_id(f);
+    const uint64_t old_size = all_segment_offsets[id].empty() ? 0 : all_segment_offsets[id].back();
+    const uint64_t new_size = std::filesystem::file_size(path);
+
+    if (new_size < old_size)
+      throw std::runtime_error(f + " shrank since it was indexed; rebuild the index");
+    if (new_size > old_size)
+      files_to_update.push_back(f);
+  }
+
+
+  const size_t num_existing_files = file_mappings_vec.size();
+  const size_t total_files = num_existing_files + new_files.size();
   file_mappings_vec.resize(total_files);
   all_segment_offsets.resize(total_files);
   all_segment_docid_modifiers.resize(total_files);
 
-  // Only new files get offsets here, so index_files skips the existing ones
-  std::vector<std::vector<uint64_t>> new_segment_offsets(total_files);
+  std::vector<uint64_t> first_segment_ids(total_files, 0);
+  for (size_t id = 0; id < num_existing_files; ++id) {
+    if (!all_segment_offsets[id].empty())
+      first_segment_ids[id] = all_segment_offsets[id].size() - 1; // Last entry marks EOF
+  }
+
+  // Add in new files
+  uint64_t file_id = num_existing_files;
   for (auto &f : new_files) {
-      std::cout << data_dir.string() + '/' + f << '\n';
+    std::cout << data_dir.string() + '/' + f << '\n';
     file_mappings_vec[file_id] = f;
-    partition_file(data_dir / f, 0, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
-    if (new_segment_offsets[file_id].size() >= 2) {
-      all_segment_offsets[file_id].assign(new_segment_offsets[file_id].begin(), new_segment_offsets[file_id].end() - 1);
-    } else { // Empty file
-      new_segment_offsets[file_id].clear();
+    partition_file(data_dir / f, 0, PARTITION_SIZE, all_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
+    if (all_segment_offsets[file_id].size() < 2) { // Empty file
+      all_segment_offsets[file_id].clear();
       all_segment_docid_modifiers[file_id].clear();
     }
     ++file_id;
   }
 
-  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, 1, run_checks);
-
-  metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
-  
-  // Update existing files
-  new_segment_offsets.clear();
+  // Update existing files, only the appended part of each file is partitioned and indexed
   for (auto &f : files_to_update) {
-    uint64_t file_id = metadata.get_file_id(f);
-    uint64_t old_file_size = metadata.get_file_size(file_id);
-    uint64_t new_file_size = std::filesystem::file_size(data_dir / f);
-    partition_file(data_dir / f, 0, PARTITION_SIZE, new_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
+    const uint64_t id = metadata.get_file_id(f);
+    std::vector<uint64_t> &segment_offsets = all_segment_offsets[id];
+    std::vector<uint64_t> &segment_docid_modifiers = all_segment_docid_modifiers[id];
+
+    const uint64_t old_file_size = segment_offsets.empty() ? 0 : segment_offsets.back();
+
+    // Partition from the previous EOF onwards
+    // Offsets come back absolute, docid modifiers come back counted from 0
+    std::vector<uint64_t> appended_offsets;
+    std::vector<uint64_t> appended_docid_modifiers;
+    partition_file(data_dir / f, old_file_size, PARTITION_SIZE, appended_offsets, appended_docid_modifiers);
+
+    if (appended_offsets.size() < 2) continue; // No documents in the appended part
+
+    if (!segment_offsets.empty()) segment_offsets.pop_back();
+    first_segment_ids[id] = segment_offsets.size();
+    segment_offsets.insert(segment_offsets.end(), appended_offsets.begin(), appended_offsets.end());
+
+    // Docid modifiers: the old document total is already the last entry, and is the modifier of the first appended segment
+    if (segment_docid_modifiers.empty()) segment_docid_modifiers.push_back(0);
+    const uint64_t old_num_documents = segment_docid_modifiers.back();
+    for (size_t i = 1; i < appended_docid_modifiers.size(); ++i)
+      segment_docid_modifiers.push_back(old_num_documents + appended_docid_modifiers[i]);
   }
 
-  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, new_segment_offsets, all_segment_docid_modifiers, 1, run_checks);
+  // Build the segments for new files and appended data, then write the metadata once
+  index_files(fields, index_dir, data_dir, metadata.get_enc_type(), file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, num_threads, run_checks, first_segment_ids);
+
   metadata.update_metadata_file(std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec));
+
+  create_checksum_file(index_dir_str);
 }
 
 void merge_index(const std::vector<std::string> &fields,

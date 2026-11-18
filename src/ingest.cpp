@@ -46,7 +46,7 @@ int update_mode(const std::string &index_path, const std::string &data_path, con
   }
 
   try {
-    update_index(fields, index_path, data_path);
+    update_index(fields, index_path, data_path, num_threads);
   } catch (const std::exception &e) {
     std::cout << "Error when updating index: " << e.what() << "\n";
     return 1;

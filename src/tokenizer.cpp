@@ -307,7 +307,7 @@ void Tokenizer::tokenize_field(const std::string_view field_str,
 
   for (const char c : field_str) {
     if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
-      field_token.push_back(c);
+      field_token.push_back(to_lower(c));
     } else if (field_token.size()) {
       processToken(field_token, doc_id, field_id);
       field_token.clear();
@@ -324,7 +324,7 @@ void Tokenizer::tokenize_string(const std::string &input) {
 
   for (const char c : input) {
     if (std::isalnum(c) || c == '+' || c == '-' || c == '.' || c == ':') {
-      field_token.push_back(c);
+      field_token.push_back(to_lower(c));
     } else if (field_token.size()) {
       processToken(field_token);
       field_token.clear();
@@ -513,7 +513,6 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
   // Fast path
   if (std::ranges::all_of(curr_token, is_alpha)) {
     if (curr_token.size() <= MAX_TOK_LENGTH) {
-      std::ranges::transform(curr_token, curr_token.begin(), to_lower);
       if (!query_mode)
         vector_inserter(alpha_tokens[curr_token][field_id], doc_id);
       else
@@ -557,7 +556,6 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
       processToken(curr);
   } else {
     if (curr.size() <= MAX_TOK_LENGTH) {
-      std::ranges::transform(curr.begin(), curr.end(), curr.begin(), [](char c) { return to_lower(c); });
       if (!query_mode)
         vector_inserter(alpha_tokens[std::move(curr)][field_id], doc_id);
       else

@@ -40,7 +40,8 @@ void create_index(const std::vector<std::string> &fields,
 void update_index(const std::vector<std::string> &fields,
                   const std::string &index_dir_str,
                   const std::string &data_dir_str,
-                  const bool run_checks = false);
+                  const uint8_t num_threads = std::max(1u, std::thread::hardware_concurrency()),
+                  const bool run_checks);
 void index_files(const std::vector<std::string> &fields,
                 const std::filesystem::path &index_dir,
                 const std::filesystem::path &data_dir,
@@ -49,7 +50,8 @@ void index_files(const std::vector<std::string> &fields,
                 std::vector<std::vector<uint64_t>> &all_segment_offsets,
                 std::vector<std::vector<uint64_t>> &all_segment_docid_modifiers,
                 const uint8_t num_threads,
-                const bool run_checks = false);
+                const bool run_checks = false,
+                const std::vector<uint64_t> &first_segment_ids = {});
 void create_segment(const std::string &data_path,
                     const std::vector<std::string> &fields,
                     const std::filesystem::path &index_dir,

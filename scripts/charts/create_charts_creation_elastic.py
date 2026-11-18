@@ -97,7 +97,7 @@ def plot_throughput_by_dataset(df, file_size, folder_name):
     totals = data.groupby(["dataset", "scheme"], observed=True)[["data_size", "real_time"]].sum()
     throughput = (totals["data_size"] / 1000000 / (totals["real_time"])).unstack("scheme")
 
-    save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s", True)
+    save_chart(out, throughput, title, "Encoding Schemes", "Dataset", "MB/s")
     save_table(out, throughput, "Scheme", "Dataset Number")
 
 def plot_index_size_by_dataset(df, file_size, folder_name):
@@ -139,3 +139,7 @@ if __name__ == "__main__":
     plot_compression_by_dataset(df, "medium", "creation_elastic")
     plot_throughput_by_dataset(df, "medium", "creation_elastic")
     plot_memory_usage_by_dataset(df, "medium", "creation_elastic")
+    plot_index_size_by_dataset(df, "large", "creation_elastic")
+    plot_compression_by_dataset(df, "large", "creation_elastic")
+    plot_throughput_by_dataset(df, "large", "creation_elastic")
+    plot_memory_usage_by_dataset(df, "large", "creation_elastic")

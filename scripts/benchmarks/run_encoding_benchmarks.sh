@@ -8,14 +8,13 @@ OUT_DIR="$RESULTS_DIR/encodings_warm"
 mkdir -p "$OUT_DIR"
 
 # # ### Benchmark comparing schemes, capturing tail latencies ###
-# # Compression Encoding
-# "$BENCH_BIN" \
-# --benchmark_filter=cenc \
-# --benchmark_out="$OUT_DIR/compression_encoding.json" \
-# --benchmark_out_format=json \
-# --benchmark_report_aggregates_only=true \
-# --benchmark_enable_random_interleaving=true \
-# --benchmark_repetitions="$reps"
+# Compression Encoding
+"$BENCH_BIN" \
+--benchmark_filter=cenc \
+--benchmark_out="a.json" \
+--benchmark_out_format=json \
+--benchmark_report_aggregates_only=true \
+--benchmark_repetitions="$reps"
 
 # # Compression Decoding
 # "$BENCH_BIN" \
@@ -45,19 +44,19 @@ mkdir -p "$OUT_DIR"
 # --benchmark_repetitions="$reps"
 
 ## Benchmark comparing schemes, capturing memory usage ###
-OUT_DIR="$RESULTS_DIR/encodings_memory_usage"
-mkdir -p "$OUT_DIR"
+# OUT_DIR="$RESULTS_DIR/encodings_memory_usage"
+# mkdir -p "$OUT_DIR"
 
-FILTER="(cenc|cdec|denc|ddec).*/(1000|10000|100000|1000000)/"
-TMP=$(mktemp -d)
+# FILTER="(cenc|cdec|denc|ddec).*/(1000|10000|100000|1000000)/"
+# TMP=$(mktemp -d)
 
-"$BENCH_BIN" --benchmark_list_tests --benchmark_filter="$FILTER" | while read -r name; do
-    "$BENCH_BIN" \
-    --benchmark_filter="^${name}\$" \
-    --benchmark_out="$TMP/$(echo "$name" | tr '/:' '__').json" \
-    --benchmark_out_format=json \
-    --benchmark_repetitions=1 </dev/null
-done
+# "$BENCH_BIN" --benchmark_list_tests --benchmark_filter="$FILTER" | while read -r name; do
+#     "$BENCH_BIN" \
+#     --benchmark_filter="^${name}\$" \
+#     --benchmark_out="$TMP/$(echo "$name" | tr '/:' '__').json" \
+#     --benchmark_out_format=json \
+#     --benchmark_repetitions=1 </dev/null
+# done
 
-jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/encodings_memory_usage.json"
-rm -rf "$TMP"
+# jq -s '{context: .[0].context, benchmarks: map(.benchmarks[])}' "$TMP"/*.json > "$OUT_DIR/encodings_memory_usage.json"
+# rm -rf "$TMP"
