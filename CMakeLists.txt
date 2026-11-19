@@ -23,6 +23,28 @@ set(BOOST_IOSTREAMS_ENABLE_BZIP2 OFF)
 set(BOOST_IOSTREAMS_ENABLE_LZMA  OFF)
 set(BOOST_IOSTREAMS_ENABLE_ZSTD  OFF)
 
+set(BOOST_INCLUDE_LIBRARIES
+    align
+    crc
+    date_time
+    filesystem
+    foreach
+    function
+    interprocess
+    iostreams
+    iterator
+    lambda
+    lexical_cast
+    program_options
+    random
+    range
+    smart_ptr
+    tuple
+    type_traits
+    unordered
+    utility
+)
+
 FetchContent_Declare(
     Boost
     URL https://github.com/boostorg/boost/releases/download/boost-1.92.0/boost-1.92.0-cmake.tar.xz
@@ -68,7 +90,7 @@ target_link_libraries(openfst PUBLIC ${CMAKE_DL_LIBS})
 FetchContent_Declare(
     simdjson
     GIT_REPOSITORY https://github.com/simdjson/simdjson.git
-    GIT_TAG        90adaa4aef486a1743dd888297c27cba64101f79 #
+    GIT_TAG        90adaa4aef486a1743dd888297c27cba64101f79
 )
 FetchContent_MakeAvailable(simdjson)
 
