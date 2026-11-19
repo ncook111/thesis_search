@@ -70,6 +70,7 @@ void create_index(const std::vector<std::string> &fields,
     all_segment_docid_modifiers[file_id] = std::move(segment_docid_modifiers);
   }
 
+  std::cout << "here\n";
   index_files(fields, index_dir, data_dir, enc_type, file_mappings_vec, all_segment_offsets, all_segment_docid_modifiers, num_threads, run_checks);
   
   Metadata metadata = Metadata::create(std::move(index_dir.string()), std::move(all_segment_offsets), std::move(all_segment_docid_modifiers), std::move(file_mappings_vec), enc_type);
