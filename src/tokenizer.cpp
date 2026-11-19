@@ -683,7 +683,6 @@ void Tokenizer::printStatistics() const {
   std::cout << "Total Date Tokens: " << d_tokens.size() << std::endl;
   std::cout << "Total Time Tokens: " << t_tokens.size() << std::endl;
   std::cout << "Total Ipv4 Tokens: " << ipv4_tokens.size() << std::endl;
-  std::cout << "Total Ipv6 Tokens: " << ipv6_tokens.size() << std::endl;
   std::cout << "Total True Boolean Tokens: " << t_bool_tokens.size() << std::endl;
   std::cout << "Total False Boolean Tokens: " << f_bool_tokens.size() << std::endl;
 }

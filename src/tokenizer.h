@@ -25,9 +25,8 @@ namespace TokenType {
     DATE = 4,
     TIME = 5,
     IPV4 = 6,
-    IPV6 = 7,
-    BOOLEAN = 8,
-    INVALID = 9,
+    BOOLEAN = 7,
+    INVALID = 8,
   };
 }
 
@@ -48,7 +47,6 @@ public:
   boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> d_tokens;
   boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> t_tokens;
   boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> ipv4_tokens;
-  boost::unordered_flat_map<uint64_t, std::map<uint32_t,std::vector<uint32_t>>> ipv6_tokens;
   
   // Map of boolean tokens for each field
   std::map<uint32_t, std::vector<uint32_t>> t_bool_tokens;
@@ -65,7 +63,6 @@ public:
   std::set<uint64_t> d_tokens_q;
   std::set<uint64_t> t_tokens_q;
   std::set<uint64_t> ipv4_tokens_q;
-  std::set<uint64_t> ipv6_tokens_q;
   bool t_bool_token_q = false;
   bool f_bool_token_q = false;
 

@@ -258,6 +258,7 @@ endif()
 
 add_executable(indexer src/indexer.cpp)
 target_link_libraries(indexer PRIVATE indexer_lib)
+set_target_properties(indexer PROPERTIES OUTPUT_NAME simdindex)
 
 include(CTest)
 
