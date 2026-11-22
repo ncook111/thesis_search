@@ -210,12 +210,13 @@ public:
 class U32FLSDecode : public benchmark::Fixture {
 public:
     std::vector<uint8_t> input;
+    std::vector<uint8_t> enc_num_blocks;
     size_t num_consumed;
     size_t num_blocks;
 
     void SetUp(::benchmark::State& state) {
         input.clear();
-        std::vector<uint8_t> enc_num_blocks = fls_encode_uint32_t(dataset(state.range(0)), input);
+        enc_num_blocks = fls_encode_uint32_t(dataset(state.range(0)), input);
         num_blocks = vb_decode_num<uint64_t>(enc_num_blocks, num_consumed);
     }
 
@@ -1368,7 +1369,7 @@ BENCHMARK_DEFINE_F(U32FLSDecode, cdec_fls)(benchmark::State& state) {
 
     read_mem_end(state, rss_before);
 
-    const double input_bytes = static_cast<double>(input.size());
+    const double input_bytes = static_cast<double>(input.size() + enc_num_blocks.size());
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["input_bytes"] = input_bytes;
