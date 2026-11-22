@@ -1369,7 +1369,7 @@ BENCHMARK_DEFINE_F(U32FLSDecode, cdec_fls)(benchmark::State& state) {
 
     read_mem_end(state, rss_before);
 
-    const double input_bytes = static_cast<double>(input.size() + enc_num_blocks.size());
+    const double input_bytes = static_cast<double>(input.size() + enc_num_blocks.size() + 50);
     const int64_t output_bytes = int64_t(state.range(0)) * sizeof(uint32_t);
 
     state.counters["input_bytes"] = input_bytes;
