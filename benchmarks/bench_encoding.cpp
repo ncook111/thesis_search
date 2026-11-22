@@ -682,7 +682,7 @@ BENCHMARK_DEFINE_F(U32Vec, cenc_fls)(benchmark::State& state) {
     read_mem_end(state, rss_before);
 
     const double input_bytes   = static_cast<double>(input.size() * sizeof(uint32_t));
-    const double encoded_bytes = static_cast<double>(encoded.size());
+    const double encoded_bytes = static_cast<double>(encoded.size() + num_blocks.size());
 
     state.counters["input_bytes"]   = input_bytes;
     state.counters["encoded_bytes"] = encoded_bytes;

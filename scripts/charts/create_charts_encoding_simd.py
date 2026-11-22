@@ -83,7 +83,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
     for stat in stats:
         title = f"{title_type} Throughput ({stat})"
         out = f"{RESULTS_DIR}/figures/encodings_warm/{chart_type}_throughput_{stat}.png"
-        data = df[df["stat"] == stat]
+        data = df[(df["stat"] == stat) & (df["size"] >= 1000)]
         throughput = data.pivot(index="size", columns="scheme", values="bytes_per_second").sort_index(axis=1) / 1e9 # Convert into GB/s
 
         with plt.rc_context({"font.size": FONT_SIZE}):
@@ -91,7 +91,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
             throughput.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="GB/s")
             
             #ax.set_title(title)
-            ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+            ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
             ax.minorticks_off()
             ax.grid(alpha=0.3)
             fig.tight_layout()
@@ -113,7 +113,7 @@ def plot_compression(df, type, key_title):
         compression.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="% of input")
         
         #ax.set_title(title)
-        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.minorticks_off()
         ax.grid(alpha=0.3)
         fig.tight_layout()
@@ -136,7 +136,7 @@ def plot_bits_int(df, type, key_title):
         bits_int.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="bits/int")
         
         #ax.set_title(title)
-        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.minorticks_off()
         ax.grid(alpha=0.3)
         fig.tight_layout()
@@ -162,7 +162,7 @@ def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type)
         fig, ax = plt.subplots(figsize=(10, 5))
         memory.plot.bar(ax=ax, rot=0, xlabel="Input Size", ylabel="Peak memory (MB)", logy=True)
         ax.legend(title=f"{key_title} Scheme", loc="upper left",
-                bbox_to_anchor=(1.01, 1), borderaxespad=0)
+                bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         
         ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
         ax.yaxis.set_minor_formatter(NullFormatter())

@@ -16,6 +16,8 @@ SCHEMES = {
 
 QUERY_TYPES = { "simple" : "Simple", "union" : "Union", "intersection" : "Intersection", "combination" : "Combination", "complex_combination" : "Complex Combination" }
 
+FILE_SIZES = { "small" : "Small", "medium" : "Medium", "large" : "Large" }
+
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
@@ -35,7 +37,7 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
         data.plot.bar(ax=ax, rot=0, title=chart_title,
                                      xlabel=xlabel, ylabel=ylabel)
     if legend_title:
-        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
 
     if zero_line:
         ax.axhline(0, color="black", linewidth=0.8)
@@ -71,7 +73,7 @@ def load_results(path):
             .rename_categories(SCHEMES)
     )
 
-    df["file_size"] = pd.Categorical(parts.str[1], categories=["small", "medium", "large"], ordered=True)
+    df["file_size"] = pd.Categorical(parts.str[1], ordered=True).rename_categories(FILE_SIZES)
 
     df["query_type"] = pd.Categorical(
         parts.str[2].map(QUERY_TYPES),
@@ -97,7 +99,7 @@ def load_results(path):
         df = pd.concat([g.mean().assign(stat="mean"),
                         g.median().assign(stat="median")]).reset_index()
 
-    df["file_size"] = pd.Categorical(df["file_size"], categories=["small", "medium", "large"], ordered=True)
+    df["file_size"] = pd.Categorical(df["file_size"], categories=["Small", "Medium", "Large"], ordered=True)
 
     all_cols = ["file_size", "scheme", "stat", "real_time", "throughput",
                 "index_size", "data_size", "dataset", "query_type", "partition_size", "thread_count", "peak_delta"]
@@ -105,7 +107,21 @@ def load_results(path):
 
 def plot_latency_by_query_type(df, file_size, folder_name):
     for stat in STATS:
-        title = f"Query Latency ({stat}, all datasets, {file_size})"
+        title = f"Query Latency ({stat}, All datasets, {file_size})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_latency_by_query_type.png"
+
+        data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
+
+        latency = data.pivot_table(index="query_type", columns="scheme", values="real_time",
+                                 aggfunc="mean", observed=True)
+        latency.columns = latency.columns.astype(str)
+
+        save_chart(out, latency, title, "Encoding Schemes", "Query Type", "Milliseconds")
+        save_table(out, latency, "Scheme", "Query Type")
+        
+def plot_latency_by_query_type(df, file_size, folder_name):
+    for stat in STATS:
+        title = f"Query Latency ({stat}, All datasets, {file_size})"
         out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_latency_by_query_type.png"
 
         data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
@@ -117,9 +133,25 @@ def plot_latency_by_query_type(df, file_size, folder_name):
         save_chart(out, latency, title, "Encoding Schemes", "Query Type", "Milliseconds")
         save_table(out, latency, "Scheme", "Query Type")
 
+def plot_latency_by_query_type_and_file_size(df, query_type, folder_name):
+    stats = ["median"]
+    for stat in stats:
+        title = f"Query Latency ({stat}, All datasets, {query_type})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{query_type}_latency_by_query_type_file_size.png"
+
+        data = df[(df["stat"] == stat) & (df["query_type"] == query_type)]
+
+        latency = data.pivot_table(index="file_size", columns="scheme",
+                                   values="real_time", aggfunc="mean", observed=True)
+        latency.columns = latency.columns.astype(str)
+        latency.index = latency.index.astype(str)
+
+        save_chart(out, latency, title, "Encoding Schemes", "Dataset Size", "Milliseconds")
+        save_table(out, latency, "Scheme", "Dataset Size")
+
 def plot_throughput_by_query_type(df, file_size, folder_name):
     for stat in STATS:
-        title = f"Query Throughput ({stat}, all datasets, {file_size})"
+        title = f"Query Throughput ({stat}, All datasets, {file_size})"
         out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_throughput_by_query_type.png"
 
         data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
@@ -133,7 +165,7 @@ def plot_throughput_by_query_type(df, file_size, folder_name):
 
 def plot_memory_usage_by_query_type(df, file_size, folder_name):
     for stat in STATS:
-        title = f"{stat.capitalize()} Peak Memory Usage During Search (all datasets, {file_size})"
+        title = f"{stat.capitalize()} Peak Memory Usage During Search (All datasets, {file_size})"
         out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_memory_by_query_type.png"
 
         data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
@@ -144,6 +176,21 @@ def plot_memory_usage_by_query_type(df, file_size, folder_name):
 
         save_chart(out, memory, title, "Encoding Schemes", "Query Type", "Peak Memory Increase (MB)")
         save_table(out, memory, "Scheme", "Query Type")
+        
+def plot_memory_usage_by_query_type_and_file_size(df, query_type, folder_name):
+    for stat in STATS:
+        title = f"{stat.capitalize()} Peak Memory Usage During Search (All datasets, {query_type})"
+        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{query_type}_memory_by_query_type_file_size.png"
+
+        data = df[(df["stat"] == stat) & (df["query_type"] == query_type)]
+
+        memory = data.pivot_table(index="file_size", columns="scheme", values="peak_delta",
+                                  aggfunc="mean", observed=True) / 1000000
+        memory.columns = memory.columns.astype(str)
+        memory.index = memory.index.astype(str)
+
+        save_chart(out, memory, title, "Encoding Schemes", "Dataset Size", "Peak Memory Increase (MB)")
+        save_table(out, memory, "Scheme", "Dataset Size")
 
 if __name__ == "__main__":
     for mode in ["warm", "cold"]:
@@ -154,12 +201,23 @@ if __name__ == "__main__":
         folder_name = f"search_elastic_{mode}"
         os.makedirs(f"{RESULTS_DIR}/figures/{folder_name}", exist_ok=True)
 
-        plot_latency_by_query_type(df, "small", folder_name)
-        plot_throughput_by_query_type(df, "small", folder_name)
-        plot_memory_usage_by_query_type(df, "small", folder_name)
-        plot_latency_by_query_type(df, "medium", folder_name)
-        plot_throughput_by_query_type(df, "medium", folder_name)
-        plot_memory_usage_by_query_type(df, "medium", folder_name)
-        plot_latency_by_query_type(df, "large", folder_name)
-        plot_throughput_by_query_type(df, "large", folder_name)
-        plot_memory_usage_by_query_type(df, "large", folder_name)
+        plot_latency_by_query_type(df, "Small", folder_name)
+        plot_throughput_by_query_type(df, "Small", folder_name)
+        plot_memory_usage_by_query_type(df, "Small", folder_name)
+        plot_latency_by_query_type(df, "Medium", folder_name)
+        plot_throughput_by_query_type(df, "Medium", folder_name)
+        plot_memory_usage_by_query_type(df, "Medium", folder_name)
+        plot_latency_by_query_type(df, "Large", folder_name)
+        plot_throughput_by_query_type(df, "Large", folder_name)
+        plot_memory_usage_by_query_type(df, "Large", folder_name)
+        
+        plot_latency_by_query_type_and_file_size(df, "Simple", folder_name)
+        plot_latency_by_query_type_and_file_size(df, "Union", folder_name)
+        plot_latency_by_query_type_and_file_size(df, "Intersection", folder_name)
+        plot_latency_by_query_type_and_file_size(df, "Combination", folder_name)
+        plot_latency_by_query_type_and_file_size(df, "Complex Combination", folder_name)
+        plot_memory_usage_by_query_type_and_file_size(df, "Simple", folder_name)
+        plot_memory_usage_by_query_type_and_file_size(df, "Union", folder_name)
+        plot_memory_usage_by_query_type_and_file_size(df, "Intersection", folder_name)
+        plot_memory_usage_by_query_type_and_file_size(df, "Combination", folder_name)
+        plot_memory_usage_by_query_type_and_file_size(df, "Complex Combination", folder_name)

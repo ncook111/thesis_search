@@ -37,7 +37,7 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
         data.plot.bar(ax=ax, rot=0, title=chart_title,
                                      xlabel=xlabel, ylabel=ylabel)
     if legend_title:
-        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
+        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
 
     if zero_line:
         ax.axhline(0, color="black", linewidth=0.8)

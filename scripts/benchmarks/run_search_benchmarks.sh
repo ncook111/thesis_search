@@ -81,12 +81,22 @@ mkdir -p "$OUT_DIR"
 # rm -rf "$TMP"
 
 
-## Search Latency Size Comparisons ###
-FILTER="IndexSearch/(small|medium|large)/csv/.*/partition_size:256/num_threads:1/cold:0/"
+## Search Latency Warm Cold Size Comparisons ###
+# FILTER="IndexSearch/(small|medium|large)/csv/.*/partition_size:256/num_threads:1/cold:0/"
+
+# "$BENCH_BIN" \
+# --benchmark_filter="$FILTER" \
+# --benchmark_out="$OUT_DIR/search_warm.json" \
+# --benchmark_out_format=json \
+# --benchmark_report_aggregates_only=true \
+# --benchmark_enable_random_interleaving=true \
+# --benchmark_repetitions="$reps" </dev/null
+
+FILTER="IndexSearch/(small|medium|large)/csv/.*/partition_size:256/num_threads:1/cold:1/"
 
 "$BENCH_BIN" \
 --benchmark_filter="$FILTER" \
---benchmark_out="$OUT_DIR/search_warm.json" \
+--benchmark_out="$OUT_DIR/search_cold.json" \
 --benchmark_out_format=json \
 --benchmark_report_aggregates_only=true \
 --benchmark_enable_random_interleaving=true \

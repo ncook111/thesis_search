@@ -60,10 +60,10 @@ simdindex_create_loop() {
     read -ra field_list <<< "$fields"
 
     # Baseline only needs the memory figure; the exit status of --help does not matter.
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --fields "${field_list[@]}" --threads 1
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --mode create --encoding "$scheme" -d "$src" -i "$dst" --fields "${field_list[@]}" --threads 1
     end=$("$DATE" +%s%N)
 
     elapsed=$(( (end - start) ))
@@ -178,21 +178,21 @@ simdindex_search_loop() {
 
     # Warm mode: one untimed run so every timed repetition reads from the page cache.
     if [[ "$cold" != true ]]; then
-      "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+      "$BUILD_DIR/simdindex" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
     fi
 
     for rep in $(seq 1 20); do
       # Cold mode: flush before every repetition. The baseline run that follows
-      # reloads the indexer binary, so only the index itself is read cold.
+      # reloads the simdindex binary, so only the index itself is read cold.
       if [[ "$cold" == true ]]; then
         drop_caches
       fi
 
       # Baseline only needs the memory figure; the exit status of --help does not matter.
-      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
+      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --help >/dev/null || true
       base_rss=$(tail -n1 "$TIMES")
       start=$("$DATE" +%s%N)
-      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+      "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
       end=$("$DATE" +%s%N)
 
       elapsed=$(( (end - start) ))
@@ -208,7 +208,7 @@ simdindex_search_loop() {
 elastic_search_loop() {
   # Called as: elastic_search_loop <size> <query type> <cold: true|false> <query for data set 1> ... <query for data set 4>
   local size="$1" query_type="$2" cold="$3" querys=("${@:4}")
-  local i rep start end elapsed max_rss base_rss es_pid resp rc
+  local i rep elapsed max_rss base_rss es_pid resp rc t
 
   es_pid="$(pgrep -f org.elasticsearch.bootstrap.Elasticsearch | head -n1 || true)"
   if [[ -z "$es_pid" ]]; then
@@ -258,12 +258,14 @@ elastic_search_loop() {
       base_rss="$(rss_kb "$es_pid" VmRSS)"
       echo 5 | sudo tee "/proc/$es_pid/clear_refs" >/dev/null
 
-      start=$("$DATE" +%s%N)
       resp="$(curl -sS --fail-with-body -u "elastic:$ES_LOCAL_PASSWORD" \
         -H 'Content-Type: application/json' \
         -X GET "http://127.0.0.1:9200/$idx_name/_count" \
-        -d "$query")" && rc=0 || rc=$?
-      end=$("$DATE" +%s%N)
+        -d "$query" \
+        -w '\n%{time_total}')" && rc=0 || rc=$?
+
+      t="${resp##*$'\n'}"
+      resp="${resp%$'\n'*}"
 
       if [[ "$rc" -ne 0 ]]; then
         echo "search failed for ${label} (curl exit $rc): $query" >&2
@@ -272,7 +274,7 @@ elastic_search_loop() {
         return 1
       fi
 
-      elapsed=$(( (end - start) ))
+      elapsed=$(( 10#${t/./} * 1000 ))
       max_rss="$(rss_kb "$es_pid" VmHWM)"
 
       printf '%s  {\n    "label": "%s",\n    "real_time": %s,\n    "time_unit": "ns",\n    "peak_delta": %s\n  }' \
@@ -384,9 +386,9 @@ rm -f "$SEARCH_SIMDINDEX_WARM" "$SEARCH_SIMDINDEX_COLD" "$SEARCH_ELASTIC_WARM" "
 rm -f "$SEARCH_OUT_DIR/search_simdindex.json" "$SEARCH_OUT_DIR/search_elastic.json"
 rm -rf "$BENCH_DATA"/tmp_indexed
 
-schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
+# schemes=(gvb pef fls s4_bpd4 s4_bpdm s8_bpd4 s8_bpdm s16_bpd4 s16_bpdm)
 
-sizes=(large)
+sizes=(small medium large)
 
 # for size in "${sizes[@]}"; do
 #   for scheme in "${schemes[@]}"; do
@@ -403,7 +405,7 @@ sizes=(large)
 # done
 # printf '\n]\n}\n' >> "$CREATION_SIMDINDEX"
 
-# query_types=(simple union intersection combination complex_combination)
+query_types=(simple union intersection combination complex_combination)
 
 # for cold in false true; do
 #   if [[ "$cold" == true ]]; then
@@ -425,29 +427,29 @@ sizes=(large)
 #   printf '\n]\n}\n' >> "$SEARCH_SIMDINDEX"
 # done
 
-# rm -rf "$BENCH_DATA"/tmp_indexed
+rm -rf "$BENCH_DATA"/tmp_indexed
 
-printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
-sep=""
-for size in "${sizes[@]}"; do
-  elastic_create_loop "$size" "${elastic_fields[@]}"
-done
-printf '\n]\n}\n' >> "$CREATION_ELASTIC"
-
-# for cold in false true; do
-#   if [[ "$cold" == true ]]; then
-#     SEARCH_ELASTIC="$SEARCH_ELASTIC_COLD"
-#   else
-#     SEARCH_ELASTIC="$SEARCH_ELASTIC_WARM"
-#   fi
-
-#   printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
-#   sep=""
-#   for size in "${sizes[@]}"; do
-#     for query_type in "${query_types[@]}"; do
-#       ref="elastic_${query_type}_queries[@]"
-#       elastic_search_loop "$size" "$query_type" "$cold" "${!ref}"
-#     done
-#   done
-#   printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
+# printf '{\n"benchmarks": [\n' > "$CREATION_ELASTIC"
+# sep=""
+# for size in "${sizes[@]}"; do
+#   elastic_create_loop "$size" "${elastic_fields[@]}"
 # done
+# printf '\n]\n}\n' >> "$CREATION_ELASTIC"
+
+for cold in false true; do
+  if [[ "$cold" == true ]]; then
+    SEARCH_ELASTIC="$SEARCH_ELASTIC_COLD"
+  else
+    SEARCH_ELASTIC="$SEARCH_ELASTIC_WARM"
+  fi
+
+  printf '{\n"benchmarks": [\n' > "$SEARCH_ELASTIC"
+  sep=""
+  for size in "${sizes[@]}"; do
+    for query_type in "${query_types[@]}"; do
+      ref="elastic_${query_type}_queries[@]"
+      elastic_search_loop "$size" "$query_type" "$cold" "${!ref}"
+    done
+  done
+  printf '\n]\n}\n' >> "$SEARCH_ELASTIC"
+done

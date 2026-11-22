@@ -29,7 +29,7 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel):
         data.plot.bar(ax=ax, rot=0, xlabel=xlabel, ylabel=ylabel)
         # ax.set_title(chart_title)
         ax.legend(title=legend_title, loc="upper left",
-                  bbox_to_anchor=(1.01, 1), borderaxespad=0)
+                  bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)
@@ -294,31 +294,56 @@ def plot_memory_usage_by_scheme(df, file_size, file_type, folder_name):
     save_chart_no_legend(out, memory, title, "Encoding Scheme", "Peak memory (MB)")
     save_table(out, memory, "Scheme", "Peak memory (MB)")
         
-def plot_throughput_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
-    # Average of all datasets, average of all schemes unless scheme set
-    tag = scheme or "all_schemes"
-    title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_throughput_by_thread_count.png"
+def plot_throughput_by_thread_count(df, file_size, file_type, folder_name):
+    # Mean throughput across all schemes (each scheme averaged over datasets first)
+    title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, mean of all schemes)"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_mean_throughput_by_thread_count.png"
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
     data["throughput"] = data["data_size"] / 1e6 / data["real_time"]
 
-    if scheme is None:
-        throughput = data.groupby(["thread_count", "scheme"])["throughput"].mean().unstack("scheme").sort_index()
-        save_chart(out, throughput, title, "Encoding Schemes", "Thread Count", "MB/s")
-        save_table(out, throughput, "Scheme", "Thread Count")
-        return
+    per_scheme = data.groupby(["thread_count", "scheme"])["throughput"].mean().unstack("scheme")
+    throughput = per_scheme.mean(axis=1).sort_index()
 
-    if scheme == "average":
-        title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, average of schemes)"
-    else:
-        data = data[data["scheme"] == SCHEMES.get(scheme, scheme)]
-        title = f"Index Creation Throughput By Thread Count ({file_size}, {file_type}, {SCHEMES.get(scheme, scheme)})"
-
-    throughput = data.groupby("thread_count")["throughput"].mean().sort_index()
     save_chart_no_legend(out, throughput, title, "Thread Count", "MB/s")
     save_table(out, throughput, "Thread Count", "MB/s")
 
+def plot_throughput_by_thread_count_vs_gvb(df, file_size, file_type, folder_name, scheme=None):
+    # % throughput increase over GVB + Delta, per thread count.
+    # Average of all datasets; all schemes unless scheme set.
+    tag = scheme or "all_schemes"
+    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_throughput_increase_by_thread_count_vs_gvb.png"
+    ylabel = f"% Increase vs GVB + Delta"
+    title_base = f"Index Creation Throughput Increase over GVB + Delta By Thread Count ({file_size}, {file_type}"
+
+    data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)].copy()
+    data["throughput"] = data["data_size"] / 1e6 / data["real_time"]
+
+    # Mean throughput per thread count and scheme (averaged over datasets)
+    throughput = data.groupby(["thread_count", "scheme"])["throughput"].mean().unstack("scheme").sort_index()
+
+    # % increase relative to the baseline at the same thread count
+    baseline = throughput["GVB + Delta"]
+    increase = (throughput.div(baseline, axis=0) - 1) * 100
+    increase = increase.drop(columns="GVB + Delta")  # always 0%, so drop it
+
+    if scheme is None:
+        save_chart(out, increase, title_base + ")", "Encoding Schemes", "Thread Count", ylabel)
+        save_table(out, increase, "Scheme", "Thread Count")
+        return
+
+    if scheme == "average":
+        series = increase.mean(axis=1)
+        title = title_base + ", average of schemes)"
+    else:
+        name = SCHEMES.get(scheme, scheme)
+        if name == "GVB + Delta":
+            raise ValueError("GVB + Delta is the baseline; its increase is always 0%")
+        series = increase[name]
+        title = title_base + f", {name})"
+
+    save_chart_no_legend(out, series, title, "Thread Count", ylabel)
+    save_table(out, series, "Thread Count", "% Increase")
 
 def plot_memory_usage_by_thread_count(df, file_size, file_type, folder_name, scheme=None):
     # Average of all datasets, average of all schemes unless scheme set
@@ -389,6 +414,7 @@ if __name__ == "__main__":
     df = pd.concat([df_0, df_1, df_2, df_3, df_4, df_5], ignore_index=True)
     
     plot_throughput_by_thread_count(df, "large", "CSV", "creation_multi_threaded")
+    plot_throughput_by_thread_count_vs_gvb(df, "large", "CSV", "creation_multi_threaded")
     plot_memory_usage_by_thread_count(df, "large", "CSV", "creation_multi_threaded")
     
     plot_compression_by_scheme(df_0, "large", "CSV", "creation_single_threaded", None)

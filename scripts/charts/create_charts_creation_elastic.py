@@ -19,6 +19,8 @@ FILE_TYPES = { "csv" : "CSV", "json" : "JSON", "logfmt" : "LOGFMT" }
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "results"
 
+FONT_SIZE = 14
+
 plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.tab20.colors[::2] + plt.cm.tab20.colors[1::2])
 
 def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, logy=False):
@@ -26,22 +28,23 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, logy=False)
         print(f"{out}: no data")
         return
     
-    fig, ax = plt.subplots(figsize=(8, 5))
-    
-    if logy:  
-        data.plot.bar(ax=ax, rot=0, title=chart_title,
-                         xlabel=xlabel, ylabel=ylabel, logy=True)
-        ax.yaxis.set_major_formatter(ScalarFormatter())
-    else:
-        data.plot.bar(ax=ax, rot=0, title=chart_title,
-                                 xlabel=xlabel, ylabel=ylabel)
+    with plt.rc_context({"font.size": FONT_SIZE}):
+        fig, ax = plt.subplots(figsize=(8, 5))
         
-    ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out, dpi=300)
-    plt.close(fig)
-    print(f"wrote chart {out}")
+        if logy:  
+            data.plot.bar(ax=ax, rot=0, title=chart_title,
+                            xlabel=xlabel, ylabel=ylabel, logy=True)
+            ax.yaxis.set_major_formatter(ScalarFormatter())
+        else:
+            data.plot.bar(ax=ax, rot=0, title=chart_title,
+                                    xlabel=xlabel, ylabel=ylabel)
+            
+        ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out, dpi=300)
+        plt.close(fig)
+        print(f"wrote chart {out}")
 
 def save_table(out, data, row_name, col_name):
     # Tabular output
