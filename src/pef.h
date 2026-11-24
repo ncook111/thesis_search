@@ -38,7 +38,7 @@ Pef_Header partitioned_ef_encode(succinct::bit_vector &bv,
   
   // Range check values for failure conditions
   if constexpr (sizeof(T) == sizeof(uint64_t)) {
-    if (n && nums.back() == UINT64_MAX)
+    if (n && nums.back() >= UINT64_MAX)
       throw std::out_of_range("PEF: Value will cause universe out of bounds");
   }
 

@@ -30,11 +30,11 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
 
     fig, ax = plt.subplots(figsize=(10, 5))
     if logy:  
-        data.plot.bar(ax=ax, rot=0, title=chart_title,
+        data.plot.bar(ax=ax, rot=0,
                              xlabel=xlabel, ylabel=ylabel, logy=True)
         ax.yaxis.set_major_formatter(ScalarFormatter())
     else:
-        data.plot.bar(ax=ax, rot=0, title=chart_title,
+        data.plot.bar(ax=ax, rot=0,
                                      xlabel=xlabel, ylabel=ylabel)
     if legend_title:
         ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
@@ -42,6 +42,7 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=F
     if zero_line:
         ax.axhline(0, color="black", linewidth=0.8)
 
+    ax.set_title(chart_title)
     ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out, dpi=300)

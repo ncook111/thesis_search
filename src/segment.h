@@ -8,21 +8,28 @@
 
 // Saved to the front of each segment file
 struct Segment_header {
-  uint64_t offsets_header_pos;
-  uint64_t alpha_fst_pos;
-  uint64_t float_fst_pos;
-  uint64_t fields_fst_pos;
+  uint64_t offsets_header_pos; // Position of offsets header
+  uint64_t alpha_fst_pos; // FST encoded alphabetical lexicon values
+  uint64_t float_fst_pos; // FST encoded float lexicon values
+  uint64_t fields_fst_pos; // FST encoded field name values
 };
 
 struct Offsets_header {
-  uint64_t alpha_offsets_header, alpha_id_map_header; // Docids
-  uint64_t num_offsets_header, num_id_map_header; // Docids
-  uint64_t neg_num_offsets_header, neg_num_id_map_header; // Docids
-  uint64_t float_offsets_header, float_id_map_header; // Docids
-  uint64_t date_offsets_header, date_id_map_header; // Docids
-  uint64_t time_offsets_header, time_id_map_header; // Docids
-  uint64_t ipv4_offsets_header, ipv4_id_map_header; // Docids
-  uint64_t entry_offsets_header; // File offsets for each document
+  uint64_t alpha_offsets_header; // Starting offset of the alphabetical postings lists
+  uint64_t alpha_id_map_header; // Maps an alphabetical tokenID to its postings list position, encoded with PEF
+  uint64_t num_offsets_header; // Positive integer postings lists
+  uint64_t num_id_map_header; // Maps a positive integer tokenID to its postings list position, encoded with PEF
+  uint64_t neg_num_offsets_header; // Negative integer postings lists
+  uint64_t neg_num_id_map_header; // Maps a negative integer tokenID to its postings list position, encoded with PEF
+  uint64_t float_offsets_header; // Float postings lists
+  uint64_t float_id_map_header; // Maps a float tokenID to its postings list position, encoded with PEF
+  uint64_t date_offsets_header; // Date postings lists
+  uint64_t date_id_map_header; // Maps a date tokenID to its postings list position, encoded with PEF
+  uint64_t time_offsets_header; // Time postings lists
+  uint64_t time_id_map_header; // Maps a time tokenID to its postings list position, encoded with PEF
+  uint64_t ipv4_offsets_header; // IPv4 postings lists
+  uint64_t ipv4_id_map_header; // Maps a ipv4 tokenID to its postings list position, encoded with PEF
+  uint64_t entry_offsets_header; // Stores the starting offset of each document with respect to its original data file
   uint64_t int_toks_header; // PEF encoded lexicon values
   uint64_t neg_int_toks_header; // PEF encoded lexicon values
   uint64_t date_toks_header; // PEF encoded lexicon values

@@ -19,19 +19,29 @@ const std::optional<Range> find_range_pef_id(const std::string &file_path,
 
   if (!header.n)
     return std::nullopt;
+
+  if (range.min > range.max)
+  return std::nullopt;
   
   const succinct::bit_vector bv = get_bv(file + offset + size, header, size_to_read - size);
 
   ds2i::partitioned_sequence<>::enumerator e(bv, 0, header.universe, header.n,
                                              ds2i::global_parameters());
 
+  const uint64_t max = std::min<uint64_t>(range.max, header.universe - 1);
+  if (static_cast<uint64_t>(range.min) > max)
+    return std::nullopt;
+
   const auto /*uint64_t*/ [pef_id_min, value_min] = e.next_geq(range.min);
-  auto /*uint64_t*/ [pef_id_max, value_max] = e.next_geq(range.max);
+  auto /*uint64_t*/ [pef_id_max, value_max] = e.next_geq(max);
 
   if (pef_id_min == header.n)
     return std::nullopt;
-  if (pef_id_max == header.n)
+  if (pef_id_max == header.n || value_max > static_cast<uint64_t>(max)) {
+    if (pef_id_max == pef_id_min)
+      return std::nullopt; // no value lies in [range.min, max]
     --pef_id_max;
+  }
 
   return std::make_optional(Range(static_cast<int64_t>(pef_id_min),
                                   static_cast<int64_t>(pef_id_max)));

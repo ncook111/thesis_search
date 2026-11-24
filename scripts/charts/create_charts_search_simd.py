@@ -25,7 +25,7 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
         return
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    data.plot.bar(ax=ax, rot=0, title=chart_title,
+    data.plot.bar(ax=ax, rot=0,
                   xlabel=xlabel, ylabel=ylabel, legend=bool(legend_title))
     if legend_title:
         ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
@@ -33,6 +33,7 @@ def save(out, data, chart_title, legend_title, xlabel, ylabel, zero_line=False):
     if zero_line:
         ax.axhline(0, color="black", linewidth=0.8)
 
+    ax.set_title(chart_title)
     ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out, dpi=300)
@@ -215,32 +216,6 @@ def plot_throughput_by_query_type(df, dataset, file_type, file_size):
         save(out, throughput, title, "Encoding Schemes", "Query Type", "Queries/s")
         save_table(out, throughput, "Scheme", "Query Type")
 
-def plot_throughput_by_scheme_threads(df, query_type, file_type, file_size):
-    qt_name = QUERY_TYPES.get(query_type, query_type)
-    qt_title = qt_name if query_type is not None else "all queries"
-    qt_file = query_type if query_type is not None else "all_queries"
-
-    title = f"Median Query Throughput by Thread Count ({qt_title}, all datasets, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_single_threaded/{qt_file}_all_datasets_{file_size}_{file_type}_throughput_by_scheme_threads.png"
-
-    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
-    if query_type is not None:
-        data = data[data["query_type"] == qt_name]
-        index = ["dataset", "thread_count"]
-    else:
-        index = ["dataset", "query_type", "thread_count"]
-
-    throughput = data.pivot(index=index, columns="scheme", values="throughput")
-    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
-    if throughput.empty:
-        return
-
-    inv = (1.0 / throughput).groupby(level="thread_count")
-    combined = (inv.count() / inv.sum()).T
-
-    save(out, combined, title, "Threads", "Encoding Scheme", "Queries/s")
-    save_table(out, combined.T, "Scheme", "Thread Count")
-
 def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
     qt_name = QUERY_TYPES.get(query_type, query_type)
     qt_title = qt_name if query_type is not None else "all queries"
@@ -267,6 +242,7 @@ def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
 
     save(out, combined, title, "Encoding Schemes", "Thread Count", "Queries/s")
     save_table(out, combined, "Scheme", "Thread Count")
+
     
 def plot_throughput_increase_by_query_type(df, dataset, file_type, file_size, baseline="gvb"):
     baseline_name = SCHEMES.get(baseline, baseline)
@@ -381,21 +357,21 @@ if __name__ == "__main__":
             plot_memory_usage_by_query_type_and_file_size(df, query_type, folder_path)
             plot_latency_p95_vs_median_by_query_type_and_file_size(df, query_type, folder_path)   
     
-    # # Multithreading
-    # df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_1.json")
-    # df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_2.json")
-    # df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_4.json")
-    # df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_8.json")
-    # df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_16.json")
-    # df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_32.json")
-    # df_mem = load_results(f"{RESULTS_DIR}/search/search_large_memory_usage_threads.json")
+    # Multithreading
+    df_1 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_1.json")
+    df_2 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_2.json")
+    df_3 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_4.json")
+    df_4 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_8.json")
+    df_5 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_16.json")
+    df_6 = load_results(f"{RESULTS_DIR}/search/search_multithreaded_32.json")
+    df_mem = load_results(f"{RESULTS_DIR}/search/search_large_memory_usage_threads.json")
     
-    # os.makedirs(f"{RESULTS_DIR}/figures/search_multi_threaded", exist_ok=True)
+    os.makedirs(f"{RESULTS_DIR}/figures/search_multi_threaded", exist_ok=True)
     
-    # query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
-    # df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
-    # for query in query_types:
-    #     for file_type in file_types:
-    #         for file_size in file_sizes:
-    #             plot_throughput_by_threads_schemes(df, query, file_type, file_size)
-    #             plot_memory_usage_by_threads(df_mem, file_type, file_size)
+    query_types = [None, "simple", "union", "intersection", "combination", "complex_combination"]
+    df = pd.concat([df_1, df_2, df_3, df_4, df_5, df_6], ignore_index=True)
+    for query in query_types:
+        for file_type in file_types:
+            for file_size in file_sizes:
+                plot_throughput_by_threads_schemes(df, query, file_type, file_size)
+                plot_memory_usage_by_threads(df_mem, file_type, file_size)

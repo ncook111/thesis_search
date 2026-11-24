@@ -133,9 +133,9 @@ const bool Tokenizer::is_ipv4(const std::string &s) const {
   return true;
 }
 
-const bool Tokenizer::is_bool(const std::string &s) const {
-  return (s == "true" || s == "false");
-}
+// const bool Tokenizer::is_bool(const std::string &s) const {
+//   return (s == "true" || s == "false");
+// }
 
 void Tokenizer::tokenize_file(const uint64_t segment_start, const uint64_t segment_size) {
   if (segment_size > std::numeric_limits<uint32_t>::max())
@@ -487,27 +487,27 @@ bool Tokenizer::handle_ipv4(std::string &curr_token, const uint32_t doc_id, cons
   return true;
 }
 
-bool Tokenizer::handle_bool(std::string  &curr_token, const uint32_t doc_id, const uint32_t field_id) {
-  if (!is_bool(curr_token)) 
-    return false;
+// bool Tokenizer::handle_bool(std::string  &curr_token, const uint32_t doc_id, const uint32_t field_id) {
+//   if (!is_bool(curr_token)) 
+//     return false;
 
-  // File tokenization
-  if (!query_mode) {
-    if (curr_token == "true") {
-      vector_inserter(t_bool_tokens[field_id], doc_id);
-    } else if (curr_token == "false") {
-       vector_inserter(f_bool_tokens[field_id], doc_id);
-    }
-  // String tokenization
-  } else {
-    if (curr_token == "true")
-      t_bool_token_q = true;
-    if (curr_token == "false")
-      f_bool_token_q = true;
-  }
+//   // File tokenization
+//   if (!query_mode) {
+//     if (curr_token == "true") {
+//       vector_inserter(t_bool_tokens[field_id], doc_id);
+//     } else if (curr_token == "false") {
+//        vector_inserter(f_bool_tokens[field_id], doc_id);
+//     }
+//   // String tokenization
+//   } else {
+//     if (curr_token == "true")
+//       t_bool_token_q = true;
+//     if (curr_token == "false")
+//       f_bool_token_q = true;
+//   }
 
-  return true;
-};
+//   return true;
+// };
 
 void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, const uint32_t field_id) {
   // Fast path
@@ -565,7 +565,7 @@ void Tokenizer::handle_alpha(std::string  &curr_token, const uint32_t doc_id, co
 }
 
 void Tokenizer::processToken(std::string &curr_token, const uint32_t doc_id, const uint32_t field_id) {
-  if (handle_bool(curr_token, doc_id, field_id)) return;
+  //if (handle_bool(curr_token, doc_id, field_id)) return;
 
   // Simple way to prevent other more expensive type checking in the below handle_x fuctions
   if (contains_alpha(curr_token)) {
@@ -585,7 +585,7 @@ void Tokenizer::processToken(std::string &curr_token, const uint32_t doc_id, con
 }
 
 void Tokenizer::processToken(std::string &curr_token) {
-  if (handle_bool(curr_token)) return;
+  //if (handle_bool(curr_token)) return;
   
   // Simple way to prevent other more expensive type checking in the below handle_x fuctions
   if (contains_alpha(curr_token)) {
@@ -683,8 +683,8 @@ void Tokenizer::printStatistics() const {
   std::cout << "Total Date Tokens: " << d_tokens.size() << std::endl;
   std::cout << "Total Time Tokens: " << t_tokens.size() << std::endl;
   std::cout << "Total Ipv4 Tokens: " << ipv4_tokens.size() << std::endl;
-  std::cout << "Total True Boolean Tokens: " << t_bool_tokens.size() << std::endl;
-  std::cout << "Total False Boolean Tokens: " << f_bool_tokens.size() << std::endl;
+  // std::cout << "Total True Boolean Tokens: " << t_bool_tokens.size() << std::endl;
+  // std::cout << "Total False Boolean Tokens: " << f_bool_tokens.size() << std::endl;
 }
 
 const std::vector<std::string> Tokenizer::getAlphaTokens() const {

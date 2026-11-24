@@ -27,7 +27,7 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel):
     with plt.rc_context({"font.size": FONT_SIZE}):
         fig, ax = plt.subplots(figsize=(8, 5))
         data.plot.bar(ax=ax, rot=0, xlabel=xlabel, ylabel=ylabel)
-        # ax.set_title(chart_title)
+        ax.set_title(chart_title)
         ax.legend(title=legend_title, loc="upper left",
                   bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.grid(alpha=0.3)
@@ -46,7 +46,7 @@ def save_chart_no_legend(out, data, chart_title, xlabel, ylabel):
     with plt.rc_context({"font.size": FONT_SIZE}):
         fig, ax = plt.subplots(figsize=(10, 5))
         data.plot.bar(ax=ax, rot=0, xlabel=xlabel, ylabel=ylabel, legend=False)
-        # ax.set_title(chart_title)
+        ax.set_title(chart_title)
         ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.05)

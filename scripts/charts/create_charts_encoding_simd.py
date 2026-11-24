@@ -90,7 +90,7 @@ def plot_throughput(df, chart_type, key_title, title_type):
             fig, ax = plt.subplots(figsize=(8, 5))
             throughput.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="GB/s")
             
-            #ax.set_title(title)
+            ax.set_title(title)
             ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
             ax.minorticks_off()
             ax.grid(alpha=0.3)
@@ -112,7 +112,7 @@ def plot_compression(df, type, key_title):
         fig, ax = plt.subplots(figsize=(8, 5))
         compression.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="% of input")
         
-        #ax.set_title(title)
+        ax.set_title(title)
         ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.minorticks_off()
         ax.grid(alpha=0.3)
@@ -135,7 +135,7 @@ def plot_bits_int(df, type, key_title):
         fig, ax = plt.subplots(figsize=(8, 5))
         bits_int.plot(ax=ax, marker="o", logx=True, xlabel="Number of Integers (uint32)", ylabel="bits/int")
         
-        #ax.set_title(title)
+        ax.set_title(title)
         ax.legend(title=f"{key_title} Schemes", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.minorticks_off()
         ax.grid(alpha=0.3)
@@ -167,7 +167,7 @@ def plot_memory_usage_by_size(df, type_filter, type_name, key_title, title_type)
         ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
         ax.yaxis.set_minor_formatter(NullFormatter())
 
-        #ax.set_title(title)
+        ax.set_title(title)
         ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out, dpi=300, bbox_inches="tight")

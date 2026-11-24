@@ -364,10 +364,8 @@ bool check_offsets_file_by_type(
   }
 
   // Check id_to_offsets
-  std::cout << "here1" << std::endl;
   std::cout << id_to_offset.size() << std::endl;
   std::vector<uint32_t> id_to_offset_from_file = get_id_offsets_from_file(file_name, type, enc_type);
-  std::cout << "here2" << std::endl;
   if (id_to_offset_from_file != id_to_offset) {
     std::cout << "id offsets incorrect\n";
     std::cout << "file\n";

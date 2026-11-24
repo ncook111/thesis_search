@@ -249,6 +249,9 @@ void search_index_by_range(FieldMap &offsets, const std::vector<std::string> &fi
 
         const std::vector<uint32_t> id_offsets_map =
             get_id_offsets_from_file(segment_path, type, metadata.get_enc_type());
+          
+        if (id_offsets_map.empty()) continue;
+        
         const FieldDocs offsets_cmp = get_tok_offsets_from_file(*ids, id_offsets_map, field_ids, segment_path, type, metadata.get_enc_type());
 
         // Reconstruct actual doc_ids using per-segment modifier value

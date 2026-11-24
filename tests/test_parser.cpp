@@ -510,11 +510,11 @@ TEST_F(parse_queries_sym_diff_test, test2) {
 /* test get_next_token */
 TEST(get_next_token_test, test1) {
     std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::STDQUERY, "hello"}, {QueryTokType::EQ, ""}, {QueryTokType::FIELD, ""}, {QueryTokType::COMPL, "!"}, {QueryTokType::INVALID, ""}};
-    ASSERT_EQ(get_next_token(in_tokens), std::make_pair(QueryTokType::INVALID, ""));
-    ASSERT_EQ(get_next_token(in_tokens), std::make_pair(QueryTokType::COMPL, "!"));
-    ASSERT_EQ(get_next_token(in_tokens), std::make_pair(QueryTokType::FIELD, ""));
-    ASSERT_EQ(get_next_token(in_tokens), std::make_pair(QueryTokType::EQ, ""));
-    ASSERT_EQ(get_next_token(in_tokens), std::make_pair(QueryTokType::STDQUERY, "hello"));
+    ASSERT_EQ(get_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::INVALID, "")));
+    ASSERT_EQ(get_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::COMPL, "!")));
+    ASSERT_EQ(get_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::FIELD, "")));
+    ASSERT_EQ(get_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::EQ, "")));
+    ASSERT_EQ(get_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::STDQUERY, "hello")));
     EXPECT_THAT(
         [&]() { get_next_token(in_tokens); },
         ::testing::ThrowsMessage<std::runtime_error>(::testing::HasSubstr("Tokens list is empty"))
@@ -525,15 +525,15 @@ TEST(get_next_token_test, test1) {
 /* test peak_next_token */
 TEST(peak_next_token_test, test1) {
     std::vector<std::pair<uint8_t, std::string>> in_tokens = {{QueryTokType::STDQUERY, "hello"}, {QueryTokType::EQ, ""}, {QueryTokType::FIELD, ""}, {QueryTokType::COMPL, "!"}, {QueryTokType::INVALID, ""}};
-    ASSERT_EQ(peak_next_token(in_tokens), std::make_pair(QueryTokType::INVALID, ""));
+    ASSERT_EQ(peak_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::INVALID, "")));
     in_tokens.pop_back();
-    ASSERT_EQ(peak_next_token(in_tokens), std::make_pair(QueryTokType::COMPL, "!"));
+    ASSERT_EQ(peak_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::COMPL, "!")));
     in_tokens.pop_back();
-    ASSERT_EQ(peak_next_token(in_tokens), std::make_pair(QueryTokType::FIELD, ""));
+    ASSERT_EQ(peak_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::FIELD, "")));
     in_tokens.pop_back();
-    ASSERT_EQ(peak_next_token(in_tokens), std::make_pair(QueryTokType::EQ, ""));
+    ASSERT_EQ(peak_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::EQ, "")));
     in_tokens.pop_back();
-    ASSERT_EQ(peak_next_token(in_tokens), std::make_pair(QueryTokType::STDQUERY, "hello"));
+    ASSERT_EQ(peak_next_token(in_tokens), (std::pair<uint8_t, std::string>(QueryTokType::STDQUERY, "hello")));
     in_tokens.pop_back();
     EXPECT_THAT(
         [&]() { peak_next_token(in_tokens); },

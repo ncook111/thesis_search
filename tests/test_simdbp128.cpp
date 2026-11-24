@@ -115,7 +115,7 @@ TEST(s8_bpdm_encode_decode_test_small, test3) {
 }
 #endif
 
-#if defined(SIMD_TARGET_AVX2)
+#if defined(SIMD_TARGET_AVX512BW)
 TEST(s16_bpd4_encode_decode_test_fuzzed, test1) {
     const std::vector<uint32_t> input = generate_rand_uint32_t_vec_dist(1000000);
     std::vector<uint32_t> input_copy(input);

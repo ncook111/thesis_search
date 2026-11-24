@@ -124,10 +124,10 @@ simdindex_create_loop() {
     dst="${out}/data_${i}"
 
     # Baseline only needs the memory figure; the exit status of --help does not matter.
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode create --encoding "$scheme" -d "$src" -i "$dst" --threads 1
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --mode create --encoding "$scheme" -d "$src" -i "$dst" --threads 1
     end=$("$DATE" +%s%N)
 
     elapsed=$(( (end - start) ))
@@ -153,22 +153,22 @@ simdindex_search_loop() {
 
   # Warm mode: one untimed run so every timed repetition reads from the page cache.
   if [[ "$cold" != true ]]; then
-    "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+    "$BUILD_DIR/simdindex" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
   fi
 
   # 20 repetitions of one query against one index, matching grep_search_loop.
   for i in $(seq 1 20); do
     # Cold mode: flush before every repetition. The baseline run that follows
-    # reloads the indexer binary, so only the index itself is read cold.
+    # reloads the simdindex binary, so only the index itself is read cold.
     if [[ "$cold" == true ]]; then
       drop_caches
     fi
 
     # Baseline only needs the memory figure; the exit status of --help does not matter.
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --help >/dev/null || true
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --help >/dev/null || true
     base_rss=$(tail -n1 "$TIMES")
     start=$("$DATE" +%s%N)
-    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/indexer" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
+    "$GTIME" -o "$TIMES" -f '%M' "$BUILD_DIR/simdindex" --mode search -i "$idx" --query "$query" --threads 1 >/dev/null
     end=$("$DATE" +%s%N)
 
     elapsed=$(( (end - start) ))

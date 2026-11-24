@@ -461,7 +461,7 @@ const Range get_range_query(const Tokenizer &tokens, const std::string &query, c
     // Form [a,]
   } else if (a.size()) {
     assert(range_tokens.size() == 1);
-    range = {static_cast<int64_t>(range_tokens[0]), INT32_MAX};
+    range = {static_cast<int64_t>(range_tokens[0]), std::numeric_limits<int64_t>::max()};
     // Form [,b]
   } else {
     assert(range_tokens.size() == 1);

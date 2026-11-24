@@ -32,13 +32,13 @@ def save_chart(out, data, chart_title, legend_title, xlabel, ylabel, logy=False)
         fig, ax = plt.subplots(figsize=(8, 5))
         
         if logy:  
-            data.plot.bar(ax=ax, rot=0, title=chart_title,
+            data.plot.bar(ax=ax, rot=0,
                             xlabel=xlabel, ylabel=ylabel, logy=True)
             ax.yaxis.set_major_formatter(ScalarFormatter())
         else:
-            data.plot.bar(ax=ax, rot=0, title=chart_title,
+            data.plot.bar(ax=ax, rot=0,
                                     xlabel=xlabel, ylabel=ylabel)
-            
+        ax.set_title(chart_title)   
         ax.legend(title=legend_title, loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0, frameon=False)
         ax.grid(alpha=0.3)
         fig.tight_layout()

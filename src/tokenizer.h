@@ -49,8 +49,8 @@ public:
   boost::unordered_flat_map<uint64_t, std::map<uint32_t, std::vector<uint32_t>>> ipv4_tokens;
   
   // Map of boolean tokens for each field
-  std::map<uint32_t, std::vector<uint32_t>> t_bool_tokens;
-  std::map<uint32_t, std::vector<uint32_t>> f_bool_tokens;
+  // std::map<uint32_t, std::vector<uint32_t>> t_bool_tokens;
+  // std::map<uint32_t, std::vector<uint32_t>> f_bool_tokens;
   
   // Denotes the start point file offset for all entries in the file being tokenized
   std::vector<uint32_t> entry_offsets; 
@@ -63,8 +63,8 @@ public:
   std::set<uint64_t> d_tokens_q;
   std::set<uint64_t> t_tokens_q;
   std::set<uint64_t> ipv4_tokens_q;
-  bool t_bool_token_q = false;
-  bool f_bool_token_q = false;
+  // bool t_bool_token_q = false;
+  // bool f_bool_token_q = false;
 
   std::vector<std::string> fields;
 
@@ -108,7 +108,7 @@ private:
   const bool is_float(const std::string &s) const;
   const bool is_pint(const std::string &s) const;
   const bool is_nint(const std::string &s) const;
-  const bool is_bool(const std::string &s) const;
+  // const bool is_bool(const std::string &s) const;
   const bool contains_alpha(const std::string &s) const;
   bool handle_pint(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   bool handle_nint(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
@@ -116,7 +116,7 @@ private:
   bool handle_date(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   bool handle_time(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   bool handle_ipv4(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
-  bool handle_bool(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
+  // bool handle_bool(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   void handle_alpha(std::string &curr_token, const uint32_t doc_id = 0, const uint32_t field_id = 0);
   inline void vector_inserter(std::vector<uint32_t> &vec, const uint32_t value);
 

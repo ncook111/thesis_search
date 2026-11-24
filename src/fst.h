@@ -109,55 +109,25 @@ template <class G> std::vector<std::string> get_strings_from_fst(const G &fst) {
 }
 
 template <class G>
-int64_t get_bound_from_fst(const G &fst, const float val, const bool bound) {
-  std::vector<std::vector<uint8_t>> all_float =
-      get_sequences_from_fst<std::vector<uint8_t>>(fst);
-  std::vector<float> float_vec;
-
-  for (const auto &fl : all_float) {
-    float_vec.push_back(from_bytes<float>(fl));
-  }
-
-  std::ranges::sort(float_vec);
-
-  const auto it = std::ranges::lower_bound(float_vec, val);
-
-  if (it == float_vec.end()) {
-    return float_vec.size() - 1;
-  } else {
-    if (!bound && it != float_vec.begin())
-      return get_id_from_fst(fst, to_bytes(*(it - 1)));
-    else
-      return get_id_from_fst(fst, to_bytes(*it));
-  }
-}
-
-template <class G>
 const std::optional<Range>
 get_id_range_from_fst(const G &fst, const std::pair<float, float> &range) {
   const auto [min, max] = range;
-  int64_t min_id, max_id;
+  if (min > max)
+    return std::nullopt;
 
-  if (min == -std::numeric_limits<float>::infinity())
-    min_id = 0;
-  else
-    min_id = get_id_from_fst(fst, to_bytes(min));
+  std::vector<float> vals;
+  for (const auto &bytes : get_sequences_from_fst<std::vector<uint8_t>>(fst))
+    vals.push_back(from_bytes<float>(bytes));
 
-  if (max == std::numeric_limits<float>::infinity())
-    max_id = get_sequences_from_fst<std::vector<uint8_t>>(fst).size() - 1;
-  else
-    max_id = get_id_from_fst(fst, to_bytes(max));
+  // Float ids are ranks in sorted order: the FST and the postings are both built from sorted_view(float_tokens)
+  std::ranges::sort(vals);
 
-  if (min_id == -1) {
-    min_id = get_bound_from_fst(fst, min, true);
-  }
+  const auto lo = std::ranges::lower_bound(vals, min); // first value >= min
+  const auto hi = std::ranges::upper_bound(vals, max); // first value > max
+  if (lo >= hi)
+    return std::nullopt; // no floats in this segment or within range [min, max]
 
-  if (max_id == -1) {
-    max_id = get_bound_from_fst(fst, max, false);
-  }
-  Range ret = {min_id, max_id};
-
-  return std::make_optional(Range(min_id, max_id));
+  return std::make_optional(Range(lo - vals.begin(), hi - vals.begin() - 1));
 }
 
 template <FstQueryType Q>
