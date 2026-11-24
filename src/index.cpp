@@ -102,7 +102,7 @@ void index_files(const std::vector<std::string> &fields,
   uint64_t num_segments = segment_tasks.size();
 
   std::cout << " Indexing " + std::to_string(file_mappings_vec.size()) + " File\\s:\n";
-
+  std::cout << "Number of Segments: " << num_segments << "\n";
   const size_t n_threads = std::min<size_t>(num_segments, num_threads);
   std::cout << "  Threads Utilized: " << n_threads << "\n";
   std::cout << "\r  Processed: " << "0.00%" << std::flush;
