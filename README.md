@@ -75,12 +75,13 @@ The dataset indexed above contains review data from Amazon. A search for all doc
 If a path to the original data is not provided, the command will return the count of matching documents. In order to return all matching documents `--data sample_datasets/data_1` can be included in the above command. The maxiumum number of threads utilised during search can be specified in the same way as during index creation. However, as the input datasets are smaller than the default partition size, the `--threads` option will have no effect. An output file can also be specified using `--output sample_output.txt`
 ```
 ./build/simdindex --mode search --index sample_index --data sample_datasets/data_1 --query '[*] = "game of thrones" & [overall] = "5.0"' --threads 4 --output sample_output.txt
+cat sample_output.txt
 ```
 
 Query commands are comprised of a field_name, enclosed in square brackets, followed by a term. Terms can consist of alphabetical strings and numbers, such as "hello", "25", "192.168.0.1". The type of the term does not need to be defined, as the query engines tokenizer will automatically deduce it. Multiple terms can also be chained together, such as "television book". This will not match the exact phrase as written, but will instead match the union of the two terms. Phrase matching is not supported. Range terms can also be used, denoted by wrapping the term in curly brackets instead of quotation marks. Examples are {1,5}, {0.5,} {,99} which are equivalent to matching values within the ranges 1 to 5 inclusive, &ge; 0.5, and &le; 99
 
 ```
-./build/simdindex --mode search --index sample_index --query '[*] = "game of thrones" & [overall] = {1.0,3.0}'
+./build/simdindex --mode search --index sample_index --query '[*] = "book" & [overall] = {1.0,4.0}'
 ```
 
 ### Index Updating

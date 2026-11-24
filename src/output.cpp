@@ -54,6 +54,8 @@ void entries_to_cout(const std::string &file_name, const std::vector<uint64_t> &
       std::cout.write(&data_file[*it], size);
       std::cout << '\n';
     }
+  } else {
+    std::cout << "  Contains no matching documents\n";
   }
 }
 
@@ -65,6 +67,8 @@ void entries_to_file(std::ofstream &output_file, const std::string &file_name, c
       output_file.write(&data_file[*it], size);
       output_file << '\n';
     }
+  } else {
+    output_file << "  Contains no matching documents\n";
   }
 
   output_file << '\n';

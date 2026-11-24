@@ -102,7 +102,6 @@ void index_files(const std::vector<std::string> &fields,
   uint64_t num_segments = segment_tasks.size();
 
   std::cout << " Indexing " + std::to_string(file_mappings_vec.size()) + " File\\s:\n";
-  std::cout << "Number of Segments: " << num_segments << "\n";
   const size_t n_threads = std::min<size_t>(num_segments, num_threads);
   std::cout << "  Threads Utilized: " << n_threads << "\n";
   std::cout << "\r  Processed: " << "0.00%" << std::flush;
@@ -165,10 +164,6 @@ void update_index(const std::vector<std::string> &fields,
 
   Metadata metadata = Metadata::read(index_dir);
 
-  for (auto &f : metadata.get_file_mappings()) {
-    std::cout << "existing: " << f << std::endl;
-  }
-
   // Get list of files currently indexed
   std::vector<std::string> files_indexed = metadata.get_file_mappings();
 
@@ -187,9 +182,6 @@ void update_index(const std::vector<std::string> &fields,
     if (std::ranges::find(files_indexed, name) == files_indexed.end())
       new_files.push_back(name);
   }
-
-  for (auto &f : new_files) std::cout << "New file: " << f << '\n';
-
 
   std::vector<std::string> file_mappings_vec = metadata.get_file_mappings();
   std::vector<std::vector<uint64_t>> all_segment_offsets = metadata.get_all_segment_offsets();
@@ -226,7 +218,6 @@ void update_index(const std::vector<std::string> &fields,
   // Add in new files
   uint64_t file_id = num_existing_files;
   for (auto &f : new_files) {
-    std::cout << data_dir.string() + '/' + f << '\n';
     file_mappings_vec[file_id] = f;
     partition_file(data_dir / f, 0, PARTITION_SIZE, all_segment_offsets[file_id], all_segment_docid_modifiers[file_id]);
     if (all_segment_offsets[file_id].size() < 2) { // Empty file
