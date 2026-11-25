@@ -28,7 +28,7 @@ cmake --build build
 Unless running a high end x86 CPU with support for AVX-512 run:
 ```
 cmake -S . -B build -DSIMD_TARGET=avx2
-cmake --build build
+cmake --build build --parallel
 ```
 
 # Tests
@@ -87,7 +87,7 @@ Query commands are comprised of a field_name, enclosed in square brackets, follo
 ### Index Updating
 Indexes can be updated to reflected additional files added to the original source folder, or new documents appended to already indexed source files. New files added must contain identical fields to any existing indexed data. This repo contains sample update files for each of the supplied datasets. Copy them into the dataset folders using the command:
 ```
-cp -r sample_update_data/ sample_datasets/
+cp -r sample_update_data/. sample_datasets/
 ```
 Next, an index update can be triggered using the command:
 ```
@@ -106,9 +106,9 @@ Each index includes corruption detection. It can be performed using the followin
 ```
 
 # Benchmarks
-In order to the run all the benchmarks, the full datasets must be downloaded from the aforementioned S3 bucket: <https://s3-thesis.s3.ap-southeast-2.amazonaws.com/compressed/all_input_data.tar.gz>
+In order to the run all the benchmarks, the full datasets must be downloaded from the aforementioned S3 bucket: <https://s3-thesis.s3.ap-southeast-2.amazonaws.com/compressed/all_input_data.tar>. This tar contains three individually compressed folders, one containing the full datasets formatted as CSV, JSONL and LOGFMT. The uncompressed size of each of them is around 80GB. They need to be placed into the `\benchmarks\bench_data\all_input_data` folder.
 
-The benchmarks directory contain a number of C++ benchmarks utilising Googles Benchmark framework. For ease-of-use, the full benchmark suite was separated into a number of bash scripts, that run a smaller subset of benchmarks, outputting their results into the results directory.
+The benchmarks directory contain a number of C++ benchmarks utilising Googles Benchmark framework. For ease-of-use, the full benchmark suite was separated into a number of bash scripts, that run a smaller subset of benchmarks outputting their results into the results directory.
 
   | Benchmark | Description | Command |
   |---|---|---|

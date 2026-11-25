@@ -207,11 +207,10 @@ def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
         index = ["dataset", "query_type", "thread_count"]
 
     throughput = data.pivot(index=index, columns="scheme", values="throughput")
-    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
+    throughput = throughput.dropna()
     if throughput.empty:
         return
 
-    # Each (dataset[, query_type]) cell run once, one after another, per thread count
     inv = (1.0 / throughput).groupby(level="thread_count")
     combined = inv.count() / inv.sum()   # rows = thread counts, cols = schemes
 
@@ -252,7 +251,7 @@ def plot_memory_usage_by_threads(df, file_type, file_size):
 
     data = df[(df["file_size"] == file_size) & (df["file_type"] == file_type)]
 
-    # Arithmetic mean across datasets, query types and schemes, bytes -> MiB
+    # Arithmetic mean across datasets, query types and schemes, bytes
     memory = (data.groupby("thread_count")["peak_delta"].mean() / (1024 ** 2)).to_frame("peak")
 
     save(out, memory, title, None, "Thread Count", "Peak Memory Increase (MiB)")

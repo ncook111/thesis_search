@@ -279,7 +279,6 @@ def plot_throughput_by_thread_count(df, file_size, file_type, folder_name):
 
 def plot_throughput_by_thread_count_vs_gvb(df, file_size, file_type, folder_name, scheme=None):
     # % throughput increase over GVB + Delta, per thread count.
-    # Average of all datasets; all schemes unless scheme set.
     tag = scheme or "all_schemes"
     out = f"{RESULTS_DIR}/figures/{folder_name}/{file_size}_{file_type}_{tag}_throughput_increase_by_thread_count_vs_gvb.png"
     ylabel = f"% Increase vs GVB + Delta"

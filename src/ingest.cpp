@@ -95,7 +95,7 @@ int parse_options(po::options_description &desc, po::variables_map &vm, const in
     ("mode,m", po::value<std::string>(), "set operation mode [create/update/search/verify] or [c/u/s/v]")
     ("partition,p", po::value<uint32_t>(), "set partition size [create] or [c]")
     ("threads,t", po::value<uint32_t>(), "set number of threads to utilise [create/update/search] or [c/u/s]")
-    ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef]")
+    ("encoding,e", po::value<std::string>(), "set encoding variant [gvb/pef/fls/s4_bpd4/s4_bpdm/s8_bpd4/s8_bpdm/s16_bpd4/s16_bpdm]")
     ("data-path,d", po::value<std::string>(), "input path, only required if mode=create/update, or if original output desired when mode=search")
     ("index-path,i", po::value<std::string>(), "index path")
     ("fields,f", po::value<std::vector<std::string>>()->multitoken(), "fields to index from the input data, optional")
