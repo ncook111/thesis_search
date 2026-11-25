@@ -1,0 +1,100 @@
+{
+"benchmarks": [
+  {
+    "label": "elastic,small,0",
+    "real_time": 54333333804,
+    "time_unit": "ns",
+    "peak_delta": 842027008,
+    "index_size": 530421737,
+    "data_size": 732849241
+  },
+  {
+    "label": "elastic,small,1",
+    "real_time": 7330079206,
+    "time_unit": "ns",
+    "peak_delta": 100401152,
+    "index_size": 186148857,
+    "data_size": 539621476
+  },
+  {
+    "label": "elastic,small,2",
+    "real_time": 100225213715,
+    "time_unit": "ns",
+    "peak_delta": 1124749312,
+    "index_size": 358915531,
+    "data_size": 1507246977
+  },
+  {
+    "label": "elastic,small,3",
+    "real_time": 7468198992,
+    "time_unit": "ns",
+    "peak_delta": 115142656,
+    "index_size": 165322022,
+    "data_size": 532665960
+  },
+  {
+    "label": "elastic,medium,0",
+    "real_time": 128526192880,
+    "time_unit": "ns",
+    "peak_delta": 639516672,
+    "index_size": 1393815097,
+    "data_size": 3039515998
+  },
+  {
+    "label": "elastic,medium,1",
+    "real_time": 115420520621,
+    "time_unit": "ns",
+    "peak_delta": 706088960,
+    "index_size": 758805275,
+    "data_size": 2161915224
+  },
+  {
+    "label": "elastic,medium,2",
+    "real_time": 392720353845,
+    "time_unit": "ns",
+    "peak_delta": 1228001280,
+    "index_size": 1180183970,
+    "data_size": 6016937539
+  },
+  {
+    "label": "elastic,medium,3",
+    "real_time": 92936686942,
+    "time_unit": "ns",
+    "peak_delta": 238100480,
+    "index_size": 1046027072,
+    "data_size": 2136219828
+  },
+  {
+    "label": "elastic,large,0",
+    "real_time": 854753146827,
+    "time_unit": "ns",
+    "peak_delta": 5755043840,
+    "index_size": 1944503691,
+    "data_size": 15809272850
+  },
+  {
+    "label": "elastic,large,1",
+    "real_time": 136407282947,
+    "time_unit": "ns",
+    "peak_delta": 1930313728,
+    "index_size": 4513541356,
+    "data_size": 11458943986
+  },
+  {
+    "label": "elastic,large,2",
+    "real_time": 2077244771663,
+    "time_unit": "ns",
+    "peak_delta": 3355574272,
+    "index_size": 4515103806,
+    "data_size": 29430801085
+  },
+  {
+    "label": "elastic,large,3",
+    "real_time": 98113239223,
+    "time_unit": "ns",
+    "peak_delta": 2253639680,
+    "index_size": 1868919017,
+    "data_size": 11342587631
+  }
+]
+}

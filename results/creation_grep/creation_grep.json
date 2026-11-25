@@ -1,0 +1,196 @@
+{
+"benchmarks": [
+  {
+    "label": "lz4,small,csv,0",
+    "real_time": 1336484866,
+    "time_unit": "ns",
+    "peak_delta": 6807552,
+    "index_size": 298555401,
+    "data_size": 536869432
+  },
+  {
+    "label": "lz4,small,csv,1",
+    "real_time": 751008795,
+    "time_unit": "ns",
+    "peak_delta": 5246976,
+    "index_size": 134342736,
+    "data_size": 536866994
+  },
+  {
+    "label": "lz4,small,csv,2",
+    "real_time": 812225200,
+    "time_unit": "ns",
+    "peak_delta": 5632000,
+    "index_size": 149700826,
+    "data_size": 536870887
+  },
+  {
+    "label": "lz4,small,csv,3",
+    "real_time": 786582903,
+    "time_unit": "ns",
+    "peak_delta": 5242880,
+    "index_size": 118936369,
+    "data_size": 536864491
+  },
+  {
+    "label": "gzip,small,csv,0",
+    "real_time": 22484832994,
+    "time_unit": "ns",
+    "peak_delta": 458752,
+    "index_size": 191172109,
+    "data_size": 536869432
+  },
+  {
+    "label": "gzip,small,csv,1",
+    "real_time": 8222316561,
+    "time_unit": "ns",
+    "peak_delta": 327680,
+    "index_size": 92225531,
+    "data_size": 536866994
+  },
+  {
+    "label": "gzip,small,csv,2",
+    "real_time": 9808391328,
+    "time_unit": "ns",
+    "peak_delta": 524288,
+    "index_size": 98116251,
+    "data_size": 536870887
+  },
+  {
+    "label": "gzip,small,csv,3",
+    "real_time": 8209067434,
+    "time_unit": "ns",
+    "peak_delta": 270336,
+    "index_size": 77310983,
+    "data_size": 536864491
+  },
+  {
+    "label": "lz4,small,json,0",
+    "real_time": 1584808529,
+    "time_unit": "ns",
+    "peak_delta": 6434816,
+    "index_size": 311852128,
+    "data_size": 732849215
+  },
+  {
+    "label": "lz4,small,json,1",
+    "real_time": 739666279,
+    "time_unit": "ns",
+    "peak_delta": 5238784,
+    "index_size": 132489101,
+    "data_size": 539621450
+  },
+  {
+    "label": "lz4,small,json,2",
+    "real_time": 1365478856,
+    "time_unit": "ns",
+    "peak_delta": 4861952,
+    "index_size": 163769221,
+    "data_size": 1507246951
+  },
+  {
+    "label": "lz4,small,json,3",
+    "real_time": 771682914,
+    "time_unit": "ns",
+    "peak_delta": 5083136,
+    "index_size": 118153641,
+    "data_size": 532665934
+  },
+  {
+    "label": "gzip,small,json,0",
+    "real_time": 21885184251,
+    "time_unit": "ns",
+    "peak_delta": 524288,
+    "index_size": 203779433,
+    "data_size": 732849215
+  },
+  {
+    "label": "gzip,small,json,1",
+    "real_time": 8313657603,
+    "time_unit": "ns",
+    "peak_delta": 270336,
+    "index_size": 92066135,
+    "data_size": 539621450
+  },
+  {
+    "label": "gzip,small,json,2",
+    "real_time": 11737989931,
+    "time_unit": "ns",
+    "peak_delta": 516096,
+    "index_size": 109514103,
+    "data_size": 1507246951
+  },
+  {
+    "label": "gzip,small,json,3",
+    "real_time": 8070010862,
+    "time_unit": "ns",
+    "peak_delta": 393216,
+    "index_size": 76811145,
+    "data_size": 532665934
+  },
+  {
+    "label": "lz4,small,logfmt,0",
+    "real_time": 1550869893,
+    "time_unit": "ns",
+    "peak_delta": 6397952,
+    "index_size": 307583846,
+    "data_size": 675911594
+  },
+  {
+    "label": "lz4,small,logfmt,1",
+    "real_time": 821436584,
+    "time_unit": "ns",
+    "peak_delta": 5271552,
+    "index_size": 141019614,
+    "data_size": 592493161
+  },
+  {
+    "label": "lz4,small,logfmt,2",
+    "real_time": 1231829361,
+    "time_unit": "ns",
+    "peak_delta": 4947968,
+    "index_size": 156719130,
+    "data_size": 1210817799
+  },
+  {
+    "label": "lz4,small,logfmt,3",
+    "real_time": 908667311,
+    "time_unit": "ns",
+    "peak_delta": 5099520,
+    "index_size": 126466172,
+    "data_size": 608433708
+  },
+  {
+    "label": "gzip,small,logfmt,0",
+    "real_time": 22475917717,
+    "time_unit": "ns",
+    "peak_delta": 647168,
+    "index_size": 200585259,
+    "data_size": 675911594
+  },
+  {
+    "label": "gzip,small,logfmt,1",
+    "real_time": 8660061562,
+    "time_unit": "ns",
+    "peak_delta": 327680,
+    "index_size": 94192907,
+    "data_size": 592493161
+  },
+  {
+    "label": "gzip,small,logfmt,2",
+    "real_time": 11166100156,
+    "time_unit": "ns",
+    "peak_delta": 458752,
+    "index_size": 105624742,
+    "data_size": 1210817799
+  },
+  {
+    "label": "gzip,small,logfmt,3",
+    "real_time": 8739244801,
+    "time_unit": "ns",
+    "peak_delta": 393216,
+    "index_size": 81409770,
+    "data_size": 608433708
+  }
+]
+}
