@@ -62,7 +62,7 @@ The `--encoding` values which are supported, and the `-DSIMD_TARGET` required to
 
 Optionally, the partition size used when creating the index can be set using --partition \<size in mb>, and max thread utilisation can be set with --threads <# threads>
 
-The datasets contained within the repo are too small to trigger partitioning or multi-threading using default settings. Larger versions of these datasets, as well as copies formatted as JSON and LOGFMT, can be downloaded from an S3 bucket here: <https://s3-thesis.s3.ap-southeast-2.amazonaws.com/compressed/all_input_data.tar.gz>. Many of the larger versions of these datasets contain multiple files. This is supported by SIMDIndex, as long as each of the files are formatted using the same CSV, JSON or LOGFMT schema.
+The datasets contained within the repo are too small to trigger partitioning or multi-threading using default settings. Larger versions of these datasets, as well as copies formatted as JSON and LOGFMT, can be downloaded from an S3 bucket here: <https://s3-thesis.s3.ap-southeast-2.amazonaws.com/compressed/all_input_data.tar>. Many of the larger versions of these datasets contain multiple files. This is supported by SIMDIndex, as long as each of the files are formatted using the same CSV, JSON or LOGFMT schema.
 
 Multi-threaded utilisation is based on the number of partitions created from the input files. A dataset size of 1GB, and a partition size of 100MB would result in a maximum of 10 threads being utilised if supported by the hardware.
 
