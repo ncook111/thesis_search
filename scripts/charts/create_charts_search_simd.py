@@ -190,31 +190,6 @@ def plot_latency_p95_vs_median_by_query_type_and_file_size(df, query_type, folde
 
     save(out, diff, title, "Encoding Schemes", "Dataset Size", "% Higher p95 Latency than Median")
     save_table(out, diff, "Scheme", "Dataset Size")
-    
-def plot_throughput_by_query_type(df, dataset, file_type, file_size):
-    if dataset is None:
-        ds_title, ds_file = "all datasets", "all_datasets"
-    else:
-        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
-
-    stats = ["median"]
-    for stat in stats:
-        title = f"Query Throughput ({stat}, {ds_title}, {file_size}, {file_type})"
-        out = f"{RESULTS_DIR}/figures/search_single_threaded/{ds_file}_{stat}_{file_size}_{file_type}_throughput_by_query.png"
-        data = df[df["stat"] == stat].copy()
-        if dataset is not None:
-            data = data[data["dataset"] == dataset]
-        data = data[(data["file_size"] == file_size) & (data["file_type"] == file_type)]
-
-        throughput = data.pivot(index=["query_type", "dataset"], columns="scheme", values="throughput")
-        if dataset is None:
-            throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
-
-        inv = (1.0 / throughput).groupby(level="query_type", observed=True)
-        throughput = inv.count() / inv.sum()
-
-        save(out, throughput, title, "Encoding Schemes", "Query Type", "Queries/s")
-        save_table(out, throughput, "Scheme", "Query Type")
 
 def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
     qt_name = QUERY_TYPES.get(query_type, query_type)
@@ -242,64 +217,6 @@ def plot_throughput_by_threads_schemes(df, query_type, file_type, file_size):
 
     save(out, combined, title, "Encoding Schemes", "Thread Count", "Queries/s")
     save_table(out, combined, "Scheme", "Thread Count")
-
-    
-def plot_throughput_increase_by_query_type(df, dataset, file_type, file_size, baseline="gvb"):
-    baseline_name = SCHEMES.get(baseline, baseline)
-    if dataset is None:
-        ds_title, ds_file = "all datasets", "all_datasets"
-    else:
-        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
-
-    title = f"Extra Throughput vs {baseline_name} (median, {ds_title}, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_single_threaded/{ds_file}_{file_size}_{file_type}_extra_throughput_vs_{baseline}_by_query.png"
-
-    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
-    if dataset is not None:
-        data = data[data["dataset"] == dataset]
-
-    throughput = data.pivot(index=["query_type", "dataset"], columns="scheme", values="throughput")
-    throughput = throughput.dropna()   # only cells every scheme has, so the workloads match
-    if throughput.empty or baseline_name not in throughput.columns:
-        print(f"{out}: no data")
-        return
-
-    # per query type: throughput assuming every dataset runs once, one after another
-    inv = (1.0 / throughput).groupby(level="query_type", observed=True)
-    combined = inv.count() / inv.sum()
-
-    extra = combined.sub(combined[baseline_name], axis=0).drop(columns=baseline_name)
-
-    save(out, extra, title, "Encoding Schemes", "Query Type", f"Extra Queries/s vs {baseline_name}", True)
-    save_table(out, extra, "Scheme", "Query Type")
-
-def plot_latency_decrease_by_query_type(df, dataset, file_type, file_size, baseline="gvb"):
-    baseline_name = SCHEMES.get(baseline, baseline)
-    if dataset is None:
-        ds_title, ds_file = "all datasets (mean)", "all_datasets"
-    else:
-        ds_title, ds_file = f"dataset {dataset}", f"dataset_{dataset}"
-
-    title = f"Latency Decrease vs {baseline_name} (median, {ds_title}, {file_size}, {file_type})"
-    out = f"{RESULTS_DIR}/figures/search_single_threaded/{ds_file}_{file_size}_{file_type}_decrease_vs_{baseline}_by_query.png"
-
-    data = df[(df["stat"] == "median") & (df["file_size"] == file_size) & (df["file_type"] == file_type)]
-    if dataset is not None:
-        data = data[data["dataset"] == dataset]
-
-    latency = data.pivot(index=["query_type", "dataset"], columns="scheme", values="real_time")
-    if latency.empty or baseline_name not in latency.columns:
-        print(f"{out}: no data")
-        return
-
-    # % decrease per dataset, then averaged across datasets for each query type
-    base = latency[baseline_name]
-    decrease = latency.rsub(base, axis=0).div(base, axis=0) * 100
-    decrease = decrease.groupby(level="query_type", observed=True).mean()
-    decrease = decrease.drop(columns=baseline_name).dropna(how="all")
-
-    save(out, decrease, title, "Encoding Schemes", "Query Type", f"% Lower Latency than {baseline_name}", True)
-    save_table(out, decrease, "Scheme", "Query Type")
 
 def plot_memory_usage_by_query(df, file_type, file_size):
     title = f"Median Peak Memory Usage During Search (all datasets, {file_size}, {file_type})"

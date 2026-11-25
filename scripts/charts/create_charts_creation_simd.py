@@ -132,22 +132,7 @@ def plot_compression_by_file_type(df, file_size, folder_name, dataset=None):
  
     save_chart(out, compression, title, "Encoding Schemes", "File Type", "% of input")
     save_table(out, compression, "Scheme", "File Type")
-    
-def plot_compression_by_file_size(df, file_type, folder_name, dataset=None):
-    title = f"Index Compression By File Size ({file_type})"
-    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_type}_compression_by_file_size.png"
-    
-    data = df[df["file_type"] == file_type].copy()
-    if dataset is not None:
-        data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_compression.png"
-        title = f"Index Compression ({file_type}, dataset_{dataset})"
- 
-    data = data.assign(compression=data["index_size"] / data["data_size"])
-    compression = (data.groupby(["file_size", "scheme"], observed=True)["compression"].mean() * 100).unstack("scheme")
- 
-    save_chart(out, compression, title, "Encoding Schemes", "Dataset Size", "% of input")
-    save_table(out, compression, "Scheme", "Dataset Size")
+
 
 def plot_compression_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Compression By Dataset ({file_size}, {file_type})"
@@ -176,22 +161,6 @@ def plot_throughput_by_file_type(df, file_size, folder_name, dataset=None):
 
     save_chart(out, throughput, title, "Encoding Schemes", "File Type", "MB/s")
     save_table(out, throughput, "Scheme", "File Type")
-    
-def plot_throughput_by_file_size(df, file_type, folder_name, dataset=None):
-    title = f"Index Creation Throughput By File Size({file_type})"
-    out = f"{RESULTS_DIR}/figures/{folder_name}/{file_type}_throughput_by_file_size.png"
-    
-    data = df[df["file_type"] == file_type].copy()
-    if dataset is not None:
-        data = data[data["dataset"] == dataset].copy()
-        out = f"{RESULTS_DIR}/figures/{folder_name}/dataset_{dataset}_{file_type}_throughput.png"
-        title = f"Index Creation Throughput ({file_type}, dataset_{dataset})"
-
-    totals = data.groupby(["file_size", "scheme"], observed=True)[["data_size", "real_time"]].sum()
-    throughput = (totals["data_size"] / 1000000 / totals["real_time"]).unstack("scheme")
-
-    save_chart(out, throughput, title, "Encoding Schemes", "Dataset Size", "MB/s")
-    save_table(out, throughput, "Scheme", "Dataset Size")
     
 def plot_throughput_by_dataset(df, file_size, file_type, folder_name):
     title = f"Index Creation Throughput By Dataset ({file_size}, {file_type})"

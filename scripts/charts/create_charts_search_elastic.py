@@ -119,20 +119,6 @@ def plot_latency_by_query_type(df, file_size, folder_name):
 
         save_chart(out, latency, title, "Encoding Schemes", "Query Type", "Milliseconds")
         save_table(out, latency, "Scheme", "Query Type")
-        
-def plot_latency_by_query_type(df, file_size, folder_name):
-    for stat in STATS:
-        title = f"Query Latency ({stat}, All datasets, {file_size})"
-        out = f"{RESULTS_DIR}/figures/{folder_name}/{stat}_{file_size}_latency_by_query_type.png"
-
-        data = df[(df["stat"] == stat) & (df["file_size"] == file_size)]
-
-        latency = data.pivot_table(index="query_type", columns="scheme", values="real_time",
-                                 aggfunc="mean", observed=True)
-        latency.columns = latency.columns.astype(str)
-
-        save_chart(out, latency, title, "Encoding Schemes", "Query Type", "Milliseconds")
-        save_table(out, latency, "Scheme", "Query Type")
 
 def plot_latency_by_query_type_and_file_size(df, query_type, folder_name):
     stats = ["median"]
