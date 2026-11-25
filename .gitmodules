@@ -1,3 +1,0 @@
-[submodule "third_party/ds2i"]
-	path = third_party/ds2i
-	url = https://github.com/ot/ds2i.git
