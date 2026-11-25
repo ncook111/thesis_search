@@ -385,7 +385,6 @@ const uint8_t get_range_query_type(const Tokenizer &tokens) {
   uint8_t type = TokenType::INVALID;
   // Alpha cannot be used in range query so throw error
   if (tokens.getAlphaTokensQ().size()) {
-    std::cout <<tokens.getAlphaTokensQ().back()<<std::endl;
     throw std::invalid_argument(
         "Range query cannot contain alphabetical or float tokens");
   } else if (tokens.getNumTokensQ().size()) {
@@ -488,7 +487,6 @@ const std::pair<float, float> get_range_query_float(const Tokenizer &tokens, con
   // Form [a,b]
   float min, max;
   if (a.size() && b.size()) { 
-        std::cout << range_tokens.size() << std::endl; 
     min = range_tokens[0];
     max = range_tokens[1]; 
     // Form [a,]

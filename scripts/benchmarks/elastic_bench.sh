@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Strict mode exits on the first failing command; say which one instead of exiting silently.
+# strict mode exits on the first failing command; say which one instead of exiting silently.
 trap 'rc=$?; echo "error: line $LINENO exited with status $rc: $BASH_COMMAND" >&2' ERR
 
 source "$(dirname "$0")/../misc/paths.sh"
@@ -31,7 +31,7 @@ SEARCH_SIMDINDEX_COLD="$SEARCH_OUT_DIR/search_simdindex_cold.json"
 
 rss_kb() { awk -v k="$2:" '$1==k {print $2}' "/proc/$1/status"; }
 
-# Flush the Linux page cache so the next read comes from disk. Needs root.
+# flush the Linux page cache so the next read comes from disk. Needs root.
 drop_caches() {
   sync
   if [[ $EUID -eq 0 ]]; then

@@ -22,7 +22,7 @@ Generally speaking, if on an ARM-based Mac, it will have support for NEON. Most 
 On an ARM Mac run:
 ```
 cmake -S . -B build -DSIMD_TARGET=neon
-cmake --build build
+cmake --build build --parallel
 ```
 
 Unless running a high end x86 CPU with support for AVX-512 run:
@@ -118,7 +118,9 @@ The benchmarks directory contain a number of C++ benchmarks utilising Googles Be
   | SIMDIndex vs GREP | Compares SIMDIndex utilising its CLI and a decompress-then-grep query pipeline, benchmarking index creation/dataset compression and index querying/dataset decompression then grep | `./scripts/benchmarks/grep_bench` |
   | SIMDIndex vs Elasticsearch | Compares SIMDIndex and Elasticsearch, benchmarking index creation and querying | `./scripts/benchmarks/elastic_bench` |
 
-# Chart and Table Creation
+The `\results` directory contains the completed set of results used for this thesis.
+
+# Chart and Table Creation Scripts
 This repo also contains python scripts used to create charts and tables out of the benchmarking data. They require `python3` and `pandas`, `matplotlib` and `warcio` to run.
 
 | Chart script | Benchmark data source |

@@ -122,7 +122,7 @@ FetchContent_MakeAvailable(csv_src)
 
 ###### SIMD TARGET ######
 
-set(SIMD_TARGET "neon" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
+set(SIMD_TARGET "scalar" CACHE STRING "SIMD target: scalar, neon, sse, avx2, avx512bw")
 set_property(CACHE SIMD_TARGET PROPERTY STRINGS scalar neon sse avx2 avx512bw)
 
 set(_simd ${SIMD_TARGET})
@@ -189,8 +189,7 @@ if (_simd STREQUAL "neon")
         ${FASTLANES_PUB}/fls_generated/arm64v8/neon_intrinsic_uf1/arm64v8_neon_intrinsic_1024_uf1_rsum_src.cpp)
 endif()
 
-# Kernel sources are cumulative, matching the SIMD_TARGET_* definitions above:
-# avx512bw also builds avx2 and sse, and avx2 also builds sse.
+# Kernel sources are cumulative, avx512bw also builds avx2 and sse, and avx2 also builds sse.
 if (_simd MATCHES "^(sse|avx2|avx512bw)$")
     target_sources(fastlanes_bp PRIVATE
         ${FLS_X86}/sse_intrinsic_uf1/x86_64_sse_intrinsic_1024_uf1_unffor_src.cpp

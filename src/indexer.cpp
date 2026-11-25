@@ -83,7 +83,6 @@ int main(int argc, const char *argv[]) {
   std::string queries;
   if (vm.count("query")) {
     queries = vm["query"].as<std::string>();
-    std::cout << queries << std::endl;
   }
 
   if (act_mode == "c" || act_mode == "create") { // Index create mode
