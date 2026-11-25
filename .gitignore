@@ -1,5 +1,2 @@
 /build/
-/tests/test_data/all_indexes/*
 .DS_Store
-benchmarks/bench_data/*
-benchmarks/bench_data/
